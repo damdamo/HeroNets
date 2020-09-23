@@ -49,7 +49,10 @@ struct Transition: Hashable {
         }
       }
     }
-    return true
+    
+    // Check guards and then return the final answer
+    // If checkGuards is true, then isFireable is true, otherwise it is false
+    return checkGuards(binding: binding)
   }
   
   public func checkGuards(binding: [String: String]) -> Bool {
