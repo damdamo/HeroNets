@@ -73,10 +73,7 @@ struct Transition: Hashable {
           }
         }
       }
-    } else {
-      return true
     }
-    
     return true
   }
   
