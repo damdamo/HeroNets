@@ -64,7 +64,7 @@ final class HeroNetsTests: XCTestCase {
     print(marking1 <= marking2)
     print(m3)
     
-    print(m1 + m2)
+    print(marking1 + marking2)
     
   }
 

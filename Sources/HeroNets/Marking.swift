@@ -102,50 +102,50 @@ extension Marking: Comparable where PlaceType.Content: Comparable & Sequence {
 
  }
 
-//extension Marking: AdditiveArithmetic where PlaceType.Content: AdditiveArithmetic {
-//
-//  /// Initializes a marking with a dictionary, associating `PlaceType.Content.zero` for unassigned
-//  /// places.
-//  ///
-//  /// - Parameters:
-//  ///   - mapping: A dictionary representing this marking.
-//  ///
-//  /// The following example illustrates the use of this initializer:
-//  ///
-//  ///     let marking = Marking([.p0: 42])
-//  ///     print(marking)
-//  ///     // Prints "[.p0: 42, .p1: 0]"
-//  ///
-//  public init(partial mapping: [PlaceType: PlaceType.Content]) {
-//    self.storage = TotalMap(partial: mapping, defaultValue: .zero)
-//  }
-//
-//  /// A marking in which all places are associated with `PlaceType.Content.zero`.
-//  public static var zero: Marking {
-//    return Marking { _ in PlaceType.Content.zero }
-//  }
-//
-//  public static func + (lhs: Marking, rhs: Marking) -> Marking {
-//    return Marking { key in lhs[key] + rhs[key] }
-//  }
-//
-//  public static func += (lhs: inout Marking, rhs: Marking) {
-//    for place in PlaceType.allCases {
-//      lhs[place] += rhs[place]
-//    }
-//  }
-//
-//  public static func - (lhs: Marking, rhs: Marking) -> Marking {
-//    return Marking { place in lhs[place] - rhs[place] }
-//  }
-//
-//  public static func -= (lhs: inout Marking, rhs: Marking) {
-//    for place in PlaceType.allCases {
-//      lhs[place] -= rhs[place]
-//    }
-//  }
-//
-//}
+extension Marking: AdditiveArithmetic where PlaceType.Content: AdditiveArithmetic {
+
+  /// Initializes a marking with a dictionary, associating `PlaceType.Content.zero` for unassigned
+  /// places.
+  ///
+  /// - Parameters:
+  ///   - mapping: A dictionary representing this marking.
+  ///
+  /// The following example illustrates the use of this initializer:
+  ///
+  ///     let marking = Marking([.p0: 42])
+  ///     print(marking)
+  ///     // Prints "[.p0: 42, .p1: 0]"
+  ///
+  public init(partial mapping: [PlaceType: PlaceType.Content]) {
+    self.storage = TotalMap(partial: mapping, defaultValue: .zero)
+  }
+
+  /// A marking in which all places are associated with `PlaceType.Content.zero`.
+  public static var zero: Marking {
+    return Marking { _ in PlaceType.Content.zero }
+  }
+
+  public static func + (lhs: Marking, rhs: Marking) -> Marking {
+    return Marking { key in lhs[key] + rhs[key] }
+  }
+
+  public static func += (lhs: inout Marking, rhs: Marking) {
+    for place in PlaceType.allCases {
+      lhs[place] += rhs[place]
+    }
+  }
+
+  public static func - (lhs: Marking, rhs: Marking) -> Marking {
+    return Marking { place in lhs[place] - rhs[place] }
+  }
+
+  public static func -= (lhs: inout Marking, rhs: Marking) {
+    for place in PlaceType.allCases {
+      lhs[place] -= rhs[place]
+    }
+  }
+
+}
 
 extension Marking: CustomStringConvertible {
 
