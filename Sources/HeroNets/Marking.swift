@@ -89,18 +89,45 @@ extension Marking: Hashable where PlaceType.Content: Hashable {}
 extension Marking: Comparable where PlaceType.Content: Comparable & Sequence {
 
   public static func < (lhs: Marking, rhs: Marking) -> Bool {
-    var smaller = false
     for place in PlaceType.allCases {
-      if lhs[place] > rhs[place] {
+      if lhs[place] >= rhs[place] {
         return false
-      } else if lhs[place] < rhs[place] {
-        smaller = true
       }
     }
-    return smaller
+    return true
   }
-
- }
+  
+  public static func > (lhs: Marking, rhs: Marking) -> Bool {
+    for place in PlaceType.allCases {
+      if lhs[place] <= rhs[place] {
+        return false
+      }
+    }
+    return true
+  }
+  
+  public static func <= (lhs: Marking, rhs: Marking) -> Bool {
+    for place in PlaceType.allCases {
+      if lhs[place] > rhs[place] {
+        print(lhs[place] > rhs[place])
+        print(lhs[place])
+        print(rhs[place])
+        return false
+      }
+    }
+    return true
+  }
+  
+  public static func >= (lhs: Marking, rhs: Marking) -> Bool {
+    for place in PlaceType.allCases {
+      if lhs[place] < rhs[place] {
+        return false
+      }
+    }
+    return true
+  }
+  
+}
 
 extension Marking: AdditiveArithmetic where PlaceType.Content: AdditiveArithmetic {
 

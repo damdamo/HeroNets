@@ -128,6 +128,10 @@ extension Multiset: ExpressibleByArrayLiteral {
 
 extension Multiset: Comparable {
   public static func < (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Bool {
+    guard rhs.storage.count != 0 else {
+      return false
+    }
+    
     for (k,v) in lhs.storage {
       if v >= rhs.occurences(of: k) {
         return false
@@ -135,6 +139,54 @@ extension Multiset: Comparable {
     }
     return true
   }
+  
+  public static func > (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Bool {
+    guard lhs.storage.count != 0 else {
+      return false
+    }
+    
+    for (k,v) in lhs.storage {
+      if v <= rhs.occurences(of: k) {
+        return false
+      }
+    }
+    return true
+  }
+  
+  public static func <= (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Bool {
+    guard rhs.storage.count != 0 else {
+      if lhs.storage.count == 0 {
+        return true
+      } else {
+        return false
+      }
+    }
+    
+    for (k,v) in lhs.storage {
+      if v > rhs.occurences(of: k) {
+        return false
+      }
+    }
+    return true
+  }
+  
+  public static func >= (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Bool {
+    guard lhs.storage.count != 0 else {
+      if rhs.storage.count == 0 {
+        return true
+      } else {
+        return false
+      }
+    }
+    
+    for (k,v) in lhs.storage {
+      if v < rhs.occurences(of: k) {
+        return false
+      }
+    }
+    return true
+  }
+  
 }
   
 extension Multiset: AdditiveArithmetic {
@@ -157,7 +209,6 @@ extension Multiset: AdditiveArithmetic {
   public static var zero: Multiset {
     return Multiset<Element>()
   }
-
 
 }
 
