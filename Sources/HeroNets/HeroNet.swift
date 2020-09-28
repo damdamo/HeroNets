@@ -165,28 +165,69 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   /// - Returns:
   ///   The marking that results from the firing of the given transition if it is fireable, or
   ///   `nil` otherwise.
-//  public func fire(transition: TransitionType, from marking: Marking<PlaceType>)
-//    -> Marking<PlaceType>?
-//  {
-//    var newMarking = marking
-//
-//    let pre = input[transition]
-//    let post = output[transition]
-//
-//    for place in PlaceType.allCases {
-//      if let n = pre?[place] {
+  public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String])
+    -> Marking<PlaceType>?
+  {
+    guard isFireable(transition: transition, from: marking, with: binding) else { return nil }
+    
+    var newMarking = marking
+
+    let pre = input[transition]
+    let post = output[transition]
+    
+    print(pre)
+    print(post)
+
+    for place in PlaceType.allCases {
+      print(place)
+      if let n = pre?[place] {
+        print(n)
 //        guard marking[place] >= n
 //          else { return nil }
 //        newMarking[place] -= n
-//      }
-//
-//      if let n = post?[place] {
-//        newMarking[place] += n
-//      }
-//    }
-//
+      }
+
+      if let n = post?[place] {
+        //newMarking[place] += n
+      }
+    }
+      return nil
 //    return newMarking
-//  }
+  }
+  
+  // Function to test if a marking is fireable for a specific binding.
+  // The goal is to construct a marking corresponding to the sequence to fire.
+  // Hence, it compares the both marking and returns true if this marking is included in the current marking
+  // Ex. : Result: [p1: {"1","1","2"}, ...] for a transition and a marking (e.g.: [p1: {"1", "2", "1", ...}, ...]) with a binding (e.g.: ["x": "1", "y": "1", "z": "2"])
+  // We supposed a transition with an input arc labeled by ["x","y","z"] from p1 to it.
+  // Second step, we create
+  public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String])
+  -> Bool {
+    if let pre = input[transition] {
+      var multiset: Multiset<String> = [:]
+      var mark: [PlaceType: PlaceType.Content] = [:]
+      for place in PlaceType.allCases {
+        mark[place] = [:]
+      }
+      for (key,values) in pre {
+        for val in values {
+          multiset.insert(binding[val]!)
+        }
+        // Create a multiset for each place of input arcs of the transition
+        mark[key] = multiset
+        multiset = [:]
+      }
+      print("-------------")
+      print(Marking<PlaceType>(mark))
+      print("-------------")
+      print(marking)
+      return Marking<PlaceType>(mark) <= marking
+    } else {
+      return true
+    }
+  }
+  
+  // public func checkGuards(transition: TransitionType, )
 
   /// Internal helper to process preconditions and postconditions.
   private static func add(
