@@ -190,20 +190,30 @@ extension Multiset: Comparable {
 }
   
 extension Multiset: AdditiveArithmetic {
-  public static func - (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Multiset<Element> {
+  public static func + (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Multiset<Element> {
     var multiset = Multiset<Element>()
-    for (el,i) in (lhs.storage.merging(rhs.storage) { (current, new) in current-new }) {
-      multiset.insert(el, occurences: i)
+    let keys = Set(lhs.storage.keys).union(Set(rhs.storage.keys))
+    for key in keys {
+      multiset.insert(key, occurences: lhs.occurences(of: key) + rhs.occurences(of: key))
     }
     return multiset
   }
-
-  public static func + (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Multiset<Element> {
+  
+  public static func += (lhs: inout Multiset<Element>, rhs: Multiset<Element>) {
+    lhs = lhs + rhs
+  }
+  
+  public static func - (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Multiset<Element> {
     var multiset = Multiset<Element>()
-    for (el,i) in (lhs.storage.merging(rhs.storage) { (current, new) in current+new }) {
-      multiset.insert(el, occurences: i)
+    let keys = Set(lhs.storage.keys).union(Set(rhs.storage.keys))
+    for key in keys {
+      multiset.insert(key, occurences: lhs.occurences(of: key) - rhs.occurences(of: key))
     }
     return multiset
+  }
+  
+  public static func -= (lhs: inout Multiset<Element>, rhs: Multiset<Element>) {
+    lhs = lhs - rhs
   }
   
   public static var zero: Multiset {
