@@ -45,8 +45,9 @@ final class HeroNetsTests: XCTestCase {
   }
   
   enum T: Transition {
-    case t1
+    case t1, t2
   }
+  
   
   func testNew() {
     
@@ -62,19 +63,20 @@ final class HeroNetsTests: XCTestCase {
       .pre(from: .p1, to: .t1, labeled: ["x","y"]),
       .pre(from: .p3, to: .t1, labeled: ["z"]),
       .post(from: .t1, to: .p2, labeled: ["$z+5"]),
+      guards: [.t1: [Condition("$x + $z","$y")], .t2: nil],
       interpreter: interpreter
     )
     
-    let marking1 = Marking<P>([.p1: ["18", "42", "99"], .p2: ["2","2"], .p3: ["1","4"]])
-    let marking2 = Marking<P>([.p1: ["1", "2"], .p2: ["2"], .p3: [:]])
-    let marking3 = Marking<P>([.p1: ["2", "2", "1"], .p2: ["2","2"], .p3: ["3"]])
-
-
-    let m1: Multiset<String> = ["x", "x", "y", "y"]
-    let m2: Multiset<String> = ["y", "y", "x", "x"]
-    
-    let m3: Multiset<String> = [:]
-    let m4: Multiset<String> = ["2":2]
+    let marking1 = Marking<P>([.p1: ["18", "22", "99"], .p2: ["2","2", "22"], .p3: ["1","4"]])
+    let marking2 = Marking<P>([.p1: ["18", "22"], .p2: [":"], .p3: ["4"]])
+//    let marking3 = Marking<P>([.p1: ["2", "2", "1"], .p2: ["2","2"], .p3: ["3"]])
+//
+//
+//    let m1: Multiset<String> = ["x", "x", "y", "y"]
+//    let m2: Multiset<String> = ["y", "y", "x", "x"]
+//
+//    let m3: Multiset<String> = [:]
+//    let m4: Multiset<String> = ["2":2]
     
 //    let m3: Multiset<String> = ["x": 2, "y": 3]
     
@@ -87,10 +89,37 @@ final class HeroNetsTests: XCTestCase {
 //    print(marking1 + marking2)
     
     
-      print(model.fire(transition: .t1, from: marking1, with: ["x": "18", "y": "42", "z": "4"]))
+    print(model.fire(transition: .t1, from: marking1, with: ["x": "18", "y": "22", "z": "4"]))
+    
+//    let x = TotalMap([T.t1: [("x","y"), ("x","z")], T.t2: nil])
+//    print(x[.t1])
+    
 
 //    print(marking1 <= marking2)
     
+  }
+  
+  func testMarking() {
+    
+    let marking1 = Marking<P>([.p1: ["1", "2"], .p2: ["3"], .p3: ["4","5"]])
+    let marking2 = Marking<P>([.p1: ["6", "7"], .p2: ["8"], .p3: ["9","10"]])
+    let marking3 = Marking<P>([.p1: ["1"], .p2: [], .p3: ["4"]])
+    let marking4 = Marking<P>([.p1: ["1", "1"], .p2: [], .p3: ["4","4"]])
+
+    XCTAssertEqual(marking1 < marking1, false)
+    XCTAssertEqual(marking1 > marking1, false)
+    XCTAssertEqual(marking1 <= marking1, true)
+    XCTAssertEqual(marking1 >= marking1, true)
+    
+    XCTAssertEqual(marking1 < marking2, false)
+    XCTAssertEqual(marking1 > marking2, false)
+    XCTAssertEqual(marking1 <= marking2, false)
+    XCTAssertEqual(marking1 >= marking2, false)
+    
+    XCTAssertEqual(marking3 < marking4, false)
+    XCTAssertEqual(marking3 > marking4, false)
+    XCTAssertEqual(marking3 <= marking4, true)
+    XCTAssertEqual(marking3 >= marking4, false)
   }
 
   static var allTests = [

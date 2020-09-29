@@ -145,8 +145,8 @@ extension Multiset: Comparable {
       return false
     }
     
-    for (k,v) in lhs.storage {
-      if v <= rhs.occurences(of: k) {
+    for (k,v) in rhs.storage {
+      if lhs.occurences(of: k) <= v {
         return false
       }
     }
@@ -179,8 +179,8 @@ extension Multiset: Comparable {
       }
     }
     
-    for (k,v) in lhs.storage {
-      if v < rhs.occurences(of: k) {
+    for (k,v) in rhs.storage {
+      if lhs.occurences(of: k) < v {
         return false
       }
     }

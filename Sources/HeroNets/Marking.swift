@@ -90,7 +90,7 @@ extension Marking: Comparable where PlaceType.Content: Comparable & Sequence {
 
   public static func < (lhs: Marking, rhs: Marking) -> Bool {
     for place in PlaceType.allCases {
-      if lhs[place] >= rhs[place] {
+      guard lhs[place] < rhs[place] else {
         return false
       }
     }
@@ -99,7 +99,7 @@ extension Marking: Comparable where PlaceType.Content: Comparable & Sequence {
   
   public static func > (lhs: Marking, rhs: Marking) -> Bool {
     for place in PlaceType.allCases {
-      if lhs[place] <= rhs[place] {
+      guard lhs[place] > rhs[place] else {
         return false
       }
     }
@@ -108,7 +108,7 @@ extension Marking: Comparable where PlaceType.Content: Comparable & Sequence {
   
   public static func <= (lhs: Marking, rhs: Marking) -> Bool {
     for place in PlaceType.allCases {
-      if lhs[place] > rhs[place] {
+      guard lhs[place] <= rhs[place] else {
         return false
       }
     }
@@ -117,7 +117,7 @@ extension Marking: Comparable where PlaceType.Content: Comparable & Sequence {
   
   public static func >= (lhs: Marking, rhs: Marking) -> Bool {
     for place in PlaceType.allCases {
-      if lhs[place] < rhs[place] {
+      guard lhs[place] >= rhs[place] else {
         return false
       }
     }
