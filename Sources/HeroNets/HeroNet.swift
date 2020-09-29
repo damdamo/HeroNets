@@ -1,28 +1,6 @@
 import Interpreter
 
-//struct HeroNet {
-//
-//  typealias Place = String
-//  typealias Marking = [Place: [String: Int]]
-//
-//  let places: Set<Place>
-//  let transitions: Set<Transition>
-//  let marking: [Place: [String: Int]]
-//  let interpreter: Interpreter
-//
-////  init(places: Set<Place> = [], transitions: Set<Transition>, interpreter: Interpreter) {
-////    self.places = places
-////    self.transitions = transitions
-////    self.interpreter = interpreter
-////  }
-//
-//
-//
-//  public func computeBindings() {}
-//
-//}
-
-/// A Petri net.
+/// A Hero net.
 ///
 /// `PetriNet` is a generic type, accepting two types representing the set of places and the set
 /// of transitions that structurally compose the model. Both should conform to `CaseIterable`,
@@ -67,7 +45,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 {
 
   public typealias ArcLabel = [String]
-
+  
   /// The description of an arc.
   public struct ArcDescription {
 
@@ -127,12 +105,16 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 
   /// This net's output matrix.
   public let output: [TransitionType: [PlaceType: ArcLabel]]
+  
+  /// Interpreter needs to evaluate Hero terms
+  public let interpreter: Interpreter
+
 
   /// Initializes a Petri net with a sequence describing its preconditions and postconditions.
   ///
   /// - Parameters:
   ///   - arcs: A sequence containing the descriptions of the Petri net's arcs.
-  public init<Arcs>(_ arcs: Arcs) where Arcs: Sequence, Arcs.Element == ArcDescription {
+  public init<Arcs>(_ arcs: Arcs, interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
     var pre: [TransitionType: [PlaceType: ArcLabel]] = [:]
     var post: [TransitionType: [PlaceType: ArcLabel]] = [:]
 
@@ -146,14 +128,15 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 
     self.input = pre
     self.output = post
+    self.interpreter = interpreter
   }
 
   /// Initializes a Petri net with descriptions of its preconditions and postconditions.
   ///
   /// - Parameters:
   ///   - arcs: A variadic argument representing the descriptions of the Petri net's arcs.
-  public init(_ arcs: ArcDescription...) {
-    self.init(arcs)
+  public init(_ arcs: ArcDescription..., interpreter: Interpreter) {
+    self.init(arcs, interpreter: interpreter)
   }
 
   /// Computes the marking resulting from the firing of the given transition, from the given
@@ -162,8 +145,9 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   /// - Parameters:
   ///   - transition: The transition to fire.
   ///   - marking: The marking from which the given transition should be fired.
+  ///   - binding: Bind values on the arcs
   /// - Returns:
-  ///   The marking that results from the firing of the given transition if it is fireable, or
+  ///   The marking that results from the firing of the given transition if it is fireable and guards check, or
   ///   `nil` otherwise.
   public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String])
     -> Marking<PlaceType>? {
@@ -211,38 +195,6 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     // Return final result
     return marking - Marking<PlaceType>(inputMarking) + Marking<PlaceType>(outputMarking)
     
-  }
-  
-  // Function to test if a marking is fireable for a specific binding.
-  // The goal is to construct a marking corresponding to the sequence to fire.
-  // Hence, it compares the both marking and returns true if this marking is included in the current marking
-  // Ex. : Result: [p1: {"1","1","2"}, ...] for a transition and a marking (e.g.: [p1: {"1", "2", "1", ...}, ...]) with a binding (e.g.: ["x": "1", "y": "1", "z": "2"])
-  // We supposed a transition with an input arc labeled by ["x","y","z"] from p1 to it.
-  // Second step, we create
-  public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String])
-  -> Bool {
-    if let pre = input[transition] {
-      var multiset: Multiset<String> = [:]
-      var mark: [PlaceType: PlaceType.Content] = [:]
-      for place in PlaceType.allCases {
-        mark[place] = [:]
-      }
-      for (key,values) in pre {
-        for val in values {
-          multiset.insert(binding[val]!)
-        }
-        // Create a multiset for each place of input arcs of the transition
-        mark[key] = multiset
-        multiset = [:]
-      }
-      print("-------------")
-      print(Marking<PlaceType>(mark))
-      print("-------------")
-      print(marking)
-      return Marking<PlaceType>(mark) <= marking
-    } else {
-      return true
-    }
   }
   
   public func checkGuards(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
