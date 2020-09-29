@@ -158,10 +158,14 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String])
     -> Marking<PlaceType>? {
     
+    guard isFireable(transition: transition, from: marking, with: binding) else {
+      return nil
+    }
+    
     var inputMarking: [PlaceType: PlaceType.Content] = [:]
     var outputMarking: [PlaceType: PlaceType.Content] = [:]
     
-    // Check Fireability and compute input marking
+    // Compute input marking
     if let pre = input[transition] {
       var multiset: Multiset<String> = [:]
       for place in PlaceType.allCases {
@@ -175,14 +179,10 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
         inputMarking[key] = multiset
         multiset = [:]
       }
-      
-      // Check is fireable
-      if !(marking >= Marking<PlaceType>(inputMarking)) || !checkGuards(transition: transition, from: marking, with: binding) {
-        return nil
-      }
     }
     
-    var valOutput = ""
+    // Interpreter evaluate terms which are expressed by String
+    var valOutput: String = ""
     // Compute result of input arcs
     if let post = output[transition] {
       var multiset: Multiset<String> = [:]
@@ -205,7 +205,32 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     
   }
   
-  // Check guards for the fireability
+  // Check the fireability of a transition
+  public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
+    var multiset: Multiset<String>
+    if let pre = input[transition] {
+      for (key,variables) in pre {
+        multiset = [:]
+        for var_ in variables {
+          if let varSubs = binding[var_] {
+            multiset.insert(varSubs)
+          } else {
+            return false
+          }
+        }
+        guard multiset <= marking[key] else {
+          return false
+        }
+      }
+    }
+    
+    if checkGuards(transition: transition, from: marking, with: binding) {
+      return true
+    }
+    return false
+  }
+  
+  // Check guards of a transition
   public func checkGuards(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
     var lhs: String = ""
     var rhs: String = ""
