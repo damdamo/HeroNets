@@ -28,6 +28,9 @@ final class HeroNetsTests: XCTestCase {
 //      var interpreter = Interpreter()
 //      try! interpreter.loadModule(fromString: module)
 //
+//      let code: String = "add(1,2)"
+//      let value = try! interpreter.eval(string: code)
+//      print(value)
 //      let heroNet =  HeroNet(places: places, transitions: transitions, marking: marking, interpreter: interpreter)
 //
 //      print(try! heroNet.transitions.first?.isFireable(marking: marking, binding: ["x":"2", "y":"4"], interpreter: interpreter))
@@ -47,10 +50,19 @@ final class HeroNetsTests: XCTestCase {
   
   func testNew() {
     
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
+
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["x","y"]),
       .pre(from: .p3, to: .t1, labeled: ["z"]),
-      .post(from: .t1, to: .p2, labeled: ["y"])
+      .post(from: .t1, to: .p2, labeled: ["$z+5"]),
+      interpreter: interpreter
     )
     
     let marking1 = Marking<P>([.p1: ["18", "42", "99"], .p2: ["2","2"], .p3: ["1","4"]])

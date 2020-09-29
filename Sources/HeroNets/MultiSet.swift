@@ -205,9 +205,13 @@ extension Multiset: AdditiveArithmetic {
   
   public static func - (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Multiset<Element> {
     var multiset = Multiset<Element>()
+    var diff: Int = 0
     let keys = Set(lhs.storage.keys).union(Set(rhs.storage.keys))
     for key in keys {
-      multiset.insert(key, occurences: lhs.occurences(of: key) - rhs.occurences(of: key))
+      diff = lhs.occurences(of: key) - rhs.occurences(of: key)
+      if diff != 0 {
+        multiset.insert(key, occurences: lhs.occurences(of: key) - rhs.occurences(of: key))
+      }
     }
     return multiset
   }

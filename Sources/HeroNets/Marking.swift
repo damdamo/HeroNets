@@ -109,9 +109,6 @@ extension Marking: Comparable where PlaceType.Content: Comparable & Sequence {
   public static func <= (lhs: Marking, rhs: Marking) -> Bool {
     for place in PlaceType.allCases {
       if lhs[place] > rhs[place] {
-        print(lhs[place] > rhs[place])
-        print(lhs[place])
-        print(rhs[place])
         return false
       }
     }

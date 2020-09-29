@@ -73,7 +73,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     /// - Parameters:
     ///   - place: The place from which the arc comes.
     ///   - transition: The transition to which the arc goes.
-    ///   - label: The arc's label.
+    ///   - labels: The arc's labels with variables. (e.g.: ["x","y"])
     public static func pre(
       from place: PlaceType,
       to transition: TransitionType,
@@ -88,7 +88,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     /// - Parameters:
     ///   - transition: The transition from which the arc comes.
     ///   - place: The place to which the arc goes.
-    ///   - label: The arc's label.
+    ///   - labels: The arc's labels with terms. (e.g.: ["x+3","y+2"])
     public static func post(
       from transition: TransitionType,
       to place: PlaceType,
@@ -176,6 +176,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
     }
     
+    var valOutput = ""
     // Compute result of input arcs
     if let post = output[transition] {
       var multiset: Multiset<String> = [:]
@@ -184,7 +185,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
       for (key,values) in post {
         for val in values {
-          multiset.insert(binding[val]!)
+          valOutput = "\(try! interpreter.eval(string: bindingSubstitution(str: val, binding: binding)))"
+          multiset.insert(valOutput)
         }
         // Create a multiset for each place of output arcs of the transition
         outputMarking[key] = multiset
@@ -199,6 +201,16 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   
   public func checkGuards(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
     return false
+  }
+  
+  /// Substitute variables inside a string by corresponding binding
+  /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
+  public func bindingSubstitution(str: String, binding: [String: String]) -> String {
+    var res: String = str
+    for el in binding {
+      res = res.replacingOccurrences(of: "$\(el.key)", with: "\(el.value)")
+    }
+    return res
   }
 
   /// Internal helper to process preconditions and postconditions.
