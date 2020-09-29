@@ -106,7 +106,10 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   /// This net's output matrix.
   public let output: [TransitionType: [PlaceType: ArcLabel]]
   
-  /// Interpreter needs to evaluate Hero terms
+  /// Guards for transitions.
+  public let guards: TotalMap<TransitionType, [Condition]?>
+  
+  /// Interpreter needs to evaluate Hero terms.
   public let interpreter: Interpreter
 
 
@@ -114,7 +117,9 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///
   /// - Parameters:
   ///   - arcs: A sequence containing the descriptions of the Petri net's arcs.
-  public init<Arcs>(_ arcs: Arcs, interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
+  ///   - guards: Conditions to fire a transition
+  ///   - interpreter: Interpreter needed to evaluate terms
+  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Condition]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
     var pre: [TransitionType: [PlaceType: ArcLabel]] = [:]
     var post: [TransitionType: [PlaceType: ArcLabel]] = [:]
 
@@ -128,6 +133,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 
     self.input = pre
     self.output = post
+    self.guards = TotalMap(guards)
     self.interpreter = interpreter
   }
 
@@ -135,8 +141,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///
   /// - Parameters:
   ///   - arcs: A variadic argument representing the descriptions of the Petri net's arcs.
-  public init(_ arcs: ArcDescription..., interpreter: Interpreter) {
-    self.init(arcs, interpreter: interpreter)
+  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Condition]?],  interpreter: Interpreter) {
+    self.init(arcs, guards: guards, interpreter: interpreter)
   }
 
   /// Computes the marking resulting from the firing of the given transition, from the given
@@ -171,7 +177,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
       
       // Check is fireable
-      if !(marking >= Marking<PlaceType>(inputMarking)), !checkGuards(transition: transition, from: marking, with: binding) {
+      if !(marking >= Marking<PlaceType>(inputMarking)) || !checkGuards(transition: transition, from: marking, with: binding) {
         return nil
       }
     }
@@ -199,8 +205,29 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     
   }
   
+  // Check guards for the fireability
   public func checkGuards(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
-    return false
+    var lhs: String = ""
+    var rhs: String = ""
+    if let conditions = guards[transition] {
+      print(conditions)
+      for condition in conditions {
+        print(condition)
+        lhs = bindingSubstitution(str: condition.e1, binding: binding)
+        rhs = bindingSubstitution(str: condition.e2, binding: binding)
+        if lhs != rhs {
+          print(lhs)
+          print(rhs)
+          let v1 = try! interpreter.eval(string: lhs)
+          let v2 = try! interpreter.eval(string: rhs)
+          if "\(v1)" != "\(v2)" {
+            return false
+          }
+        }
+      }
+    }
+    
+    return true
   }
   
   /// Substitute variables inside a string by corresponding binding
@@ -237,4 +264,5 @@ public protocol Place: CaseIterable, Hashable {
 }
 
 /// A transition in a Petri net.
-public protocol Transition: CaseIterable, Hashable {}
+public protocol Transition: CaseIterable, Hashable {
+}
