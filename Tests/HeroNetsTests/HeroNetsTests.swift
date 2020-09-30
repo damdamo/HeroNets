@@ -3,105 +3,19 @@ import XCTest
 import Interpreter
 
 final class HeroNetsTests: XCTestCase {
-  func testExample() {
       
-//      typealias Place = String
-////      let p1 = Place(name: "p1", values: ["1": 2, "2": 4])
-////      let p2 = Place(name: "p2", values: [:])
-//
-//      let places: Set<Place> = ["p1","p2"]
-//      let guards: [Transition.Condition] = [Transition.Condition(e1: "$x*2", e2: "y")]
-//
-//      let t1 = Transition(name: "t1", guards: guards, inArcs: [Transition.InArc(variables: ["x", "y"], place: "p1")], outArcs: [Transition.OutArc(expr: "add(x,y)", place: "p2")]
-//      )
-//
-//      let transitions: Set<Transition> = [t1]
-//
-//      let marking: [Place: [String: Int]] = ["p1": ["2": 2, "4":1], "p2": [:]]
-//
-//      let module: String = """
-//      func add(_ x: Int, _ y: Int) -> Int ::
-//        x + y
-//      """
-//
-//
-//      var interpreter = Interpreter()
-//      try! interpreter.loadModule(fromString: module)
-//
-//      let code: String = "add(1,2)"
-//      let value = try! interpreter.eval(string: code)
-//      print(value)
-//      let heroNet =  HeroNet(places: places, transitions: transitions, marking: marking, interpreter: interpreter)
-//
-//      print(try! heroNet.transitions.first?.isFireable(marking: marking, binding: ["x":"2", "y":"4"], interpreter: interpreter))
-//
-//      // print(heroNet.transitions.first?.checkGuards(binding: ["x": "2", "y": "2"], interpreter: interpreter))
-  }
-      
-  enum P: Place {
-    typealias Content = Multiset<String>
-    
-    case p1,p2,p3
-  }
-  
-  enum T: Transition {
-    case t1, t2
-  }
-  
-  
-  func testNew() {
-    
-    let module: String = """
-    func add(_ x: Int, _ y: Int) -> Int ::
-      x + y
-    """
-
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
-    
-    let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: ["x","y"]),
-      .pre(from: .p3, to: .t1, labeled: ["z"]),
-      .post(from: .t1, to: .p2, labeled: ["$z+5"]),
-      guards: [.t1: [Condition("$x + $z","$y")], .t2: nil],
-      interpreter: interpreter
-    )
-    
-    let marking1 = Marking<P>([.p1: ["18", "22", "99"], .p2: ["2","2", "22"], .p3: ["1","4"]])
-    let marking2 = Marking<P>([.p1: ["18", "22"], .p2: [":"], .p3: ["4"]])
-//    let marking3 = Marking<P>([.p1: ["2", "2", "1"], .p2: ["2","2"], .p3: ["3"]])
-//
-//
-//    let m1: Multiset<String> = ["x", "x", "y", "y"]
-//    let m2: Multiset<String> = ["y", "y", "x", "x"]
-//
-//    let m3: Multiset<String> = [:]
-//    let m4: Multiset<String> = ["2":2]
-    
-//    let m3: Multiset<String> = ["x": 2, "y": 3]
-    
-//    print(marking3 - marking1)
-//    print(m1 > m2)
-//    print(marking1 < marking3)
-//    print(m3)
-//
-//    marking1 += marking2
-//    print(marking1 + marking2)
-    
-    
-    print(model.fire(transition: .t1, from: marking1, with: ["x": "18", "y": "22", "z": "4"]))
-    
-//    print(model.isFireable(transition: .t1, from: marking1, with: ["x": "18", "y": "22", "z": "4"]))
-    
-//    let x = TotalMap([T.t1: [("x","y"), ("x","z")], T.t2: nil])
-//    print(x[.t1])
-    
-
-//    print(marking1 <= marking2)
-    
-  }
-  
   func testIsFireable() {
+    
+    enum P: Place {
+      typealias Content = Multiset<String>
+      
+      case p1,p2,p3
+    }
+    
+    enum T: Transition {
+      case t1, t2
+    }
+    
     let module: String = """
     func add(_ x: Int, _ y: Int) -> Int ::
       x + y
@@ -112,13 +26,20 @@ final class HeroNetsTests: XCTestCase {
     
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["x","y"]),
-      .pre(from: .p3, to: .t1, labeled: ["z"]),
-      .post(from: .t1, to: .p2, labeled: ["$z+5"]),
-      guards: [.t1: [Condition("$x + $z","$y")], .t2: nil],
+      .pre(from: .p2, to: .t1, labeled: ["z"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: [Condition("$x","$z")], .t2: nil],
       interpreter: interpreter
     )
+    
+    let marking1 = Marking<P>([.p1: ["1","2","3","4"], .p2: ["1", "1", "2", "3", "4"], .p3: []])
+    
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"1", "y":"4", "z": "1"]), true)
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"1", "y":"4", "z": "2"]), false)
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"6", "y":"4", "z": "6"]), false)
   }
   
+  // Test of a simple Hero net
   func testHeroNet1() {
     
     enum P1: Place {
@@ -161,7 +82,74 @@ final class HeroNetsTests: XCTestCase {
     XCTAssertEqual(model.fire(transition: .apply, from: marking1, with: ["f": "mul", "x": "1", "y": "4"]), nil)
   }
   
+  // Test application of curryfication (partial application)
+  func testHeroNet2() {
+    
+    enum P2: Place {
+      typealias Content = Multiset<String>
+      case op, p1, p2, res
+    }
+    
+    enum T2: Transition {
+      case curry, apply
+    }
+    
+    let module: String = """
+    func add(_ x: Int) -> (Int) -> Int ::
+      func foo(_ y: Int) -> Int ::
+        x + y
+    
+    func sub(_ x: Int) -> (Int) -> Int ::
+      func foo(_ y: Int) -> Int ::
+        x - y
+
+    func mul(_ x: Int) -> (Int) -> Int ::
+      func foo(_ y: Int) -> Int ::
+        x * y
+
+    func div(_ x: Int) -> (Int) -> Int ::
+      func foo(_ y: Int) -> Int ::
+        x / y
+    """
+
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
+    let model = HeroNet<P2, T2>(
+      .pre(from: .op, to: .curry, labeled: ["f"]),
+      .pre(from: .p1, to: .curry, labeled: ["x"]),
+      .pre(from: .p1, to: .apply, labeled: ["y"]),
+      .pre(from: .p2, to: .apply, labeled: ["g"]),
+      .post(from: .curry, to: .p2, labeled: ["$f($x)"]),
+      .post(from: .apply, to: .res, labeled: ["$g($y)"]),
+      guards: [.curry: nil, .apply: nil],
+      interpreter: interpreter
+    )
+    
+    let marking1 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["1", "1", "2", "3", "4"], .p2: [], .res: []])
+    let marking1AfterFiringCurry = model.fire(transition: .curry, from: marking1, with: ["f": "mul", "x": "4"])
+    let marking1AfterFiringCurryExpected = Marking<P2>([.op: ["add","sub","div"], .p1: ["1", "1", "2", "3"], .p2: ["mul(4)"], .res: []])
+    
+    XCTAssertEqual(marking1AfterFiringCurry, marking1AfterFiringCurryExpected)
+    
+    let marking1AfterFiringApply = model.fire(transition: .apply, from: marking1AfterFiringCurry!, with: ["g": "mul(4)", "y": "2"])
+    let marking1AfterFiringApplyExpected = Marking<P2>([.op: ["add","sub","div"], .p1: ["1", "1", "3"], .p2: [], .res: ["8"]])
+    
+    XCTAssertEqual(marking1AfterFiringApply, marking1AfterFiringApplyExpected)
+    
+  }
+  
   func testMarking() {
+    
+    enum P: Place {
+      typealias Content = Multiset<String>
+      
+      case p1,p2,p3
+    }
+    
+    enum T: Transition {
+      case t1, t2
+    }
     
     let marking1 = Marking<P>([.p1: ["1", "2"], .p2: ["3"], .p3: ["4","5"]])
     let marking2 = Marking<P>([.p1: ["6", "7"], .p2: ["8"], .p3: ["9","10"]])
@@ -185,6 +173,9 @@ final class HeroNetsTests: XCTestCase {
   }
 
   static var allTests = [
-      ("testExample", testExample),
+    ("testIsFireable", testIsFireable),
+    ("testHeroNet1", testHeroNet1),
+    ("testHeroNet2", testHeroNet2),
+    ("testMarking", testMarking),
   ]
 }
