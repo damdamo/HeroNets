@@ -183,6 +183,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     
     // Interpreter evaluate terms which are expressed by String
     var valOutput: String = ""
+    var valSubs: String = ""
     // Compute result of input arcs
     if let post = output[transition] {
       var multiset: Multiset<String> = [:]
@@ -191,8 +192,14 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
       for (key,values) in post {
         for val in values {
-          valOutput = "\(try! interpreter.eval(string: bindingSubstitution(str: val, binding: binding)))"
-          multiset.insert(valOutput)
+          valSubs = bindingSubstitution(str: val, binding: binding)
+          valOutput = "\(try! interpreter.eval(string: valSubs))"
+          // In the case or we get the signature of a function, we just return the function name
+          if valOutput.contains("function") {
+            multiset.insert(valSubs)
+          } else {
+            multiset.insert(valOutput)
+          }
         }
         // Create a multiset for each place of output arcs of the transition
         outputMarking[key] = multiset
@@ -235,17 +242,16 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     var lhs: String = ""
     var rhs: String = ""
     if let conditions = guards[transition] {
-      print(conditions)
       for condition in conditions {
-        print(condition)
         lhs = bindingSubstitution(str: condition.e1, binding: binding)
         rhs = bindingSubstitution(str: condition.e2, binding: binding)
+        // Check if the both term are equals, thanks to the syntactic equivalence !
+        // Moreover, allows to compare functions in a syntactic way
         if lhs != rhs {
-          print(lhs)
-          print(rhs)
           let v1 = try! interpreter.eval(string: lhs)
           let v2 = try! interpreter.eval(string: rhs)
-          if "\(v1)" != "\(v2)" {
+          // If values are different and not are signature functions
+          if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
             return false
           }
         }
