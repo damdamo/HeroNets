@@ -91,12 +91,74 @@ final class HeroNetsTests: XCTestCase {
     
     print(model.fire(transition: .t1, from: marking1, with: ["x": "18", "y": "22", "z": "4"]))
     
+//    print(model.isFireable(transition: .t1, from: marking1, with: ["x": "18", "y": "22", "z": "4"]))
+    
 //    let x = TotalMap([T.t1: [("x","y"), ("x","z")], T.t2: nil])
 //    print(x[.t1])
     
 
 //    print(marking1 <= marking2)
     
+  }
+  
+  func testIsFireable() {
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
+
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["x","y"]),
+      .pre(from: .p3, to: .t1, labeled: ["z"]),
+      .post(from: .t1, to: .p2, labeled: ["$z+5"]),
+      guards: [.t1: [Condition("$x + $z","$y")], .t2: nil],
+      interpreter: interpreter
+    )
+  }
+  
+  func testHeroNet1() {
+    
+    enum P1: Place {
+      typealias Content = Multiset<String>
+      case op, n, res
+    }
+    
+    enum T1: Transition {
+      case apply
+    }
+    
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    func sub(_ x: Int, _ y: Int) -> Int ::
+      x - y
+    func mul(_ x: Int, _ y: Int) -> Int ::
+      x * y
+    func div(_ x: Int, _ y: Int) -> Int ::
+      x / y
+    """
+
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
+    let model = HeroNet<P1, T1>(
+      .pre(from: .op, to: .apply, labeled: ["f"]),
+      .pre(from: .n, to: .apply, labeled: ["x","y"]),
+      .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
+      .post(from: .apply, to: .op, labeled: ["$f"]),
+      guards: [.apply: [Condition("$f","add")]],
+      interpreter: interpreter
+    )
+    
+    let marking1 = Marking<P1>([.op: ["add","sub","mul","div"], .n: ["1", "1", "2", "3", "4"], .res: []])
+    let marking2 = Marking<P1>([.op: ["add","sub","mul","div"], .n: ["1", "2", "3"], .res: ["5"]])
+    
+    XCTAssertEqual(model.fire(transition: .apply, from: marking1, with: ["f": "add", "x": "1", "y": "4"]), marking2)
+    
+    XCTAssertEqual(model.fire(transition: .apply, from: marking1, with: ["f": "mul", "x": "1", "y": "4"]), nil)
   }
   
   func testMarking() {
