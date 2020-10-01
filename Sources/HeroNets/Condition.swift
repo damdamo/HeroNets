@@ -1,3 +1,4 @@
+/// Declare a condition between two strings
 public struct Condition: Hashable {
   let e1: String
   let e2: String
@@ -7,14 +8,3 @@ public struct Condition: Hashable {
     self.e2 = e2
   }
 }
-
-//extension Condition: ExpressibleByArrayLiteral {
-//  public init(arrayLiteral elements: String...) {
-//    guard elements.count == 2 else {
-//      throw Error.self
-//    }
-//  }
-//  
-//  public typealias ArrayLiteralElement = String
-//  
-//}

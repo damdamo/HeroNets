@@ -1,6 +1,6 @@
-/// A marking of a Petri net.
+/// A marking of a Hero net.
 ///
-/// A marking is a mapping that associates the places of a Petri net to the tokens they contain.
+/// A marking is a mapping that associates the places of a Hero net to the tokens they contain.
 ///
 /// An algebra is defined over markings if the type used to represent the tokens associated with
 /// each place (i.e. `PlaceType`) allows it. More specifically, markings are comparable if tokens
@@ -8,10 +8,10 @@
 ///
 /// The following example illustrates how to perform arithmetic operations of markings:
 ///
-///     let m0: Marking<P> = [.p0: 1, .p1: 2]
-///     let m1: Marking<P> = [.p0: 0, .p1: 1]
+///     let m0: Marking<P> = [.p0: ["1", "2"], .p1: ["4"]]
+///     let m1: Marking<P> = [.p0: ["1", "3"], .p1: ["6"]]
 ///     print(m0 + m1)
-///     // Prints "[.p0: 1, .p1: 3]"
+///     // Prints "[.p0: ["1", "1", "2", "3"], .p1: ["4", "6"]]"
 ///
 public struct Marking<PlaceType> where PlaceType: Place {
 
@@ -136,9 +136,7 @@ extension Marking: AdditiveArithmetic where PlaceType.Content: AdditiveArithmeti
   ///
   /// The following example illustrates the use of this initializer:
   ///
-  ///     let marking = Marking([.p0: 42])
-  ///     print(marking)
-  ///     // Prints "[.p0: 42, .p1: 0]"
+  ///     let marking = Marking<P>([.p0: ["42", "1337"], .p1 ["12", "15"])
   ///
   public init(partial mapping: [PlaceType: PlaceType.Content]) {
     self.storage = TotalMap(partial: mapping, defaultValue: .zero)

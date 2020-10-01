@@ -2,43 +2,58 @@ import Interpreter
 
 /// A Hero net.
 ///
-/// `PetriNet` is a generic type, accepting two types representing the set of places and the set
+/// `HeroNet` is a generic type, accepting two types representing the set of places and the set
 /// of transitions that structurally compose the model. Both should conform to `CaseIterable`,
 /// which guarantees that the set of places (resp. transitions) is bounded, and known statically.
 /// The following example illustrates how to declare the places and transition of a simple Petri
 /// net representing an on/off switch:
 ///
 ///     enum P: Place {
-///       typealias Content = Int
-///       case on, off
+///       typealias Content = Multiset<String>
+///       case p1, p2
 ///     }
 ///
 ///     enum T: Transition {
-///       case switchOn, switchOff
+///       case t1
 ///     }
 ///
-/// Petri net instances are created by providing the list of the preconditions and postconditions
-/// that compose them. These should be provided in the form of arc descriptions (i.e. instances of
-/// `ArcDescription`) and fed directly to the Petri net's initializer. The following example shows
-/// how to create an instance of the on/off switch:
+/// Hero net instances are created by providing the list of the preconditions and postconditions
+/// that compose them, guards of each transition and  an interpreter to evaluate the term inside the net.
+/// Preconditions and postconditions should be provided in the form of arc descriptions (i.e. instances of
+/// `ArcDescription`) and fed directly to the Petri net's initializer.
+/// Guards are provided by a list of condition for each transition.
+/// Interpreter and its module has to be loaded before to initialize the net.
+///
+/// The following example shows
+/// how to create an instance of a Hero net with above Place and Transition:
+///
+///     let module: String = """
+///       func add(_ x: Int, _ y: Int) -> Int ::
+///          x + y
+///     """
+///
+///    var interpreter = Interpreter()
+///    try! interpreter.loadModule(fromString: module)
+///
+///    let model = HeroNet<P, T>(
+///      .pre(from: .p1, to: .t1, labeled: ["x", "y"]),
+///      .post(from: .t1, to: .p2, labeled: ["$x+$y"]),
+///      guards: [.t1: [Condition("$x","$y")]],
+///      interpreter: interpreter
+///    )
 ///
 ///
-///     let model = PetriNet<P, T>(
-///       .pre(from: .on, to: .switchOff),
-///       .post(from: .switchOff, to: .off),
-///       .pre(from: .off, to: .switchOn),
-///       .post(from: .switchOn, to: .on),
-///     )
-///
-/// Petri net instances only represent the structual part of the corresponding model, meaning that
+/// Hero net instances only represent the structual part of the corresponding model, meaning that
 /// markings should be stored externally. They can however be used to compute the marking resulting
-/// from the firing of a particular transition, using the method `fire(transition:from:)`. The
+/// from the firing of a particular transition, using the method `fire(transition:from:with:)`. The
 /// following example illustrates this method's usage:
 ///
-///     if let marking = model.fire(.switchOn, from: [.on: 0, .off: 1]) {
+///     let marking = Marking<P>([.p1: ["1", "2", "2", "3"], .p2: []])
+///
+///     if let marking = model.fire(transition: .t1, from: marking, with: ["x": "2", "y": "2"]) {
 ///       print(marking)
 ///     }
-///     // Prints "[.on: 1, .off: 0]"
+///     // Prints "[.p1: ["1", "3"], .p2: ["4"]]"
 ///
 public struct HeroNet<PlaceType, TransitionType>
 where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: Transition

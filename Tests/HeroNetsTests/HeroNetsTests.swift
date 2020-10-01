@@ -3,7 +3,7 @@ import XCTest
 import Interpreter
 
 final class HeroNetsTests: XCTestCase {
-      
+  
   func testIsFireable() {
     
     enum P: Place {

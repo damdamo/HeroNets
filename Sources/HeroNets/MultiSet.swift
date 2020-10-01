@@ -1,3 +1,17 @@
+/// A Multiset is a structure which contains different elements (`Element`), without any order.
+/// It is mainly used to represent the content of a Hero net place
+/// The commonly way to represent a multiset is the following:
+///
+///     let m1: Multiset<String> = ["a", "a", "b", "b"]
+///
+/// An alternative exists to write Multisets by specifying the element and the number of occurences:
+///
+///     let m2: Multiset<String> = ["a":2, "b":2]
+///
+/// Multisets are `Comparable` and benefits of the protocol `AdditiveArithmetic` to make operations
+/// such as: `m1 + m2`, `m1 - m2`, `m1 < m2`, `m1 <= m2`, `m1 > m2`, `m1 >= m2`
+///
+/// In addition, Multisets are a `Collection` and can be easily browsed.
 public struct Multiset<Element> where Element: Hashable {
 
   public init() {

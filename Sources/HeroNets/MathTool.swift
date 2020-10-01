@@ -1,3 +1,4 @@
+/// Function to compute all the binding in a brute force way
 func combos<T>(elements: ArraySlice<T>, k: Int) -> [[T]] {
     if k == 0 {
         return [[]]
