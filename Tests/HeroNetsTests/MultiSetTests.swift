@@ -8,9 +8,7 @@ final class MultiSetTests: XCTestCase {
     let m0: Multiset<String> = [:]
     let m1: Multiset<String> = ["a", "b"]
     let m2: Multiset<String> = ["a", "a", "b", "b"]
-    let m3: Multiset<String> = ["x", "y", "z"]
-    let m4: Multiset<String> = ["x":1, "y":3]
-    
+    let m3: Multiset<String> = ["x", "y", "z"]    
     
     XCTAssertEqual(m0 <= m0, true)
     XCTAssertEqual(m0 >= m0, true)
