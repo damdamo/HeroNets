@@ -83,6 +83,16 @@ public struct Multiset<Element> where Element: Hashable {
     }
     return result
   }
+  
+  public func multisetToArray() -> Array<Element> {
+    var arr: Array<Element> = []
+    for (key,value) in storage {
+      for i in 0 ... value-1 {
+        arr.append(key)
+      }
+    }
+    return arr
+  }
 
 }
 
