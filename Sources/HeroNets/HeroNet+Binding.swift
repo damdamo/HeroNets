@@ -47,12 +47,16 @@ extension HeroNet {
     // Sort keys by name of places
     // Keys must be ordered to pass into a MFDD.
     // The name of a variable is as follows: nameOfThePlace_variable (e.g.: "p1_x")
-    if let inputTransition = input[transition]?.sorted(by: {"\($0.key)" > "\($1.key)"}) {
-      for (place, vars) in inputTransition {
+    if let inputTransition = input[transition] {
+      for (place, vars) in inputTransition.sorted(by: {"\($0.key)" > "\($1.key)"}) {
         values = marking[place].multisetToArray()
         pointer = fireableBindings(factory: factory, vars: vars.map{"\(place)_\($0)"}, values: values, initPointer: pointer)
       }
     }
     return MFDD(pointer: pointer!, factory: factory)
   }
+  
+//  func orderKeys(for transition: TransitionType) -> [String] {
+//    for
+//  }
 }
