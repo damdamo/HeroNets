@@ -5,16 +5,17 @@ import XCTest
 
 final class HeroNetsBindingsTests: XCTestCase {
   
-  func testBinding() {
-    enum P: Place {
-      typealias Content = Multiset<String>
-      
-      case p1,p2,p3
-    }
+  enum P: Place, Equatable {
+    typealias Content = Multiset<String>
     
-    enum T: Transition {
-      case t1, t2
-    }
+    case p1,p2,p3
+  }
+  
+  enum T: Transition {
+    case t1, t2
+  }
+  
+  func testBinding() {
     
     let module: String = """
     func add(_ x: Int, _ y: Int) -> Int ::
@@ -54,6 +55,48 @@ final class HeroNetsBindingsTests: XCTestCase {
     
     model.orderPlacesKeys(for: .t1)
 
+  }
+  
+  func testSortKeys() {
+    
+    var interpreter = Interpreter()
+    
+    let conditionList1: [Condition] = [Condition("$x", "$z"), Condition("$x", "$x"), Condition("$x", "1"), Condition("$x", "$y"), Condition("$y", "1"), Condition("$z", "5"), Condition("$z", "$z + 2"), Condition("$z", "$z + 2")]
+    
+    let model1 = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["x","y"]),
+      .pre(from: .p2, to: .t1, labeled: ["z"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: conditionList1, .t2: nil],
+      interpreter: interpreter
+    )
+    
+    XCTAssertEqual(model1.countUniqueVarInConditions(with: .t1), ["x": 2, "y": 1, "z": 3])
+    
+    let conditionList2: [Condition] = []
+    
+    let model2 = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["x","y"]),
+      .pre(from: .p2, to: .t1, labeled: ["z"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: conditionList2, .t2: nil],
+      interpreter: interpreter
+    )
+    
+    XCTAssertEqual(model2.countUniqueVarInConditions(with: .t1), [:])
+    
+    let conditionList3: [Condition] = [Condition("$x", "$z"), Condition("$x", "$x"), Condition("$x", "1"), Condition("$x", "$y"), Condition("$z", "5"), Condition("$z", "$z + 2"), Condition("$z", "$z + 2")]
+    
+    let model3 = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["x","y"]),
+      .pre(from: .p2, to: .t1, labeled: ["z"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: conditionList3, .t2: nil],
+      interpreter: interpreter
+    )
+    
+    XCTAssertEqual(model3.countUniqueVarInConditions(with: .t1), ["x": 2, "z": 3])
+    
   }
   
   static var allTests = [

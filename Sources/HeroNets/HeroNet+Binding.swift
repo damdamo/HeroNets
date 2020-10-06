@@ -53,6 +53,11 @@ extension HeroNet {
   func orderPlacesKeys(for transition: TransitionType) -> Array<(PlaceType, Array<(String, Int)>)>? {
     
     let countVar = countUniqueVarInConditions(with: transition)
+    
+    guard !countVar.isEmpty else {
+      return nil
+    }
+    
     var dicTemp: [String: Int]
     var placeCountVariables: [PlaceType: Array<(String, Int)>] = [:]
     
@@ -118,5 +123,4 @@ extension HeroNet {
     }
     return countVar
   }
-  
 }
