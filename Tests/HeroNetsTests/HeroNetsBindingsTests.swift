@@ -25,7 +25,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Condition] = [Condition("$x", "$1"), Condition("$x", "$y")]
+    let conditionList: [Condition] = [Condition("$x", "1"), Condition("$x", "$y")]
     
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["x","y"]),
@@ -41,7 +41,8 @@ final class HeroNetsBindingsTests: XCTestCase {
     
     var x: MFDD<String, String> = model.fireableBindings(for: .t1, with: marking1, factory: factory)!
     
-    print(model.isolateConditionsInGuard(for: .t1))
+    print(x)
+//    print(model.clearVar("00_x"))
     
 //    let lol1 = model.sortPlacesKeys(for: .t1)
 //    let lol2 = model.renameKeys(for: lol1)

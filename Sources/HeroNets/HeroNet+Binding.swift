@@ -9,7 +9,7 @@ extension HeroNet {
 //    return nil
 //  }
   
-  func fireableBindings(factory: MFDDFactory<KeyMFDD, ValueMFDD>, vars: [KeyMFDD], values: [ValueMFDD], initPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+  func fireableBindings(factory: MFDDFactory<KeyMFDD, ValueMFDD>, vars: [KeyMFDD], values: [ValueMFDD], conditionsForVars: [String: [Condition]], initPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
     var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
     if vars.count == 0 {
       if let p = initPointer {
@@ -18,10 +18,27 @@ extension HeroNet {
         return factory.one.pointer
       }
     }
-    for i in values {
-      take[i] = fireableBindings(factory: factory, vars: Array(vars.dropFirst()), values: values.filter({$0 != i}), initPointer: initPointer)
+    
+    let key = vars.first!
+    let keyClear = clearVar(key)
+    var conditions: [Condition]
+    print(conditionsForVars)
+    print(key)
+    
+    if let c = conditionsForVars[keyClear] {
+      conditions = c
+    } else {
+      conditions = []
     }
-    return factory.node(key: vars.first!, take: take, skip: factory.zero.pointer)
+    print(conditions)
+    
+    for i in values {
+      if checkGuards(conditions: conditions, with: [keyClear:i]) {
+        take[i] = fireableBindings(factory: factory, vars: Array(vars.dropFirst()), values: values.filter({$0 != i}), conditionsForVars: conditionsForVars, initPointer: initPointer)
+      }
+    }
+    return factory.node(key: key, take: take, skip: factory.zero.pointer)
+    
   }
   
   /// Creates the fireable bindings of a transition.
@@ -36,6 +53,7 @@ extension HeroNet {
   func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>, factory: MFDDFactory<KeyMFDD, ValueMFDD>) -> MFDD<KeyMFDD, ValueMFDD>? {
     var pointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil
     var values: [ValueMFDD] = []
+    let conditions = isolateConditionsInGuard(for: transition)
     
     let sortKeys = sortPlacesKeys(for: transition)
     let renameSortKeys = renameKeys(for: sortKeys)
@@ -45,7 +63,7 @@ extension HeroNet {
     // The name of a variable is as follows: nameOfThePlace_variable (e.g.: "p1_x")
     for (place,vars) in renameSortKeys {
       values = marking[place].multisetToArray()
-      pointer = fireableBindings(factory: factory, vars: vars, values: values, initPointer: pointer)
+      pointer = fireableBindings(factory: factory, vars: vars, values: values, conditionsForVars: conditions, initPointer: pointer)
     }
     
     return MFDD(pointer: pointer!, factory: factory)
@@ -196,5 +214,14 @@ extension HeroNet {
     return res
   }
   
+  // Separate the string into a list of string using "_" and take the last string of the list, which is the variable name
+  // E.g.: "00_x" -> x
+  func clearVar(_ v: String) -> String {
+    guard v.contains("_") else {
+      return v
+    }
+    let vTab: [String] = v.components(separatedBy: "_")
+    return vTab[vTab.count-1]
+  }
   
 }
