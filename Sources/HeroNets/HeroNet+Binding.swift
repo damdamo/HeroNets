@@ -37,21 +37,24 @@ extension HeroNet {
     var pointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil
     var values: [ValueMFDD] = []
     
+    let sortKeys = sortPlacesKeys(for: transition)
+    let renameSortKeys = renameKeys(for: sortKeys)
+    
     // Sort keys by name of places
     // Keys must be ordered to pass into a MFDD.
     // The name of a variable is as follows: nameOfThePlace_variable (e.g.: "p1_x")
-    if let inputTransition = input[transition] {
-      for (place, vars) in inputTransition.sorted(by: {"\($0.key)" > "\($1.key)"}) {
-        values = marking[place].multisetToArray()
-        pointer = fireableBindings(factory: factory, vars: vars.map{"\(place)_\($0)"}, values: values, initPointer: pointer)
-      }
+    for (place,vars) in renameSortKeys {
+      values = marking[place].multisetToArray()
+      print(vars)
+      pointer = fireableBindings(factory: factory, vars: vars, values: values, initPointer: pointer)
     }
     
     return MFDD(pointer: pointer!, factory: factory)
   }
   
   // Rename keys which are ordered in an "optimal" way to keep an order for MFDD
-  func renameKeys(for arr: Array<(PlaceType, Array<String>)>) -> Array<(PlaceType, Array<String>)>? {
+  func renameKeys(for arr: Array<(PlaceType, Array<String>)>) -> Array<(PlaceType, Array<String>)> {
+        
     var nbPlace = arr.count-1
     var nbVar = -1
     var res: Array<(PlaceType, Array<String>)> = []
@@ -63,7 +66,7 @@ extension HeroNet {
     
     for (place, couple) in arr {
       for el in couple {
-        subArray.append("\(nbPlace)\(nbVar)_\(el)")
+        subArray.insert(("\(nbPlace)\(nbVar)_\(el)"), at: 0)
         nbVar -= 1
       }
       res.append((place, subArray))
@@ -74,13 +77,13 @@ extension HeroNet {
     return res
   }
   
-  func sortPlacesKeys(for transition: TransitionType) -> Array<(PlaceType, Array<String>)>? {
+  func sortPlacesKeys(for transition: TransitionType) -> Array<(PlaceType, Array<String>)> {
     
     let countVar = countUniqueVarInConditions(with: transition)
     
-    guard !countVar.isEmpty else {
-      return nil
-    }
+//    guard !countVar.isEmpty else {
+//      return nil
+//    }
     
     var dicTemp: [String: Int]
     var placeCountVariables: [PlaceType: Array<(String, Int)>] = [:]
@@ -120,7 +123,7 @@ extension HeroNet {
   
   
   /// Use guards to determine the number of apparition of a variable such that a variable is the only variable in a condition and repeat it for each condition.
-  /// E.g.: [("$x", "$y"), ("$x","$x+4"), ("$z", "1")] -> ["x": 1, "z": 1]
+  /// E.g.: [("$x", "$y"), ("$x","$x+4"), ("$z", "1")] -> ["x": 1, "y": 0, "z": 1]
   /// We have 3 conditions, but only two have the same variable in each part of the condition.
   func countUniqueVarInConditions(with transition: TransitionType) -> [String: Int] {
     

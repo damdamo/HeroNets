@@ -41,9 +41,11 @@ final class HeroNetsBindingsTests: XCTestCase {
     
     var x: MFDD<String, String> = model.fireableBindings(for: .t1, with: marking1, factory: factory)!
     
-    let lol1 = model.sortPlacesKeys(for: .t1)!
-    let lol2 = model.renameKeys(for: lol1)
-    print(lol2!)
+    print(x)
+    
+//    let lol1 = model.sortPlacesKeys(for: .t1)
+//    let lol2 = model.renameKeys(for: lol1)
+//    print(lol2)
     
 //    print(x.factory.morphisms.filter(excluding: ["x": ["3"]]))
 //    print(x.factory.morphisms.insert(assignments: ["p1_x": "42"]))
