@@ -41,7 +41,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     
     var x: MFDD<String, String> = model.fireableBindings(for: .t1, with: marking1, factory: factory)!
     
-    print(x)
+    print(model.isolateConditionsInGuard(for: .t1))
     
 //    let lol1 = model.sortPlacesKeys(for: .t1)
 //    let lol2 = model.renameKeys(for: lol1)
@@ -76,7 +76,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       interpreter: interpreter
     )
     
-    XCTAssertEqual(model1.countUniqueVarInConditions(with: .t1), ["x": 2, "y": 1, "z": 3])
+    XCTAssertEqual(model1.countUniqueVarInConditions(for: .t1), ["x": 2, "y": 1, "z": 3])
     
     let conditionList2: [Condition] = []
     
@@ -88,7 +88,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       interpreter: interpreter
     )
     
-    XCTAssertEqual(model2.countUniqueVarInConditions(with: .t1), ["x": 0, "y": 0, "z": 0])
+    XCTAssertEqual(model2.countUniqueVarInConditions(for: .t1), ["x": 0, "y": 0, "z": 0])
     
     let conditionList3: [Condition] = [Condition("$x", "$z"), Condition("$x", "$x"), Condition("$x", "1"), Condition("$x", "$y"), Condition("$z", "5"), Condition("$z", "$z + 2"), Condition("$z", "$z + 2")]
     
@@ -100,7 +100,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       interpreter: interpreter
     )
     
-    XCTAssertEqual(model3.countUniqueVarInConditions(with: .t1), ["x": 2, "y": 0, "z": 3])
+    XCTAssertEqual(model3.countUniqueVarInConditions(for: .t1), ["x": 2, "y": 0, "z": 3])
     
   }
   

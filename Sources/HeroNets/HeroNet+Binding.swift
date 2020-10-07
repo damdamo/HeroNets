@@ -45,7 +45,6 @@ extension HeroNet {
     // The name of a variable is as follows: nameOfThePlace_variable (e.g.: "p1_x")
     for (place,vars) in renameSortKeys {
       values = marking[place].multisetToArray()
-      print(vars)
       pointer = fireableBindings(factory: factory, vars: vars, values: values, initPointer: pointer)
     }
     
@@ -79,7 +78,7 @@ extension HeroNet {
   
   func sortPlacesKeys(for transition: TransitionType) -> Array<(PlaceType, Array<String>)> {
     
-    let countVar = countUniqueVarInConditions(with: transition)
+    let countVar = countUniqueVarInConditions(for: transition)
     
 //    guard !countVar.isEmpty else {
 //      return nil
@@ -125,7 +124,7 @@ extension HeroNet {
   /// Use guards to determine the number of apparition of a variable such that a variable is the only variable in a condition and repeat it for each condition.
   /// E.g.: [("$x", "$y"), ("$x","$x+4"), ("$z", "1")] -> ["x": 1, "y": 0, "z": 1]
   /// We have 3 conditions, but only two have the same variable in each part of the condition.
-  func countUniqueVarInConditions(with transition: TransitionType) -> [String: Int] {
+  func countUniqueVarInConditions(for transition: TransitionType) -> [String: Int] {
     
     var countVar: [String: Int] = [:]
     // Return a list of all variables on the arcs for a specific transition
@@ -140,26 +139,62 @@ extension HeroNet {
     }
     
     // Count the number of time where only one variable is present in a condition for all conditions
-    var countVarTemp: [String: Int] = [:]
+    var listCurrentVars: [String] = []
     var s: String
     if let cond = guards[transition] {
       for c in cond {
         s = "\(c.e1) \(c.e2)"
         for v in listVariables {
           if s.contains("$\(v)") {
-            if countVarTemp[v] == nil {
-              countVarTemp[v] = 1
-            } else {
-              countVarTemp[v]! += 1
+            if !listCurrentVars.contains(v) {
+              listCurrentVars.append(v)
             }
           }
         }
-        if countVarTemp.count == 1 {
-          countVar[countVarTemp.first!.key]! += 1
+        if listCurrentVars.count == 1 {
+          countVar[listCurrentVars[0]]! += 1
         }
-        countVarTemp = [:]
+        listCurrentVars = []
       }
     }
     return countVar
   }
+  
+  func isolateConditionsInGuard(for transition: TransitionType) -> [String: [Condition]] {
+    
+    var listVariables: [String] = []
+    var res: [String: [Condition]] = [:]
+    var s: String = ""
+    
+    if let inputTransition = input[transition] {
+      for (_, vars) in inputTransition {
+        listVariables.append(contentsOf: vars)
+        for v in vars {
+          res[v] = []
+        }
+      }
+    }
+    
+    var listCurrentVars: [String] = []
+    if let cond = guards[transition] {
+      for c in cond {
+        s = "\(c.e1) \(c.e2)"
+        for v in listVariables {
+          if s.contains("$\(v)") {
+            if !listCurrentVars.contains(v) {
+              listCurrentVars.append(v)
+            }
+          }
+        }
+        if listCurrentVars.count == 1 {
+          res[listCurrentVars[0]]!.append(c)
+        }
+        listCurrentVars = []
+      }
+    }
+    
+    return res
+  }
+  
+  
 }
