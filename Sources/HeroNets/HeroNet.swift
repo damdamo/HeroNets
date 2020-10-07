@@ -246,14 +246,14 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
     }
     
-    if checkGuards(transition: transition, from: marking, with: binding) {
+    if checkGuards(transition: transition, with: binding) {
       return true
     }
     return false
   }
   
   // Check guards of a transition
-  public func checkGuards(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
+  public func checkGuards(transition: TransitionType, with binding: [String: String]) -> Bool {
     var lhs: String = ""
     var rhs: String = ""
     if let conditions = guards[transition] {
@@ -275,6 +275,30 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     
     return true
   }
+  
+//  // Check guards of a transition
+//  public func checkConditions(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
+//    var lhs: String = ""
+//    var rhs: String = ""
+//    if let conditions = guards[transition] {
+//      for condition in conditions {
+//        lhs = bindingSubstitution(str: condition.e1, binding: binding)
+//        rhs = bindingSubstitution(str: condition.e2, binding: binding)
+//        // Check if the both term are equals, thanks to the syntactic equivalence !
+//        // Moreover, allows to compare functions in a syntactic way
+//        if lhs != rhs {
+//          let v1 = try! interpreter.eval(string: lhs)
+//          let v2 = try! interpreter.eval(string: rhs)
+//          // If values are different and not are signature functions
+//          if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
+//            return false
+//          }
+//        }
+//      }
+//    }
+//
+//    return true
+//  }
   
   /// Substitute variables inside a string by corresponding binding
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
