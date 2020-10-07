@@ -50,7 +50,31 @@ extension HeroNet {
     return MFDD(pointer: pointer!, factory: factory)
   }
   
-  func orderPlacesKeys(for transition: TransitionType) -> Array<(PlaceType, Array<(String, Int)>)>? {
+  // Rename keys which are ordered in an "optimal" way to keep an order for MFDD
+  func renameKeys(for arr: Array<(PlaceType, Array<String>)>) -> Array<(PlaceType, Array<String>)>? {
+    var nbPlace = arr.count-1
+    var nbVar = -1
+    var res: Array<(PlaceType, Array<String>)> = []
+    var subArray: Array<String> = []
+    
+    for (_ , vars) in arr {
+      nbVar += vars.count
+    }
+    
+    for (place, couple) in arr {
+      for el in couple {
+        subArray.append("\(nbPlace)\(nbVar)_\(el)")
+        nbVar -= 1
+      }
+      res.append((place, subArray))
+      subArray = []
+      nbPlace -= 1
+    }
+    
+    return res
+  }
+  
+  func sortPlacesKeys(for transition: TransitionType) -> Array<(PlaceType, Array<String>)>? {
     
     let countVar = countUniqueVarInConditions(with: transition)
     
@@ -60,6 +84,8 @@ extension HeroNet {
     
     var dicTemp: [String: Int]
     var placeCountVariables: [PlaceType: Array<(String, Int)>] = [:]
+    var res: Array<(PlaceType, Array<String>)> = []
+    var subArray: Array<String> = []
     
     // First, sort variable in each place
     // e.g.: sort(p1: [x:2, y:3, z:1]) -> p1: [(z,1), (x,2), (y,3)]
@@ -75,9 +101,20 @@ extension HeroNet {
     
     // Ordering places by the max of each tuple
     // e.g.: sort(p1: [(x, 3), (y,2)], p2: [(z,1)]) -> [(p2,[(z,1)]), (p1,[(x, 3), (y,2)])]
-    return placeCountVariables.sorted(by: {
-      $0.value.max(by: {$0.1 < $1.1})! < $1.value.max(by: {$0.1 < $1.1})!
+    // For each place, we get the maximum value of all variable to compare with other places. E.g.: $0.1 = (x,3), $1.1 = (y,2), max((x,3),(y,2)) -> (x,3) and we keep only the value. (x,3).1 -> 3
+    let partialRes = placeCountVariables.sorted(by: {
+      $0.value.max(by: {$0.1 < $1.1})!.1 < $1.value.max(by: {$0.1 < $1.1})!.1
     })
+    
+    for (key, couple) in partialRes {
+      for (v,_) in couple {
+        subArray.append(v)
+      }
+      res.append((key,subArray))
+      subArray = []
+    }
+    
+    return res
     
   }
   
@@ -87,16 +124,19 @@ extension HeroNet {
   /// We have 3 conditions, but only two have the same variable in each part of the condition.
   func countUniqueVarInConditions(with transition: TransitionType) -> [String: Int] {
     
+    var countVar: [String: Int] = [:]
     // Return a list of all variables on the arcs for a specific transition
     var listVariables: [String] = []
     if let inputTransition = input[transition] {
       for (_, vars) in inputTransition {
         listVariables.append(contentsOf: vars)
+        for v in vars {
+          countVar[v] = 0
+        }
       }
     }
     
     // Count the number of time where only one variable is present in a condition for all conditions
-    var countVar: [String: Int] = [:]
     var countVarTemp: [String: Int] = [:]
     var s: String
     if let cond = guards[transition] {
@@ -112,11 +152,7 @@ extension HeroNet {
           }
         }
         if countVarTemp.count == 1 {
-          if countVar[countVarTemp.first!.key] == nil {
-            countVar[countVarTemp.first!.key] = 1
-          } else {
-            countVar[countVarTemp.first!.key]! += 1
-          }
+          countVar[countVarTemp.first!.key]! += 1
         }
         countVarTemp = [:]
       }
