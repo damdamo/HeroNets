@@ -31,7 +31,7 @@ extension HeroNet {
     
     for i in values {
       if checkGuards(conditions: conditions, with: [keyClear:i]) {
-        take[i] = fireableBindings(factory: factory, vars: Array(vars.dropFirst()), values: values.filter({$0 != i}), conditionsForVars: conditionsForVars, initPointer: initPointer)
+        take[i] = fireableBindings(factory: factory, vars: Array(vars.dropFirst()), values: Array(values.dropFirst()), conditionsForVars: conditionsForVars, initPointer: initPointer)
       }
     }
     return factory.node(key: key, take: take, skip: factory.zero.pointer)
