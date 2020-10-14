@@ -40,7 +40,6 @@ final class HeroNetsBindingsTests: XCTestCase {
     
     let bindings1: MFDD<String, String> = model.fireableBindings(for: .t1, with: marking1, factory: factory)!
         
-    print(bindings1.map({model.clearDicVar($0)}))
     XCTAssertEqual(Set(bindings1.map({model.clearDicVar($0)})), Set([["z": "2", "x": "1", "y": "1"], ["y": "1", "z": "1", "x": "1"]]))
     
   }
@@ -82,7 +81,6 @@ final class HeroNetsBindingsTests: XCTestCase {
 
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
-    print(try! interpreter.eval(string: "eq(2, 2)"))
     
     let conditionListCurry: [Condition] = [Condition("$f","div")]
     let conditionListApply: [Condition] = [Condition("eq($y,0)","false")]
@@ -99,17 +97,14 @@ final class HeroNetsBindingsTests: XCTestCase {
     )
     
     let factory = MFDDFactory<String,String>()
-    let marking1 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["1", "1", "2", "3", "4"], .p2: [], .res: []])
-    let marking2 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["0", "1", "1", "2", "3", "4"], .p2: ["div(2)"], .res: []])
+    let marking1 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["1", "1", "2"], .p2: [], .res: []])
+    let marking2 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["0", "1"], .p2: ["div(2)"], .res: []])
     
     let bindings1: MFDD<String, String> = model.fireableBindings(for: .curry, with: marking1, factory: factory)!
-//    let bindings2: MFDD<String, String> = model.fireableBindings(for: .apply, with: marking2, factory: factory)!
+    let bindings2: MFDD<String, String> = model.fireableBindings(for: .apply, with: marking2, factory: factory)!
     
-//    print(bindings1.map({model.clearDicVar($0)}))
-//    print(bindings2.map({model.clearDicVar($0)}))
-
-        
-//    XCTAssertEqual(Set(bindings1.map({model.clearDicVar($0)})), Set([["x": "1", "z": "1", "y": "2"], ["z": "2", "x": "1", "y": "2"]]))
+    XCTAssertEqual(Set(bindings1.map({model.clearDicVar($0)})), Set([["f": "div", "x": "1"], ["f": "div", "x": "2"]]))
+    XCTAssertEqual(Set(bindings2.map({model.clearDicVar($0)})), Set([["y": "1", "g": "div(2)"]]))
 
   }
   
