@@ -28,15 +28,16 @@ final class HeroNetsTests: XCTestCase {
       .pre(from: .p1, to: .t1, labeled: ["x","y"]),
       .pre(from: .p2, to: .t1, labeled: ["z"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-      guards: [.t1: [Condition("$x","$z")], .t2: nil],
+      guards: [.t1: [Condition("$x","$z"), Condition("$x","$y-1")], .t2: nil],
       interpreter: interpreter
     )
     
     let marking1 = Marking<P>([.p1: ["1","2","3","4"], .p2: ["1", "1", "2", "3", "4"], .p3: []])
     
-    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"1", "y":"4", "z": "1"]), true)
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"2", "y":"3", "z": "2"]), true)
     XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"1", "y":"4", "z": "2"]), false)
     XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"6", "y":"4", "z": "6"]), false)
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"1", "y":"2", "z": "1"]), true)
   }
   
   // Test of a simple Hero net

@@ -22,15 +22,12 @@ extension HeroNet {
     let key = vars.first!
     let keyClear = clearVar(key)
     var conditions: [Condition]
-    print(conditionsForVars)
-    print(key)
     
     if let c = conditionsForVars[keyClear] {
       conditions = c
     } else {
       conditions = []
     }
-    print(conditions)
     
     for i in values {
       if checkGuards(conditions: conditions, with: [keyClear:i]) {
@@ -66,7 +63,25 @@ extension HeroNet {
       pointer = fireableBindings(factory: factory, vars: vars, values: values, conditionsForVars: conditions, initPointer: pointer)
     }
     
-    return MFDD(pointer: pointer!, factory: factory)
+    var res = MFDD(pointer: pointer!, factory: factory)
+    var dicClear: [String:String] = [:]
+    // print(partialResult)
+    
+    if let condOthers = conditions["others"] {
+      if !condOthers.isEmpty {
+        for el in res {
+          for (k,v) in el {
+            dicClear[clearVar(k)] = v
+          }
+          if !checkGuards(conditions: condOthers, with: dicClear) {
+            res = res.subtracting(factory.encode(family: [el]))
+          }
+        }
+      }
+      return res
+    }
+    
+    return nil
   }
   
   // Rename keys which are ordered in an "optimal" way to keep an order for MFDD
@@ -178,6 +193,9 @@ extension HeroNet {
     return countVar
   }
   
+  /// Isolate each conditions depending variables.
+  /// Goal is to keep all conditions where there is an only variables, to simplify the construction of binding
+  /// E.g.: [cond("x", 2), cond("y", "x"), ...] --> ["x": [cond("x",2)], "y": [], "z": [], "others": [cond("y","x")]]
   func isolateConditionsInGuard(for transition: TransitionType) -> [String: [Condition]] {
     
     var listVariables: [String] = []
@@ -192,6 +210,7 @@ extension HeroNet {
         }
       }
     }
+    res["others"] = []
     
     var listCurrentVars: [String] = []
     if let cond = guards[transition] {
@@ -206,6 +225,8 @@ extension HeroNet {
         }
         if listCurrentVars.count == 1 {
           res[listCurrentVars[0]]!.append(c)
+        } else {
+          res["others"]!.append(c)
         }
         listCurrentVars = []
       }
@@ -222,6 +243,15 @@ extension HeroNet {
     }
     let vTab: [String] = v.components(separatedBy: "_")
     return vTab[vTab.count-1]
+  }
+  
+  // Clear all variables in a string to string dictionary, using clearVar
+  func clearDicVar(_ dicVar: [String:String]) -> [String:String] {
+    var res: [String:String] = [:]
+    for (k,v) in dicVar {
+      res[clearVar(k)] = v
+    }
+    return res
   }
   
 }

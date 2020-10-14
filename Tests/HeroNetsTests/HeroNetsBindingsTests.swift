@@ -25,7 +25,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Condition] = [Condition("$x", "1"), Condition("$x", "$y")]
+    let conditionList: [Condition] = [Condition("$x","1"), Condition("$x", "$y-1")]
     
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["x","y"]),
@@ -37,29 +37,11 @@ final class HeroNetsBindingsTests: XCTestCase {
     //   func fireableBindings(factory: MFDDFactory<KeyMFDD, ValueMFDD>, vars: [KeyMFDD], values: [ValueMFDD]) -> MFDD<KeyMFDD,ValueMFDD>.Pointer? {
 
     let factory = MFDDFactory<String,String>()
-    let marking1 = Marking<P>([.p1: ["1","2","5"], .p2: ["1", "2"], .p3: []])
+    let marking1 = Marking<P>([.p1: ["1","1","2","5"], .p2: ["1", "2"], .p3: []])
     
-    var x: MFDD<String, String> = model.fireableBindings(for: .t1, with: marking1, factory: factory)!
-    
-    print(x)
-//    print(model.clearVar("00_x"))
-    
-//    let lol1 = model.sortPlacesKeys(for: .t1)
-//    let lol2 = model.renameKeys(for: lol1)
-//    print(lol2)
-    
-//    print(x.factory.morphisms.filter(excluding: ["x": ["3"]]))
-//    print(x.factory.morphisms.insert(assignments: ["p1_x": "42"]))
-//    morphismFactory.filter(excluding: ["x": ["3"]])
-//    print(x.factory.morphisms.union(x, x))
-//    x.filter(excluding: ["x":"3"])
-//    print(x.count)
-//    print(x)
-//    let morphism = factory.morphisms.filter(excluding: [(key: "p1_x", values: ["2"])])
-//    x = morphism.apply(on: x)
-//    print(x.count)
-    
-    // model.orderPlacesKeys(for: .t1)
+    let bindings1: MFDD<String, String> = model.fireableBindings(for: .t1, with: marking1, factory: factory)!
+        
+    XCTAssertEqual(Set(bindings1.map({model.clearDicVar($0)})), Set([["x": "1", "z": "1", "y": "2"], ["z": "2", "x": "1", "y": "2"]]))
 
   }
   
@@ -107,6 +89,7 @@ final class HeroNetsBindingsTests: XCTestCase {
   
   static var allTests = [
     ("testBinding", testBinding),
+    ("testSortKeys", testSortKeys),
   ]
 }
 
