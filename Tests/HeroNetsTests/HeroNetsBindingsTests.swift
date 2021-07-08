@@ -39,6 +39,8 @@ final class HeroNetsBindingsTests: XCTestCase {
     let marking1 = Marking<P>([.p1: ["1","1","2","5"], .p2: ["1", "2"], .p3: []])
     
     let bindings1: MFDD<String, String> = model.fireableBindings(for: .t1, with: marking1, factory: factory)!
+    
+    print(bindings1)
         
     XCTAssertEqual(Set(bindings1.map({model.clearDicVar($0)})), Set([["z": "2", "x": "1", "y": "1"], ["y": "1", "z": "1", "x": "1"]]))
     

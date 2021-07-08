@@ -186,38 +186,40 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       for place in PlaceType.allCases {
         inputMarking[place] = [:]
       }
-      for (key,values) in pre {
-        for val in values {
-          multiset.insert(binding[val]!)
+      // In the case of pre, expressions is just a list of variables
+      for (place,expressions) in pre {
+        for var_ in expressions {
+          multiset.insert(binding[var_]!)
         }
         // Create a multiset for each place of input arcs of the transition
-        inputMarking[key] = multiset
+        inputMarking[place] = multiset
         multiset = [:]
       }
     }
     
     // Interpreter evaluate terms which are expressed by String
     var valOutput: String = ""
-    var valSubs: String = ""
+    var exprSubs: String = ""
     // Compute result of input arcs
     if let post = output[transition] {
       var multiset: Multiset<String> = [:]
       for place in PlaceType.allCases {
         outputMarking[place] = [:]
       }
-      for (key,values) in post {
-        for val in values {
-          valSubs = bindingSubstitution(str: val, binding: binding)
-          valOutput = "\(try! interpreter.eval(string: valSubs))"
+      // In the case of post, expressions is a list of strings containing variables
+      for (place,expressions) in post {
+        for expr in expressions {
+          exprSubs = bindingSubstitution(str: expr, binding: binding)
+          valOutput = "\(try! interpreter.eval(string: exprSubs))"
           // In the case or we get the signature of a function, we just return the function name
           if valOutput.contains("function") {
-            multiset.insert(valSubs)
+            multiset.insert(exprSubs)
           } else {
             multiset.insert(valOutput)
           }
         }
         // Create a multiset for each place of output arcs of the transition
-        outputMarking[key] = multiset
+        outputMarking[place] = multiset
         multiset = [:]
       }
     }
@@ -231,7 +233,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
     var multiset: Multiset<String>
     if let pre = input[transition] {
-      for (key,variables) in pre {
+      for (place,variables) in pre {
         multiset = [:]
         for var_ in variables {
           if let varSubs = binding[var_] {
@@ -240,7 +242,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
             return false
           }
         }
-        guard multiset <= marking[key] else {
+        guard multiset <= marking[place] else {
           return false
         }
       }

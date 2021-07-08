@@ -4,66 +4,7 @@ extension HeroNet {
   
   typealias KeyMFDD = String
   typealias ValueMFDD = String
-  
-//  func fireableBindingsNaive(vars: ArraySlice<String>, values: ArraySlice<String>) -> [[String]] {
-//  
-//    if vars.count == 0 || values.count == 0 {
-//        return [[]]
-//    }
-//
-//    var ret: [[String]] = []
-//    var arr: [String] = []
-//    var subcombos: [[String]] = []
-//
-//    for el in values {
-//      let head = [el]
-//      arr = Array(values)
-//      arr.remove(at: arr.firstIndex(of: el)!)
-//      subcombos = fireableBindingsNaive(vars: vars.dropFirst(), values: ArraySlice(arr))
-//      ret += subcombos.map { head + $0 }
-//    }
-//
-//    return ret
-//  }
-//
-//  func fireableBindingsNaive(for transition: TransitionType, with marking: Marking<PlaceType>) -> [[String]] {
-//
-//    var res: [[String]] =  []
-//    var resFireableBindings: [[String]] = []
-//    var storeAppendList: [[String]] = []
-//    var values: [String] = []
-//    let conditions = isolateConditionsInGuard(for: transition)
-//
-//    if let inputPlaces = input[transition] {
-//      for (place,vars) in inputPlaces {
-//        values = marking[place].multisetToArray()
-//        resFireableBindings = fireableBindingsNaive(vars: ArraySlice(vars), values: ArraySlice(values))
-//        if res.count == 0 {
-//          res = resFireableBindings
-//        } else {
-//          for el in res {
-//            storeAppendList += resFireableBindings.map { el + $0 }
-//          }
-//          res = storeAppendList
-//        }
-//      }
-//    }
-//
-////    if let condOthers = conditions["others"] {
-////      if !condOthers.isEmpty {
-////        for el in res {
-////          for (k,v) in el {
-////            dicClear[clearVar(k)] = v
-////          }
-////          if !checkGuards(conditions: condOthers, with: dicClear) {
-////            res = res.subtracting(factory.encode(family: [el]))
-////          }
-////        }
-////      }
-//
-//    return res
-//  }
-  
+    
   func fireableBindings(factory: MFDDFactory<KeyMFDD, ValueMFDD>, vars: [KeyMFDD], values: [ValueMFDD], conditionsForVars: [String: [Condition]], initPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
     var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
     if vars.count == 0 {
@@ -313,3 +254,62 @@ extension HeroNet {
   }
   
 }
+
+//  func fireableBindingsNaive(vars: ArraySlice<String>, values: ArraySlice<String>) -> [[String]] {
+//
+//    if vars.count == 0 || values.count == 0 {
+//        return [[]]
+//    }
+//
+//    var ret: [[String]] = []
+//    var arr: [String] = []
+//    var subcombos: [[String]] = []
+//
+//    for el in values {
+//      let head = [el]
+//      arr = Array(values)
+//      arr.remove(at: arr.firstIndex(of: el)!)
+//      subcombos = fireableBindingsNaive(vars: vars.dropFirst(), values: ArraySlice(arr))
+//      ret += subcombos.map { head + $0 }
+//    }
+//
+//    return ret
+//  }
+//
+//  func fireableBindingsNaive(for transition: TransitionType, with marking: Marking<PlaceType>) -> [[String]] {
+//
+//    var res: [[String]] =  []
+//    var resFireableBindings: [[String]] = []
+//    var storeAppendList: [[String]] = []
+//    var values: [String] = []
+//    let conditions = isolateConditionsInGuard(for: transition)
+//
+//    if let inputPlaces = input[transition] {
+//      for (place,vars) in inputPlaces {
+//        values = marking[place].multisetToArray()
+//        resFireableBindings = fireableBindingsNaive(vars: ArraySlice(vars), values: ArraySlice(values))
+//        if res.count == 0 {
+//          res = resFireableBindings
+//        } else {
+//          for el in res {
+//            storeAppendList += resFireableBindings.map { el + $0 }
+//          }
+//          res = storeAppendList
+//        }
+//      }
+//    }
+//
+////    if let condOthers = conditions["others"] {
+////      if !condOthers.isEmpty {
+////        for el in res {
+////          for (k,v) in el {
+////            dicClear[clearVar(k)] = v
+////          }
+////          if !checkGuards(conditions: condOthers, with: dicClear) {
+////            res = res.subtracting(factory.encode(family: [el]))
+////          }
+////        }
+////      }
+//
+//    return res
+//  }
