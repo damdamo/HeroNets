@@ -177,7 +177,7 @@ extension HeroNet {
       for c in cond {
         s = "\(c.e1) \(c.e2)"
         for v in listVariables {
-          if s.contains("$\(v)") {
+          if s.contains("\(v)") {
             if !listCurrentVars.contains(v) {
               listCurrentVars.append(v)
             }

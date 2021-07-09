@@ -25,8 +25,8 @@ final class HeroNetsTests: XCTestCase {
     try! interpreter.loadModule(fromString: module)
     
     let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: ["x","y"]),
-      .pre(from: .p2, to: .t1, labeled: ["z"]),
+      .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
+      .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
       guards: [.t1: [Condition("$x","$z"), Condition("$x","$y-1")], .t2: nil],
       interpreter: interpreter
@@ -34,10 +34,10 @@ final class HeroNetsTests: XCTestCase {
     
     let marking1 = Marking<P>([.p1: ["1","2","3","4"], .p2: ["1", "1", "2", "3", "4"], .p3: []])
     
-    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"2", "y":"3", "z": "2"]), true)
-    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"1", "y":"4", "z": "2"]), false)
-    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"6", "y":"4", "z": "6"]), false)
-    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["x":"1", "y":"2", "z": "1"]), true)
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["$x":"2", "$y":"3", "$z": "2"]), true)
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["$x":"1", "$y":"4", "$z": "2"]), false)
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["$x":"6", "$y":"4", "$z": "6"]), false)
+    XCTAssertEqual(model.isFireable(transition: .t1, from: marking1, with: ["$x":"1", "$y":"2", "$z": "1"]), true)
   }
   
   // Test of a simple Hero net
@@ -67,8 +67,8 @@ final class HeroNetsTests: XCTestCase {
     try! interpreter.loadModule(fromString: module)
     
     let model = HeroNet<P1, T1>(
-      .pre(from: .op, to: .apply, labeled: ["f"]),
-      .pre(from: .n, to: .apply, labeled: ["x","y"]),
+      .pre(from: .op, to: .apply, labeled: ["$f"]),
+      .pre(from: .n, to: .apply, labeled: ["$x","$y"]),
       .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
       .post(from: .apply, to: .op, labeled: ["$f"]),
       guards: [.apply: [Condition("$f","add")]],
@@ -78,9 +78,9 @@ final class HeroNetsTests: XCTestCase {
     let marking1 = Marking<P1>([.op: ["add","sub","mul","div"], .n: ["1", "1", "2", "3", "4"], .res: []])
     let marking2 = Marking<P1>([.op: ["add","sub","mul","div"], .n: ["1", "2", "3"], .res: ["5"]])
     
-    XCTAssertEqual(model.fire(transition: .apply, from: marking1, with: ["f": "add", "x": "1", "y": "4"]), marking2)
+    XCTAssertEqual(model.fire(transition: .apply, from: marking1, with: ["$f": "add", "$x": "1", "$y": "4"]), marking2)
     
-    XCTAssertEqual(model.fire(transition: .apply, from: marking1, with: ["f": "mul", "x": "1", "y": "4"]), nil)
+    XCTAssertEqual(model.fire(transition: .apply, from: marking1, with: ["$f": "mul", "$x": "1", "$y": "4"]), nil)
   }
   
   // Test application of curryfication (partial application)
@@ -117,10 +117,10 @@ final class HeroNetsTests: XCTestCase {
     try! interpreter.loadModule(fromString: module)
     
     let model = HeroNet<P2, T2>(
-      .pre(from: .op, to: .curry, labeled: ["f"]),
-      .pre(from: .p1, to: .curry, labeled: ["x"]),
-      .pre(from: .p1, to: .apply, labeled: ["y"]),
-      .pre(from: .p2, to: .apply, labeled: ["g"]),
+      .pre(from: .op, to: .curry, labeled: ["$f"]),
+      .pre(from: .p1, to: .curry, labeled: ["$x"]),
+      .pre(from: .p1, to: .apply, labeled: ["$y"]),
+      .pre(from: .p2, to: .apply, labeled: ["$g"]),
       .post(from: .curry, to: .p2, labeled: ["$f($x)"]),
       .post(from: .apply, to: .res, labeled: ["$g($y)"]),
       guards: [.curry: nil, .apply: nil],
@@ -128,12 +128,12 @@ final class HeroNetsTests: XCTestCase {
     )
     
     let marking1 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["1", "1", "2", "3", "4"], .p2: [], .res: []])
-    let marking1AfterFiringCurry = model.fire(transition: .curry, from: marking1, with: ["f": "mul", "x": "4"])
+    let marking1AfterFiringCurry = model.fire(transition: .curry, from: marking1, with: ["$f": "mul", "$x": "4"])
     let marking1AfterFiringCurryExpected = Marking<P2>([.op: ["add","sub","div"], .p1: ["1", "1", "2", "3"], .p2: ["mul(4)"], .res: []])
     
     XCTAssertEqual(marking1AfterFiringCurry, marking1AfterFiringCurryExpected)
     
-    let marking1AfterFiringApply = model.fire(transition: .apply, from: marking1AfterFiringCurry!, with: ["g": "mul(4)", "y": "2"])
+    let marking1AfterFiringApply = model.fire(transition: .apply, from: marking1AfterFiringCurry!, with: ["$g": "mul(4)", "$y": "2"])
     let marking1AfterFiringApplyExpected = Marking<P2>([.op: ["add","sub","div"], .p1: ["1", "1", "3"], .p2: [], .res: ["8"]])
     
     XCTAssertEqual(marking1AfterFiringApply, marking1AfterFiringApplyExpected)

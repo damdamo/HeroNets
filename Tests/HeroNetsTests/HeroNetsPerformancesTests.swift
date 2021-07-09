@@ -49,8 +49,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
 //    let conditionList: [Condition]? = [Condition("add($a,5)","10"), Condition("eq($c,0)", "false"), Condition("mod($g($b,$c),2)", "0")]
 
     let model = HeroNet<P1, T1>(
-      .pre(from: .op, to: .apply, labeled: ["f","g"]),
-      .pre(from: .n, to: .apply, labeled: ["a","b", "c", "d"]),
+      .pre(from: .op, to: .apply, labeled: ["$f","$g"]),
+      .pre(from: .n, to: .apply, labeled: ["$a","$b", "$c", "$d"]),
       .post(from: .apply, to: .res, labeled: ["$f($a,$b)"]),
       .post(from: .apply, to: .op, labeled: ["$f", "$g"]),
       guards: [.apply: conditionList],
@@ -68,7 +68,7 @@ final class HeroNetsPerformancesTests: XCTestCase {
     let marking1 = Marking<P1>([.op: ["add","sub","mul","div"], .n: seq, .res: []])
 
 
-    var s: Stopwatch = Stopwatch()
+    let s: Stopwatch = Stopwatch()
 
     let x = model.fireableBindings(for: .apply, with: marking1, factory: factory)!
     print(x.count)

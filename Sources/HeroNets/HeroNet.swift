@@ -269,7 +269,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     for condition in conditions {
       lhs = bindingSubstitution(str: condition.e1, binding: binding)
       rhs = bindingSubstitution(str: condition.e2, binding: binding)
-      // Check if the both term are equals, thanks to the syntactic equivalence !
+      // Check if both term are equals, thanks to the syntactic equivalence !
       // Moreover, allows to compare functions in a syntactic way
       if lhs != rhs {
         let v1 = try! interpreter.eval(string: lhs)
@@ -289,7 +289,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public func bindingSubstitution(str: String, binding: [String: String]) -> String {
     var res: String = str
     for el in binding {
-      res = res.replacingOccurrences(of: "$\(el.key)", with: "\(el.value)")
+      res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")
     }
     return res
   }
