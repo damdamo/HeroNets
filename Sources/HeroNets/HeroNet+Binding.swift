@@ -56,7 +56,7 @@ extension HeroNet {
   
   func constructMFDD(keys: [Key], exprs: [String], factory: MFDDFactory<KeyMFDD, ValueMFDD>) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
     var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
-    if keys.count <= 1 {
+    if keys.count == 0 {
       return factory.one.pointer
     } else {
       for el in exprs {
