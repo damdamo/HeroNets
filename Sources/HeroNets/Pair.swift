@@ -12,3 +12,9 @@ struct Pair<T>: Hashable where T: Hashable {
     return lhs.l == rhs.l && lhs.r == rhs.r
   }
 }
+
+extension Pair: CustomStringConvertible {
+  var description: String {
+    return "(\(self.l),\(self.r))"
+  }
+}

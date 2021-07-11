@@ -3,38 +3,8 @@ import DDKit
 /// A Hero net binding computes all the possibles marking for a given  transition
 extension HeroNet {
   
-  typealias KeyMFDD = String
+  typealias KeyMFDD = Key
   typealias ValueMFDD = String
-  
-  /// A Key is a requires structure to satisfay MFDD
-  /// A key needs to  be comparable w.r.t the MFDD (k1 < k2 < ...) and hashable
-  /// The order key is not important but need to be created and constant
-  /// The order on String cannot be used because of the name
-  /// that are chosen by the creator of the Hero nets.
-  /// The Key contains the name (variable name)
-  /// and a list of pairs where each tuple represents a relation of comparison
-  /// between both values.
-  /// Pair(l,r) => l < r
-  struct Key: Comparable &  Hashable {
-
-    public init (name: String, couple: [Pair<String>]) {
-      self.name = name
-      self.couple = couple
-    }
-    
-    static func == (lhs: Key, rhs: Key) -> Bool {
-      return lhs.name == rhs.name
-    }
-
-    let name: String
-    let couple: [Pair<String>]
-    
-    static func < (lhs: Key, rhs: Key) -> Bool {
-      return lhs.couple.contains (where: { pair in
-        return (pair.l == lhs.name && pair.r == rhs.name)
-      })
-    }
-  }
   
   // createOrder creates a list of pair from a list of string
   // to represent a total order relation. Pair(l,r) => l < r
@@ -48,22 +18,59 @@ extension HeroNet {
       return r
   }
   
-  func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>, factory: MFDDFactory<KeyMFDD, ValueMFDD>) {
+  func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>) {
     
     // All variables imply in the transition firing
     var variableList: [String] = []
-    // All possible values that can be taken by each variable
+    // All possible values that can be taken by each variable (then key)
     var mapVarToExpr: [[String]: Multiset<String>] = [:]
+    var mapKeyToExpr: [[Key]: Multiset<String>] = [:]
     if let pre = input[transition] {
       for (place, labels) in pre {
         mapVarToExpr[labels] = marking[place]
         variableList.append(contentsOf: labels)
       }
     }
-    print(mapVarToExpr)
-    print(variableList)
-  }
     
+    let totalOrder = createTotalOrder(keys: variableList)
+    var listKey: [Key] = []
+    for (vars, values) in mapVarToExpr {
+      for var_ in vars {
+        listKey.append(Key(name: var_, couple: totalOrder))
+      }
+      mapKeyToExpr[listKey] = values
+      listKey = []
+    }
+    let factory = MFDDFactory<KeyMFDD, ValueMFDD>()
+    
+    for (keys, exprs) in mapKeyToExpr {
+      let test = constructMFDD(keys: keys, exprs: exprs.multisetToArray(), factory: factory)
+      print(MFDD(pointer: test, factory: factory))
+    }
+  }
+  
+//  func constructMFDD(keys: [Key], exprs: [String]) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+//    var pointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil
+//
+//  }
+  
+  func constructMFDD(keys: [Key], exprs: [String], factory: MFDDFactory<KeyMFDD, ValueMFDD>) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+    var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
+    if keys.count <= 1 {
+      return factory.one.pointer
+    } else {
+      for el in exprs {
+        var copyExprs: [String] = exprs
+        let index = copyExprs.firstIndex(where: {$0 == el})!
+        copyExprs.remove(at: index)
+        take[el] = constructMFDD(
+          keys: Array(keys.dropFirst()),
+          exprs: copyExprs,
+          factory: factory)
+      }
+    }
+    return factory.node(key: keys.first!, take: take, skip: factory.zero.pointer)
+  }
 //  func fireableBindings(factory: MFDDFactory<KeyMFDD, ValueMFDD>, vars: [KeyMFDD], values: [ValueMFDD], conditionsForVars: [String: [Condition]], initPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
 //    var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
 //    if vars.count == 0 {
