@@ -70,8 +70,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
 
     let s: Stopwatch = Stopwatch()
 
-    let x = model.fireableBindings(for: .apply, with: marking1, factory: factory)!
-    print(x.count)
+//    let x = model.fireableBindings(for: .apply, with: marking1, factory: factory)!
+//    print(x.count)
 //    print(x)
 
     print("----------------------------------")
