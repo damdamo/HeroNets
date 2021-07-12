@@ -18,7 +18,15 @@ extension HeroNet {
       return r
   }
   
-  func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>) {
+  /// Creates the fireable bindings of a transition.
+  ///
+  /// - Parameters:
+  ///   - transition: The transition for which we want to compute all bindings
+  ///   - marking: The marking which is the initial state of the net
+  ///   - factory: The factory to construct the MFDD
+  /// - Returns:
+  ///   The MFDD which represents all fireable bindings.
+  func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>) -> MFDD<KeyMFDD,ValueMFDD> {
     
     // All variables imply in the transition firing
     var variableList: [String] = []
@@ -42,22 +50,30 @@ extension HeroNet {
       listKey = []
     }
     let factory = MFDDFactory<KeyMFDD, ValueMFDD>()
+    var mfddPointer: MFDD<KeyMFDD, ValueMFDD>.Pointer = factory.one.pointer
     
-    for (keys, exprs) in mapKeyToExpr {
-      let test = constructMFDD(keys: keys, exprs: exprs.multisetToArray(), factory: factory)
-      print(MFDD(pointer: test, factory: factory))
+    // We sort the keys in the dictionnary to ensure that we construct the mfdd from the bottom to the top
+    for (keys, exprs) in mapKeyToExpr.sorted(by: {$0.key.first! > $1.key.first!}) {
+      mfddPointer = constructMFDD(keys: keys, exprs: exprs.multisetToArray(), factory: factory, initPointer: mfddPointer)
     }
+    return MFDD(pointer: mfddPointer, factory: factory)
   }
   
-//  func constructMFDD(keys: [Key], exprs: [String]) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
-//    var pointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil
-//
-//  }
-  
-  func constructMFDD(keys: [Key], exprs: [String], factory: MFDDFactory<KeyMFDD, ValueMFDD>) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+  /// Creates a MFDD pointer for a couple of keys and expressions.
+  /// It corresponds only to a single input arc that can contains multiple variables.
+  /// - Parameters:
+  ///   - keys: The label keys of an input arc
+  ///   - exprs: The expressions that can be taken by the variables.
+  ///   - factory: The factory to construct the MFDD
+  ///   - initPointer: The pointer which makes the relation between each input arc. The first  time the function is called, this value will be top (T) and the final getting result of this function will be used to next initPointer.
+  /// - Returns:
+  ///   A MFDD pointer that contains every valid possibilities for the given args.
+  func constructMFDD(keys: [Key], exprs: [String],
+                     factory: MFDDFactory<KeyMFDD, ValueMFDD>,
+                     initPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
     var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
     if keys.count == 0 {
-      return factory.one.pointer
+      return initPointer
     } else {
       for el in exprs {
         var copyExprs: [String] = exprs
@@ -66,11 +82,13 @@ extension HeroNet {
         take[el] = constructMFDD(
           keys: Array(keys.dropFirst()),
           exprs: copyExprs,
-          factory: factory)
+          factory: factory,
+          initPointer: initPointer)
       }
     }
     return factory.node(key: keys.first!, take: take, skip: factory.zero.pointer)
   }
+  
 //  func fireableBindings(factory: MFDDFactory<KeyMFDD, ValueMFDD>, vars: [KeyMFDD], values: [ValueMFDD], conditionsForVars: [String: [Condition]], initPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
 //    var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
 //    if vars.count == 0 {

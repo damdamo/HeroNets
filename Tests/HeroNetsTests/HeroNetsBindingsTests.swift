@@ -35,7 +35,6 @@ final class HeroNetsBindingsTests: XCTestCase {
        interpreter: interpreter
      )
  
-     let factory = MFDDFactory<String,String>()
      let marking1 = Marking<P>([.p1: ["1","1","2","5"], .p2: ["1", "2"], .p3: []])
  
      model.fireableBindings(for: .t1, with: marking1)
