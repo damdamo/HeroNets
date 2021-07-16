@@ -28,7 +28,7 @@ final class HeroNetsTests: XCTestCase {
       .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-      guards: [.t1: [Condition("$x","$z"), Condition("$x","$y-1")], .t2: nil],
+      guards: [.t1: [Pair("$x","$z"), Pair("$x","$y-1")], .t2: nil],
       interpreter: interpreter
     )
     
@@ -71,7 +71,7 @@ final class HeroNetsTests: XCTestCase {
       .pre(from: .n, to: .apply, labeled: ["$x","$y"]),
       .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
       .post(from: .apply, to: .op, labeled: ["$f"]),
-      guards: [.apply: [Condition("$f","add")]],
+      guards: [.apply: [Pair("$f","add")]],
       interpreter: interpreter
     )
     

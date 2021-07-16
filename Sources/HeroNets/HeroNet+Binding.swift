@@ -40,6 +40,8 @@ extension HeroNet {
       }
     }
     
+    variableList = optimizeKeyOrder(keyList: variableList, conditions: guards[transition], mapVarToExpr: mapVarToExpr)
+    
     let totalOrder = createTotalOrder(keys: variableList)
     var listKey: [Key] = []
     for (vars, values) in mapVarToExpr {
@@ -88,7 +90,80 @@ extension HeroNet {
     }
     return factory.node(key: keys.first!, take: take, skip: factory.zero.pointer)
   }
+ 
+  func optimizeKeyOrder(keyList: [String], conditions: [Pair<String>]?,
+                        mapVarToExpr: [[String]: Multiset<String>]) -> [String] {
+    
+    // If there is no conditions
+    guard let _ = conditions else {
+      return keyList
+    }
+    var keyWeights: [String: Int] = [:]
+    var countVarForCond: [[String: Bool]] = []
+    var countVar: [String: Bool] = [:]
+    
+    // Initialize the score to 1 for each variable
+    for key in keyList {
+      keyWeights[key] = 1
+    }
+    
+    // To know condition variables
+    for pair in conditions! {
+      for key in keyList {
+        countVar[key] = pair.l.contains(key) || pair.r.contains(key)
+      }
+      countVarForCond.append(countVar)
+      countVar = [:]
+    }
+    
+    // To compute a score
+    for  el in countVarForCond {
+      if el.count == 1 {
+        keyWeights[el.first!.key]! += 5
+      } else {
+        for key in keyList {
+          if el[key]! {
+            keyWeights[key]! += 1
+          }
+        }
+      }
+    }
+    
+    var listOfVarList: [[String]] = []
+    
+    for (key, _) in mapVarToExpr {
+      listOfVarList.append(key)
+    }
+    
+    // Order listOfVarList using variable weights.
+    // When a sub Array contains multiple variables, the weight corresponds to the variable with the maximum weight in this sub array
+    let res = listOfVarList.sorted(by: {
+      (varList1, varList2) -> Bool in
+      let max1 = varList1.map({
+        keyWeights[$0]!
+      }).max()!
+      let max2 = varList2.map({
+        keyWeights[$0]!
+      }).max()!
+      return max1 < max2
+    })
+    
+    return res.flatMap({return $0})
+  }
   
+}
+
+
+
+
+
+
+
+
+
+
+
+
 //  func fireableBindings(factory: MFDDFactory<KeyMFDD, ValueMFDD>, vars: [KeyMFDD], values: [ValueMFDD], conditionsForVars: [String: [Condition]], initPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer? = nil) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
 //    var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
 //    if vars.count == 0 {
@@ -336,5 +411,3 @@ extension HeroNet {
 //    }
 //    return res
 //  }
-  
-}

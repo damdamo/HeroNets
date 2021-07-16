@@ -122,7 +122,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public let output: [TransitionType: [PlaceType: ArcLabel]]
   
   /// Guards for transitions.
-  public let guards: TotalMap<TransitionType, [Condition]?>
+  public let guards: TotalMap<TransitionType, [Pair<String>]?>
   
   /// Interpreter needs to evaluate Hero terms.
   public let interpreter: Interpreter
@@ -134,7 +134,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///   - arcs: A sequence containing the descriptions of the Petri net's arcs.
   ///   - guards: Conditions to fire a transition
   ///   - interpreter: Interpreter needed to evaluate terms
-  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Condition]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
+  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Pair<String>]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
     var pre: [TransitionType: [PlaceType: ArcLabel]] = [:]
     var post: [TransitionType: [PlaceType: ArcLabel]] = [:]
 
@@ -156,7 +156,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///
   /// - Parameters:
   ///   - arcs: A variadic argument representing the descriptions of the Petri net's arcs.
-  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Condition]?],  interpreter: Interpreter) {
+  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<String>]?],  interpreter: Interpreter) {
     self.init(arcs, guards: guards, interpreter: interpreter)
   }
 
@@ -263,12 +263,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards of a transition
-  public func checkGuards(conditions: [Condition], with binding: [String: String]) -> Bool {
+  public func checkGuards(conditions: [Pair<String>], with binding: [String: String]) -> Bool {
     var lhs: String = ""
     var rhs: String = ""
     for condition in conditions {
-      lhs = bindingSubstitution(str: condition.e1, binding: binding)
-      rhs = bindingSubstitution(str: condition.e2, binding: binding)
+      lhs = bindingSubstitution(str: condition.l, binding: binding)
+      rhs = bindingSubstitution(str: condition.r, binding: binding)
       // Check if both term are equals, thanks to the syntactic equivalence !
       // Moreover, allows to compare functions in a syntactic way
       if lhs != rhs {

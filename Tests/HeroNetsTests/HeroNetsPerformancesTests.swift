@@ -45,8 +45,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
     try! interpreter.loadModule(fromString: module)
     // print(try! interpreter.eval(string: "eq(mod(25,5),0)"))
     
-    let conditionList: [Condition]? = [Condition("eq(mod($a,2),0)","true")]
-//    let conditionList: [Condition]? = [Condition("add($a,5)","10"), Condition("eq($c,0)", "false"), Condition("mod($g($b,$c),2)", "0")]
+    let conditionList: [Pair<String>]? = [Pair("eq(mod($a,2),0)","true")]
+//    let conditionList: [Pair<String>]? = [Pair("add($a,5)","10"), Pair("eq($c,0)", "false"), Pair("mod($g($b,$c),2)", "0")]
 
     let model = HeroNet<P1, T1>(
       .pre(from: .op, to: .apply, labeled: ["$f","$g"]),
