@@ -17,27 +17,29 @@ final class HeroNetsBindingsTests: XCTestCase {
   
   func testBinding1() {
  
-     let module: String = """
-     func add(_ x: Int, _ y: Int) -> Int ::
-       x + y
-     """
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
  
-     var interpreter = Interpreter()
-     try! interpreter.loadModule(fromString: module)
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
  
-     let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$y")]
+    let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$y")]
  
-     let model = HeroNet<P, T>(
-       .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
-       .pre(from: .p2, to: .t1, labeled: ["$z"]),
-       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-       guards: [.t1: conditionList, .t2: nil],
-       interpreter: interpreter
-     )
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
+      .pre(from: .p2, to: .t1, labeled: ["$z"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: conditionList, .t2: nil],
+      interpreter: interpreter
+    )
  
-     let marking1 = Marking<P>([.p1: ["1","1","2","5"], .p2: ["1", "2"], .p3: []])
+    let marking1 = Marking<P>([.p1: ["1","1","2","5"], .p2: ["1", "2"], .p3: []])
  
-     model.fireableBindings(for: .t1, with: marking1)
+    let factory = MFDDFactory<Key, String>()
+    
+    print(model.fireableBindings(for: .t1, with: marking1, factory: factory))
     
  
    }
