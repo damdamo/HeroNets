@@ -134,6 +134,7 @@ extension HeroNet {
     return factory.node(key: keys.first!, take: take, skip: factory.zero.pointer)
   }
  
+  // TODO: Improve heuristic to compute the score
   /// Creates a string Array that optimizes key ordering for MFDD
   /// - Parameters:
   ///   - keyList: Variable of pre arcs of a transition
