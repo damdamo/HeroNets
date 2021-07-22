@@ -207,7 +207,7 @@ extension HeroNet {
     return res
   }
   
-  /// Creates an Array of dictionnary containing every possibilities for a specific condition, focusing on variables of a condition. If a condition contains only 2 variables while the mfdd have more than 2, the mfdd will be browsed untile we achieve to have all values for theses 2 keys.
+  /// Creates a dictionnary containing all incorrects solutions for a condition. To avoid to explore all branches, we stop in the exploration when we have seen all keys implies in the condition.
   /// - Parameters:
   ///   - mfdd: A pointer to the current mfdd
   ///   - cond: The condition to check
@@ -215,50 +215,76 @@ extension HeroNet {
   ///   - listVar: Variable list implies in the condition
   ///   - factory: The factory of the mfdd
   /// - Returns:
-  ///   An array of dictionnary of Key / Value
-  func computeImpossibilitiesForACond(
+  ///   A dictionnary of Key with all values that not satisfy the condition and will be deleted
+    func constructExcludingValues(
+      mfdd: MFDD<KeyMFDD, ValueMFDD>.Pointer,
+      cond: Pair<String>,
+      save: [Key: String],
+      listKey: [Key],
+      factory: MFDDFactory<KeyMFDD, ValueMFDD>
+    ) -> [Key: Set<String>] {
+  
+      // We do not want to explore every keys, therefore if we achieve to explore all keys in conditions we just return it !
+      if save.count == listKey.count {
+        if !checkCondition(condition: cond, with: save) {
+          var dicTemp: [Key: Set<String>] = [:]
+          for (k,v) in save {
+            dicTemp[k] = [v]
+          }
+          return dicTemp
+        }
+        return [:]
+      }
+  
+      var res: [Key: Set<String>] = [:]
+      for el in mfdd.pointee.take {
+        // If the key is in the condition, we add it ! Otherwise we continue the exploration without adding it !
+        if cond.l.contains(mfdd.pointee.key.name) || cond.r.contains(mfdd.pointee.key.name) {
+          res = res.merging(
+            constructExcludingValues(
+              mfdd: el.value,
+              cond: cond,
+              save: save.merging([mfdd.pointee.key: el.key], uniquingKeysWith: { (current, _) in current }),
+              listKey: listKey,
+              factory: factory
+            ),
+            uniquingKeysWith: { (current, new) in current.union(new) }
+          )
+        } else {
+          res = res.merging(
+            constructExcludingValues(
+              mfdd: el.value,
+              cond: cond,
+              save: save,
+              listKey: listKey,
+              factory: factory
+            ),
+            uniquingKeysWith: { (current, new) in current.union(new) }
+          )
+        }
+      }
+      return res
+    }
+
+  // Convert the result of the other constructExcludingValues into the good one
+  // for the mfdd excluding filter
+  func constructExcludingValues(
     mfdd: MFDD<KeyMFDD, ValueMFDD>.Pointer,
     cond: Pair<String>,
-    save: [Key: String] = [:],
     listKey: [Key],
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
-  ) -> Set<[Key: String]> {
+  ) -> [(key: Key, values: [String])] {
     
-    // We do not want to explore every keys, therefore if we achieve to explore all keys in conditions we just return it !
-    if save.count == listKey.count {
-      if !checkCondition(condition: cond, with: save) {
-        return [save]
-      }
-      return []
-    }
+      let excludingValues = constructExcludingValues(
+        mfdd: mfdd,
+        cond: cond,
+        save: [:],
+        listKey: listKey,
+        factory: factory)
     
+    print(excludingValues)
+    return excludingValues.map({(key: $0, values: Array($1))})
     
-    var res: [[Key: String]] = []
-    for el in mfdd.pointee.take {
-      // If the key is in the condition, we add it ! Otherwise we continue the exploration without adding it !
-      if cond.l.contains(mfdd.pointee.key.name) || cond.r.contains(mfdd.pointee.key.name) {
-        
-        res.append(
-          contentsOf: computeImpossibilitiesForACond(
-            mfdd: el.value,
-            cond: cond,
-            save: save.merging([mfdd.pointee.key: el.key], uniquingKeysWith: { (current, _) in current }),
-            listKey: listKey,
-            factory: factory)
-        )
-        
-      } else {
-        res.append(
-          contentsOf: computeImpossibilitiesForACond(
-            mfdd: el.value,
-            cond: cond,
-            save: save,
-            listKey: listKey,
-            factory: factory)
-        )
-      }
-    }
-    return Set(res)
   }
-  
+
 }

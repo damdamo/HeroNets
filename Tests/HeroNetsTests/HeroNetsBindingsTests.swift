@@ -42,17 +42,21 @@ final class HeroNetsBindingsTests: XCTestCase {
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
     
 
-    let notgood = model.computeImpossibilitiesForACond(
+    let notgood = model.constructExcludingValues(
       mfdd: mfdd.pointer,
       cond: Pair("$x", "1"),
       listKey: [Key(name: "x", couple: [Pair("x","y")])],
       factory: factory
     )
     
+    print(notgood)
+    
     var morphisms: MFDDMorphismFactory<Key, String> { factory.morphisms }
-//    let morphism = morphisms.filter(excluding: [(key: 3, values: ["c"]), (key: 4, values: ["d"])])
-//    let morphism = morphisms.filter(containing: notgood)
-//
+
+    let morphism = morphisms.filter(excluding: notgood)
+    
+     print(morphism.apply(on: mfdd))
+
 //    XCTAssertEqual(morphism.apply(on: factory.zero), factory.zero)
 //    XCTAssertEqual(morphism.apply(on: factory.one), factory.one)
 //    XCTAssertEqual(
