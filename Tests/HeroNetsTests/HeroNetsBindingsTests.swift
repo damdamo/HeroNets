@@ -40,22 +40,22 @@ final class HeroNetsBindingsTests: XCTestCase {
     let factory = MFDDFactory<Key, String>()
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-    
 
-    let notgood = model.constructExcludingValues(
-      mfdd: mfdd.pointer,
-      cond: Pair("$x", "1"),
-      listKey: [Key(name: "x", couple: [Pair("x","y")])],
-      factory: factory
-    )
-    
-    print(notgood)
-    
-    var morphisms: MFDDMorphismFactory<Key, String> { factory.morphisms }
-
-    let morphism = morphisms.filter(excluding: notgood)
-    
-     print(morphism.apply(on: mfdd))
+    print(mfdd)
+//    let notgood = model.constructExcludingValues(
+//      mfddPointer: mfdd.pointer,
+//      cond: Pair("$x", "1"),
+//      listKey: [Key(name: "$x", couple: [Pair("$x","$y")])],
+//      factory: factory
+//    )
+//    
+//    print(notgood)
+//    
+//    var morphisms: MFDDMorphismFactory<Key, String> { factory.morphisms }
+//
+//    let morphism = morphisms.filter(excluding: notgood)
+//    
+//     print(morphism.apply(on: mfdd))
 
 //    XCTAssertEqual(morphism.apply(on: factory.zero), factory.zero)
 //    XCTAssertEqual(morphism.apply(on: factory.one), factory.one)
@@ -63,7 +63,7 @@ final class HeroNetsBindingsTests: XCTestCase {
 //      morphism.apply(on: factory.encode(family: [[1: "a", 2: "b"], [1: "a", 3: "c"]])),
 //      factory.encode(family: [[1: "a", 2: "b"]]))
 //
-//   }
+   }
   
 //  func testBinding1() {
 //
