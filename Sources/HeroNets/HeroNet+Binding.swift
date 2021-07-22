@@ -1,4 +1,5 @@
 import DDKit
+import Interpreter
 
 /// A Hero net binding computes all the possibles marking for a given  transition
 extension HeroNet {
@@ -113,9 +114,12 @@ extension HeroNet {
   ///   - nextPointer: The pointer that links every arcs between them cause we construct a separate mfdd for each list of variables. Hence, we get a logic continuation. This value is Top for the last variable of the MFDD.
   /// - Returns:
   ///   A MFDD pointer that contains every valid possibilities for the given args.
-  func constructMFDD(keys: [Key], exprs: [String],
-                     factory: MFDDFactory<KeyMFDD, ValueMFDD>,
-                     nextPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+  func constructMFDD(
+    keys: [Key],
+    exprs: [String],
+    factory: MFDDFactory<KeyMFDD, ValueMFDD>,
+    nextPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer)
+  -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
     var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
     if keys.count == 0 {
       return nextPointer
@@ -201,6 +205,60 @@ extension HeroNet {
     })
     
     return res
+  }
+  
+  /// Creates an Array of dictionnary containing every possibilities for a specific condition, focusing on variables of a condition. If a condition contains only 2 variables while the mfdd have more than 2, the mfdd will be browsed untile we achieve to have all values for theses 2 keys.
+  /// - Parameters:
+  ///   - mfdd: A pointer to the current mfdd
+  ///   - cond: The condition to check
+  ///   - save: The save of the current dictionnary which is constructed
+  ///   - listVar: Variable list implies in the condition
+  ///   - factory: The factory of the mfdd
+  /// - Returns:
+  ///   An array of dictionnary of Key / Value
+  func computeImpossibilitiesForACond(
+    mfdd: MFDD<KeyMFDD, ValueMFDD>.Pointer,
+    cond: Pair<String>,
+    save: [Key: String] = [:],
+    listKey: [Key],
+    factory: MFDDFactory<KeyMFDD, ValueMFDD>
+  ) -> Set<[Key: String]> {
+    
+    // We do not want to explore every keys, therefore if we achieve to explore all keys in conditions we just return it !
+    if save.count == listKey.count {
+      if !checkCondition(condition: cond, with: save) {
+        return [save]
+      }
+      return []
+    }
+    
+    
+    var res: [[Key: String]] = []
+    for el in mfdd.pointee.take {
+      // If the key is in the condition, we add it ! Otherwise we continue the exploration without adding it !
+      if cond.l.contains(mfdd.pointee.key.name) || cond.r.contains(mfdd.pointee.key.name) {
+        
+        res.append(
+          contentsOf: computeImpossibilitiesForACond(
+            mfdd: el.value,
+            cond: cond,
+            save: save.merging([mfdd.pointee.key: el.key], uniquingKeysWith: { (current, _) in current }),
+            listKey: listKey,
+            factory: factory)
+        )
+        
+      } else {
+        res.append(
+          contentsOf: computeImpossibilitiesForACond(
+            mfdd: el.value,
+            cond: cond,
+            save: save,
+            listKey: listKey,
+            factory: factory)
+        )
+      }
+    }
+    return Set(res)
   }
   
 }
