@@ -68,9 +68,9 @@ extension HeroNet {
       factory: factory
     )
     
-    // Apply guards
-    mfddPointer = applyGuardFilter(
-      mfddPointer: mfddPointer,
+//     Apply guards
+    applyGuardFilter(
+      mfddPointer: &mfddPointer,
       transition: transition,
       listKey: listKey,
       factory: factory
@@ -220,16 +220,12 @@ extension HeroNet {
   }
   
   func applyGuardFilter(
-    mfddPointer: MFDD<KeyMFDD, ValueMFDD>.Pointer,
+    mfddPointer: inout MFDD<KeyMFDD, ValueMFDD>.Pointer,
     transition: TransitionType,
     listKey: [Key],
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
-  )
-  -> MFDD<KeyMFDD, ValueMFDD>.Pointer {
+  ) {
     
-    var mfddPointerTemp = mfddPointer
-    var morphisms: MFDDMorphismFactory<Key, String> { factory.morphisms }
-    var morphism: MFDD<KeyMFDD, ValueMFDD>.ExclusiveFilter
     var listKeyForCond: [KeyMFDD] = listKey
     
     if let conditions = guards[transition] {
@@ -237,20 +233,15 @@ extension HeroNet {
         listKeyForCond.removeAll(where: {(key: Key) -> Bool in
           return !cond.l.contains(key.name) && !cond.r.contains(key.name)
         })
-        morphism = morphisms.filter(excluding:
-          constructExcludingValues(
-            mfddPointer: mfddPointer,
-            cond: cond,
-            listKey: listKeyForCond,
-            factory: factory
-          )
+        constructExcludingValues(
+          mfddPointer: &mfddPointer,
+          cond: cond,
+          listKey: listKeyForCond,
+          factory: factory
         )
-        mfddPointerTemp = morphism.apply(on: mfddPointerTemp)
         listKeyForCond = listKey
       }
     }
-    
-    return mfddPointerTemp
   }
   
   /// Creates a dictionnary containing all incorrects solutions for a condition. To avoid to explore all branches, we stop in the exploration when we have seen all keys implies in the condition.
@@ -262,73 +253,70 @@ extension HeroNet {
   ///   - factory: The factory of the mfdd
   /// - Returns:
   ///   A dictionnary of Key with all values that not satisfy the condition and will be deleted
-    func constructExcludingValues(
-      mfddPointer: MFDD<KeyMFDD, ValueMFDD>.Pointer,
-      cond: Pair<String>,
-      save: [Key: String],
-      listKey: [Key],
-      factory: MFDDFactory<KeyMFDD, ValueMFDD>
-    ) -> [Key: Set<String>] {
-  
-      // We do not want to explore every keys, therefore if we achieve to explore all keys in conditions we just return it !
-      if save.count == listKey.count {
-        if !checkCondition(condition: cond, with: save) {
-          var dicTemp: [Key: Set<String>] = [:]
-          for (k,v) in save {
-            dicTemp[k] = [v]
+  func constructExcludingValues(
+    mfddPointer: inout MFDD<KeyMFDD, ValueMFDD>.Pointer,
+    cond: Pair<String>,
+    save: [Key: String] = [:],
+    listKey: [Key],
+    factory: MFDDFactory<KeyMFDD, ValueMFDD>
+  ) {
+
+    // If the current key is contained in the condition
+    if cond.l.contains(mfddPointer.pointee.key.name) || cond.r.contains(mfddPointer.pointee.key.name) {
+      // If we read the last key, we have all parameters to evaluate the condition and keeping it if condition is satisfied
+      if save.count + 1 == listKey.count {
+        for (k, _) in mfddPointer.pointee.take {
+          if !checkCondition(
+              condition: cond,
+              with: save.merging([mfddPointer.pointee.key: k], uniquingKeysWith: { (current, _) in current })
+          ) {
+            mfddPointer.pointee.take[k] = factory.zero.pointer
           }
-          return dicTemp
         }
-        return [:]
-      }
-  
-      var res: [Key: Set<String>] = [:]
-      for el in mfddPointer.pointee.take {
-        // If the key is in the condition, we add it ! Otherwise we continue the exploration without adding it !
-        if cond.l.contains(mfddPointer.pointee.key.name) || cond.r.contains(mfddPointer.pointee.key.name) {
-          res = res.merging(
-            constructExcludingValues(
-              mfddPointer: el.value,
-              cond: cond,
-              save: save.merging([mfddPointer.pointee.key: el.key], uniquingKeysWith: { (current, _) in current }),
-              listKey: listKey,
-              factory: factory
-            ),
-            uniquingKeysWith: { (current, new) in current.union(new) }
-          )
-        } else {
-          res = res.merging(
-            constructExcludingValues(
-              mfddPointer: el.value,
-              cond: cond,
-              save: save,
-              listKey: listKey,
-              factory: factory
-            ),
-            uniquingKeysWith: { (current, new) in current.union(new) }
+        // If It's not the last key, we add it to save and continue the recursion
+      } else {
+        for (k, _) in mfddPointer.pointee.take {
+          constructExcludingValues(
+            mfddPointer: &mfddPointer.pointee.take[k]!,
+            cond: cond,
+            save: save.merging([mfddPointer.pointee.key: k], uniquingKeysWith: { (current, _) in current }),
+            listKey: listKey,
+            factory: factory
           )
         }
       }
-      return res
+    } else {
+      // If the current k is not contained in the condition, function is recursively called with his children without modifying save
+      for (k, _) in mfddPointer.pointee.take {
+        constructExcludingValues(
+          mfddPointer: &mfddPointer.pointee.take[k]!,
+          cond: cond,
+          save: save,
+          listKey: listKey,
+          factory: factory
+        )
+      }
+      
     }
+  }
 
   // Convert the result of the other constructExcludingValues into the good one
   // for the mfdd excluding filter
-  func constructExcludingValues(
-    mfddPointer: MFDD<KeyMFDD, ValueMFDD>.Pointer,
-    cond: Pair<String>,
-    listKey: [Key],
-    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-  ) -> [(key: Key, values: [String])] {
-    
-      let excludingValues = constructExcludingValues(
-        mfddPointer: mfddPointer,
-        cond: cond,
-        save: [:],
-        listKey: listKey,
-        factory: factory)
-    
-    return excludingValues.map({(key: $0, values: Array($1))})
-  }
+//  func constructExcludingValues(
+//    mfddPointer: MFDD<KeyMFDD, ValueMFDD>.Pointer,
+//    cond: Pair<String>,
+//    listKey: [Key],
+//    factory: MFDDFactory<KeyMFDD, ValueMFDD>
+//  ) -> [(key: Key, values: [String])] {
+//
+//      let excludingValues = constructExcludingValues(
+//        mfddPointer: mfddPointer,
+//        cond: cond,
+//        save: [:],
+//        listKey: listKey,
+//        factory: factory)
+//
+//    return excludingValues.map({(key: $0, values: Array($1))})
+//  }
 
 }
