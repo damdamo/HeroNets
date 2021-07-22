@@ -219,6 +219,12 @@ extension HeroNet {
     return res
   }
   
+  /// Apply each conditions on the current mfdd pointer.
+  /// - Parameters:
+  ///   - mfddPointer: Mfdd pointer that is modified depending on conditions of the transition
+  ///   - conditions: The firing transition
+  ///   - listKey: List of all keys in the mfdd
+  ///   - factory: The factory of the mfdd
   func applyGuardFilter(
     mfddPointer: inout MFDD<KeyMFDD, ValueMFDD>.Pointer,
     transition: TransitionType,
@@ -244,15 +250,13 @@ extension HeroNet {
     }
   }
   
-  /// Creates a dictionnary containing all incorrects solutions for a condition. To avoid to explore all branches, we stop in the exploration when we have seen all keys implies in the condition.
+  /// Modify mfddPointer which is inout and apply modification in it if necessary.  We explore the mfdd recursively (as a tree) and keeping a trace of the variable explored. If variables are in conditions, we keep them until we have all of them to test the condition. If the condition is not satisfied, the key points on bottom.
   /// - Parameters:
-  ///   - mfdd: A pointer to the current mfdd
+  ///   - mfddPointer: A pointer to the current mfdd
   ///   - cond: The condition to check
   ///   - save: The save of the current dictionnary which is constructed
   ///   - listKey: Key list implies in the condition (do not add others keys)
   ///   - factory: The factory of the mfdd
-  /// - Returns:
-  ///   A dictionnary of Key with all values that not satisfy the condition and will be deleted
   func constructExcludingValues(
     mfddPointer: inout MFDD<KeyMFDD, ValueMFDD>.Pointer,
     cond: Pair<String>,
@@ -299,24 +303,5 @@ extension HeroNet {
       
     }
   }
-
-  // Convert the result of the other constructExcludingValues into the good one
-  // for the mfdd excluding filter
-//  func constructExcludingValues(
-//    mfddPointer: MFDD<KeyMFDD, ValueMFDD>.Pointer,
-//    cond: Pair<String>,
-//    listKey: [Key],
-//    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-//  ) -> [(key: Key, values: [String])] {
-//
-//      let excludingValues = constructExcludingValues(
-//        mfddPointer: mfddPointer,
-//        cond: cond,
-//        save: [:],
-//        listKey: listKey,
-//        factory: factory)
-//
-//    return excludingValues.map({(key: $0, values: Array($1))})
-//  }
 
 }
