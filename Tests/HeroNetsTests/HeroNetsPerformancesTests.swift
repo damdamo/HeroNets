@@ -45,8 +45,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
     try! interpreter.loadModule(fromString: module)
     // print(try! interpreter.eval(string: "eq(mod(25,5),0)"))
     
-    let conditionList: [Pair<String>]? = [Pair("eq(mod($a,2),0)","true")]
-//    let conditionList: [Pair<String>]? = [Pair("add($a,5)","10"), Pair("eq($c,0)", "false"), Pair("mod($g($b,$c),2)", "0")]
+//    let conditionList: [Pair<String>]? = [Pair("eq(mod($a,2),0)","true")]
+    let conditionList: [Pair<String>]? = [/*Pair("add($a,5)","6"),*/ Pair("eq($c,0)", "false")/*,Pair("mod($g($b,$c),2)", "0")*/]
 
     let model = HeroNet<P1, T1>(
       .pre(from: .op, to: .apply, labeled: ["$f","$g"]),
@@ -57,21 +57,21 @@ final class HeroNetsPerformancesTests: XCTestCase {
       interpreter: interpreter
     )
 
-    let len = 10
+    let len = 3
 
     var seq: Multiset<String>  = []
     for i in 0...len {
       seq.insert(String(i))
     }
 
-    let factory = MFDDFactory<String,String>()
+    let factory = MFDDFactory<Key,String>()
     let marking1 = Marking<P1>([.op: ["add","sub","mul","div"], .n: seq, .res: []])
 
 
     let s: Stopwatch = Stopwatch()
 
-//    let x = model.fireableBindings(for: .apply, with: marking1, factory: factory)!
-//    print(x.count)
+    let x = model.fireableBindings(for: .apply, with: marking1, factory: factory)
+    print(x.count)
 //    print(x)
 
     print("----------------------------------")

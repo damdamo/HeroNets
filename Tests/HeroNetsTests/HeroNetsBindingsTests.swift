@@ -15,59 +15,63 @@ final class HeroNetsBindingsTests: XCTestCase {
     case t1, t2
   }
   
-//  func testBinding1() {
-//
-//    let module: String = """
-//    func add(_ x: Int, _ y: Int) -> Int ::
-//      x + y
-//    """
-//
-//    var interpreter = Interpreter()
-//    try! interpreter.loadModule(fromString: module)
-//
-//    let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$y")]
-//
-//    let model = HeroNet<P, T>(
-//      .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
-//      .pre(from: .p2, to: .t1, labeled: ["$z"]),
-//      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-//      guards: [.t1: conditionList, .t2: nil],
-//      interpreter: interpreter
-//    )
-//
-//    let marking1 = Marking<P>([.p1: ["1","1","2","5"], .p2: ["1", "2"], .p3: []])
-//
-//    let factory = MFDDFactory<Key, String>()
-//
-//    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-//
+  func testBinding0() {
+
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
+
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
+//    let conditionList: [Pair<String>] = [Pair("$x","$y")]
+//    let conditionList: [Pair<String>] = [Pair("$x","1")]
+    let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$y")]
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
+      .pre(from: .p2, to: .t1, labeled: ["$z"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: conditionList, .t2: nil],
+      interpreter: interpreter
+    )
+
+    let marking1 = Marking<P>([.p1: ["1","2"], .p2: ["1", "2"], .p3: []])
+
+    let factory = MFDDFactory<Key, String>()
+
+    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+
+    print(model.isolateCondForVars(variableLists: [["$x", "$y"],["$z"]], transition: .t1))
+    
 //    print(mfdd)
-////    model.constructExcludingValues(
-////      mfddPointer: &mfddPointer,
-////      cond: Pair("$x", "1"),
-////      save: [:],
-////      listKey: [Key(name: "$x", couple: [Pair("$x","$y")])],
-////      factory: factory
-////    )
+//    model.constructExcludingValues(
+//      mfddPointer: &mfddPointer,
+//      cond: Pair("$x", "1"),
+//      save: [:],
+//      listKey: [Key(name: "$x", couple: [Pair("$x","$y")])],
+//      factory: factory
+//    )
+
+    //print(MFDD(pointer: mfddPointer, factory: factory))
+
 //
-//    //print(MFDD(pointer: mfddPointer, factory: factory))
+//    print(notgood)
 //
-////
-////    print(notgood)
-////
-////    var morphisms: MFDDMorphismFactory<Key, String> { factory.morphisms }
-////
-////    let morphism = morphisms.filter(excluding: notgood)
-////
-////     print(morphism.apply(on: mfdd))
+//    var morphisms: MFDDMorphismFactory<Key, String> { factory.morphisms }
 //
-////    XCTAssertEqual(morphism.apply(on: factory.zero), factory.zero)
-////    XCTAssertEqual(morphism.apply(on: factory.one), factory.one)
-////    XCTAssertEqual(
-////      morphism.apply(on: factory.encode(family: [[1: "a", 2: "b"], [1: "a", 3: "c"]])),
-////      factory.encode(family: [[1: "a", 2: "b"]]))
-////
-//   }
+//    let morphism = morphisms.filter(excluding: notgood)
+//
+//     print(morphism.apply(on: mfdd))
+
+//    XCTAssertEqual(morphism.apply(on: factory.zero), factory.zero)
+//    XCTAssertEqual(morphism.apply(on: factory.one), factory.one)
+//    XCTAssertEqual(
+//      morphism.apply(on: factory.encode(family: [[1: "a", 2: "b"], [1: "a", 3: "c"]])),
+//      factory.encode(family: [[1: "a", 2: "b"]]))
+//
+   }
   
   func testBinding1() {
 
@@ -79,7 +83,9 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$y")]
+    let conditionList: [Pair<String>] = [Pair("$x","1"),Pair("$y", "$x")]
+//    let conditionList: [Pair<String>] = [Pair("$z","1"),Pair("$z", "$x")]
+
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
@@ -90,7 +96,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     )
 
     let factory = MFDDFactory<Key,String>()
-    let marking1 = Marking<P>([.p1: ["1","1","2","5"], .p2: ["1", "2"], .p3: []])
+    let marking1 = Marking<P>([.p1: ["1","1","5"], .p2: ["1", "2"], .p3: []])
 
     let bindings1 = model.fireableBindings(for: .t1, with: marking1, factory: factory)
     var s: Set<[String: String]> = []
@@ -103,8 +109,19 @@ final class HeroNetsBindingsTests: XCTestCase {
       s.insert(dic)
       dic = [:]
     }
+    
+    let couple = [Pair("$z", "$x"), Pair("$z", "$y"), Pair("$y", "$x")]
+    
+    let xKey = Key(name: "$x", couple: couple)
+    let yKey = Key(name: "$y", couple: couple)
+    let zKey = Key(name: "$z", couple: couple)
 
-    XCTAssertEqual(s, Set([["$z": "2", "$x": "1", "$y": "1"], ["$y": "1", "$z": "1", "$x": "1"]]))
+
+    print(bindings1)
+    print("--------------")
+    print(bindings1.subtracting(factory.encode(family: [[xKey: "1",yKey: "1",zKey: "1"]])))
+
+//    XCTAssertEqual(s, Set([["$z": "2", "$x": "1", "$y": "1"], ["$y": "1", "$z": "1", "$x": "1"]]))
 
   }
 
