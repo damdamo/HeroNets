@@ -247,6 +247,16 @@ extension Multiset: AdditiveArithmetic {
   public static var zero: Multiset {
     return Multiset<Element>()
   }
+  
+  public func intersection (_ rhs: Multiset<Element>) -> Multiset<Element> {
+    var newMultiset: Multiset<Element> = []
+    for (key, nb) in self.storage {
+      if let v = rhs.storage[key] {
+        newMultiset.insert(key, occurences: Swift.min(nb, v))
+      }
+    }
+    return newMultiset
+  }
 
 }
 

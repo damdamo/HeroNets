@@ -3,6 +3,7 @@ import XCTest
 import Interpreter
 
 final class MultiSetTests: XCTestCase {
+  
   func testComparison() {
     
     let m0: Multiset<String> = [:]
@@ -31,6 +32,17 @@ final class MultiSetTests: XCTestCase {
     XCTAssertEqual(m2 > m3, false)
     
   }
+  
+  func testIntersection() {
+    let m1: Multiset<String> = ["a", "a", "b", "b", "c"]
+    let m2: Multiset<String> = ["a", "b", "b"]
+    let m3: Multiset<String> = []
+    let res: Multiset<String> = ["a", "b", "b"]
+    
+    XCTAssertEqual(m1.intersection(m3), m3)
+    XCTAssertEqual(m1.intersection(m2), res)
+  }
+  
   static var allTests = [
       ("testComparison", testComparison),
   ]
