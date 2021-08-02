@@ -284,10 +284,13 @@ extension Multiset: ExpressibleByDictionaryLiteral {
 }
 
 
-//extension Multiset: CustomStringConvertible {
-//
+extension Multiset: CustomStringConvertible {
+
 //  public var description: String {
 //    return "{\( map({ "\($0)" }).joined(separator: ", ") )}"
 //  }
-//
-//}
+
+  public var description: String {
+    return "\(storage)"
+  }
+}

@@ -19,6 +19,19 @@ extension HeroNet {
       return r
   }
   
+  func isVariable(label: String) -> Bool {
+    return label.contains("$")
+  }
+  
+  func isolateVariableName(varName: String) -> String {
+    return String(varName.split(separator: "_")[0])
+  }
+  
+  func isSameVar(v1Name: String, v2Name: String) -> Bool {
+    return isolateVariableName(varName: v1Name) == isolateVariableName(varName: v2Name)
+  }
+  
+  
   /// Creates the fireable bindings of a transition.
   ///
   /// - Parameters:
@@ -33,48 +46,117 @@ extension HeroNet {
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
   ) -> MFDD<KeyMFDD,ValueMFDD> {
     
-    // All variables imply in the transition firing
+    // All variables imply in the transition firing keeping the group by arc
     var variableLists: [[String]] = []
-    // All possible values that can be taken by each variable (then key)
-    var mapVarsToExpr: [Set<String>: Array<String>] = [:]
-    var mapKeysToExpr: [[Key]: Array<String>] = [:]
+    var varToExprs: [String: Multiset<String>] = [:]
+//    var keyToExprs: [Key: Multiset<String>] = [:]
+    var arrayKeyToExprs: [[Key: Multiset<String>]] = []
+    
+    // varSave: Store the original names with its counterpart (e.g.: [x: [x_p0_0, x_p1_1]])
+    var listLabel: [String] = []
+    var varSave: [String: Set<String>] = [:]
+    var newLabelName: String = ""
+    
+    // Prepare variable names and binds it to their possible expressions
     if let pre = input[transition] {
       for (place, labels) in pre {
-        variableLists.append(labels)
-        mapVarsToExpr[Set(labels)] = marking[place].multisetToArray()
+        for label in labels {
+          newLabelName = "\(label)_\(place)"
+          if let _ = varSave[label] {
+            newLabelName.append("_\(varSave[label]!.count)")
+            varSave[label]!.insert(newLabelName)
+          } else {
+            newLabelName.append("_0")
+            varSave[label] = [newLabelName]
+          }
+          varToExprs[newLabelName] = marking[place]
+          listLabel.append(newLabelName)
+        }
+        variableLists.append(listLabel)
+        listLabel = []
+      }
+    }
+        
+    // TODO: Transform this step using MFDD directly
+    // If multiple variables appears in different arcs, we do a filterInclude between multiset to keep only valid values.
+    for (_, vars) in varSave {
+      if vars.count > 1 {
+        for var1 in vars {
+          for var2 in vars {
+            if var1 != var2 {
+              varToExprs[var1] = varToExprs[var1]!.filterInclude(varToExprs[var2]!)
+            }
+          }
+        }
       }
     }
     
+    // Create the key order
     variableLists = optimizeKeyOrder(variableLists: variableLists, conditions: guards[transition])
-    let totalOrder = createTotalOrder(keys: variableLists.flatMap({$0}))
-    var listKeyTemp: [Key] = []
-    var listKey: [Key] = []
         
+    let totalOrder = createTotalOrder(keys: variableLists.flatMap({$0}))
+    print(totalOrder)
+    var keyToExprsTemp: [Key: Multiset<String>] = [:]
+
+    // Create an array of dictionnary where each dictionnary represents a place with labels (as a key) and their corresponding expressions
     for vars in variableLists {
       for var_ in vars {
-        listKey.append(Key(name: var_, couple: totalOrder))
-        listKeyTemp.append(Key(name: var_, couple: totalOrder))
+        keyToExprsTemp[Key(name: var_, couple: totalOrder)] = varToExprs[var_]
       }
-      mapKeysToExpr[listKeyTemp] = mapVarsToExpr[Set(vars)]
-      listKeyTemp = []
+      arrayKeyToExprs.append(keyToExprsTemp)
+      keyToExprsTemp = [:]
     }
     
-    let arrayKeysToExpr = mapKeysToExpr.sorted(by: {$0.key.first! < $1.key.first!})
+    // We sort the dictionnary that becomes an array. The type is implictely changed cause a dictionnary is not ordered.
+    // Finally, we reorder all subarray using the biggest key of each.
+    var arrayKeyToExprsSorted = arrayKeyToExprs
+      .map({(dic: [Key: Multiset<String>]) in
+        return dic.sorted(by: {$0.key < $1.key})
+      })
+      .sorted(by: {$0.first!.value < $1.first!.value})
     
-//    var keysToCond: [[Key]: [Pair<String>]] = [:]
+    
+    print(arrayKeyToExprsSorted)
+    
+//    arrayKeyToExprsSorted = arrayKeyToExprsSorted.sorted(by: )
+
+//    arrayKeyToExprs = KeyToExpr.sorted(by: {$0.key.first! < $1.key.first!})
+//    print(arrayKeysToExpr)
+        
+        
+    // Construct the mfdd
+//    var mfddPointer = constructMFDD(
+//      arrayKeysToExpr: arrayKeyToExprs,
+//      index: 0,
+//      factory: factory
+//    )
+    
 //
-//    if let conditions = guards[transition] {
-//      for cond in conditions {
+//    let arrayKeysToExpr = mapKeysToExpr.sorted(by: {$0.key.first! < $1.key.first!})
+//    print(arrayKeysToExpr)
+    
+//    let varsToConds = isolateCondForVars(variableLists: variableLists, transition: transition)
+//    var keysToCond: [[Key]: [Pair<String>]]? = [:]
 //
+//    if let vToC = varsToConds {
+//      for (vars,conds) in vToC {
+//        for var_ in vars {
+//          listKeyTemp.append(Key(name: var_, couple: totalOrder))
+//        }
+//        keysToCond![listKeyTemp] = conds
 //      }
+//    } else {
+//      keysToCond = nil
 //    }
     
+    
+    
     // Construct the mfdd
-    var mfddPointer = constructMFDD(
-      arrayKeysToExpr: arrayKeysToExpr,
-      index: 0,
-      factory: factory
-    )
+//    var mfddPointer = constructMFDD(
+//      arrayKeysToExpr: arrayKeysToExpr,
+//      index: 0,
+//      factory: factory
+//    )
     
     // Apply guards
 //    applyGuardFilter(
@@ -83,7 +165,7 @@ extension HeroNet {
 //      listKey: listKey,
 //      factory: factory
 //    )
-        
+    let mfddPointer = factory.one.pointer
     return MFDD(pointer: mfddPointer, factory: factory)
   }
   
@@ -207,7 +289,7 @@ extension HeroNet {
   /// - Parameters:
   ///   - keyList: Variable of pre arcs of a transition
   ///   - conditions: Conditions of the guard of the transition
-  ///   - mapVarToExpr: Mapping from var to expr, only used to capture variables by group of arcs
+  ///   - varSave: A save of the original variable and its counterparts
   /// - Returns:
   ///   A string Array with an optimized order for keys.
   func optimizeKeyOrder(variableLists: [[String]], conditions: [Pair<String>]?) -> [[String]] {
@@ -218,43 +300,59 @@ extension HeroNet {
       return variableLists
     }
     var keyWeights: [String: Int] = [:]
-    var countVarForCond: [[String: Bool]] = []
-    var countVar: [String: Bool] = [:]
+    var varForCond: [Set<String>] = []
+    var varInACond: Set<String> = []
+    var multipleSameKey: [String: Int] = [:]
     
-    // Initialize the score to 1 for each variable
-    for key in variableList {
-      keyWeights[key] = 1
+    // Initialize the score to 100 for each variable
+    // To avoid that a same variable has the same score, we increment it by one each time
+    for var_ in variableList {
+      if let n = multipleSameKey[self.isolateVariableName(varName: var_)] {
+        keyWeights[var_] = 100 + n
+        multipleSameKey[self.isolateVariableName(varName: var_)]! += 1
+      } else {
+        multipleSameKey[self.isolateVariableName(varName: var_)] = 1
+        keyWeights[var_] = 100
+      }
     }
     
     // To know condition variables
     for pair in conditions! {
       for key in variableList {
-        countVar[key] = pair.l.contains(key) || pair.r.contains(key)
+        if pair.l.contains(self.isolateVariableName(varName: key)) || pair.r.contains(self.isolateVariableName(varName: key)) {
+          varInACond.insert(self.isolateVariableName(varName: key))
+        }
       }
-      countVarForCond.append(countVar)
-      countVar = [:]
+      varForCond.append(varInACond)
+      varInACond = []
     }
     
+    
     // To compute a score
-    for  el in countVarForCond {
-      if el.count == 1 {
-        keyWeights[el.first!.key]! += 5
-      } else {
-        for key in variableList {
-          if el[key]! {
-            keyWeights[key]! += 1
+    for (key, _) in keyWeights {
+      for cond in varForCond {
+        if cond.contains(self.isolateVariableName(varName: key)) {
+          if cond.count == 1  {
+            keyWeights[key]! += 50
+          } else {
+            keyWeights[key]! += 10
           }
         }
       }
     }
     
+    print(keyWeights)
+    
     var listOfVarList: [[String]] = []
     
+    // More a key is bigger, more the key will be in the top of the mfdd.
+    // Having a big key means to be lower than a small key !
+    // For instance: x_weight = 160, y_weight = 120 => x < y
     listOfVarList = variableLists.map({
       stringList in
-      return stringList.sorted(by: {keyWeights[$0]! < keyWeights[$1]!})
+      return stringList.sorted(by: {keyWeights[$0]! > keyWeights[$1]!})
     })
-        
+            
     // Order listOfVarList using variable weights.
     // When a sub Array contains multiple variables, the weight corresponds to the variable with the maximum weight in this sub array
     let res = listOfVarList.sorted(by: {
@@ -265,7 +363,7 @@ extension HeroNet {
       let max2 = varList2.map({
         keyWeights[$0]!
       }).max()!
-      return max1 < max2
+      return max1 > max2
     })
     
     return res

@@ -31,19 +31,19 @@ final class HeroNetsBindingsTests: XCTestCase {
     
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
-      .pre(from: .p2, to: .t1, labeled: ["$z"]),
+      .pre(from: .p2, to: .t1, labeled: ["$x", "2"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
       guards: [.t1: conditionList, .t2: nil],
       interpreter: interpreter
     )
 
-    let marking1 = Marking<P>([.p1: ["1","2"], .p2: ["1", "2"], .p3: []])
+    let marking1 = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "2"], .p3: []])
 
     let factory = MFDDFactory<Key, String>()
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
 
-    print(model.isolateCondForVars(variableLists: [["$x", "$y"],["$z"]], transition: .t1))
+    // print(model.isolateCondForVars(variableLists: [["$x", "$y"],["$z"]], transition: .t1))
     
 //    print(mfdd)
 //    model.constructExcludingValues(
