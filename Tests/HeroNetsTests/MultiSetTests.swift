@@ -43,6 +43,17 @@ final class MultiSetTests: XCTestCase {
     XCTAssertEqual(m1.intersection(m2), res)
   }
   
+  func testFilterInclude() {
+    let m1: Multiset<String> = ["a", "a", "b", "b", "c"]
+    let m2: Multiset<String> = ["a", "b", "b"]
+    let res1: Multiset<String> = ["a", "a", "b", "b"]
+    let res2: Multiset<String> = ["a", "b", "b"]
+    
+    XCTAssertEqual(m1.filterInclude(m2), res1)
+    XCTAssertEqual(m2.filterInclude(m1), res2)
+ 
+  }
+  
   static var allTests = [
       ("testComparison", testComparison),
   ]

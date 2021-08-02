@@ -258,6 +258,16 @@ extension Multiset: AdditiveArithmetic {
     return newMultiset
   }
 
+  // Keep elements belong to rhs
+  public func filterInclude(_ rhs: Multiset<Element>) -> Multiset<Element> {
+    var res = Multiset()
+    for el in self {
+      if rhs.contains(el) {
+        res.insert(el)
+      }
+    }
+    return res
+  }
 }
 
 extension Multiset: ExpressibleByDictionaryLiteral {
