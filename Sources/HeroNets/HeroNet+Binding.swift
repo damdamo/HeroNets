@@ -20,9 +20,6 @@ extension HeroNet {
       return r
   }
   
-
-  
-  
   /// Creates the fireable bindings of a transition.
   ///
   /// - Parameters:
@@ -179,6 +176,13 @@ extension HeroNet {
     return res
   }
   
+  /// Create a label for each variable and associates the possible expressions. Labels are grouped by places.
+  ///
+  /// - Parameters:
+  ///   - placeToExprs: Marking of each place (that has been modified earlier)
+  ///   - transition: The transition for which we want to compute all bindings
+  /// - Returns:
+  ///   An array of dictionnary from label to multiset of possible expressions
   func associateLabelToExprsForPlace(
     placeToExprs: [PlaceType: Multiset<String>],
     transition: TransitionType)
@@ -313,6 +317,13 @@ extension HeroNet {
 //    return factory.node(key: keys.first!, take: take, skip: factory.zero.pointer)
 //  }
   
+  /// Compute a score for each variable using the guards
+  ///
+  /// - Parameters:
+  ///   - labelSet: Set of labels
+  ///   - condition: List of condition for a specific transition
+  /// - Returns:
+  ///   Return a dictionnary that binds a label to its weight
   func computeScoreOrder(
     labelSet: Set<Label>,
     conditions: [Pair<String>]?)
@@ -362,6 +373,13 @@ extension HeroNet {
     return labelWeights
   }
  
+  /// Return the array of all possibles values for each labels that are transformed into keys. MFDD requires to have a total order relation between variables, so we construct this order using the weight computed before. We transform the precedent array of labels with expressions into an array of keys related to their multiset of expressions. This result is ordered using label weights.
+  ///
+  /// - Parameters:
+  ///   - variableLists: List of each group of variables
+  ///   - transition: The transition for which we want to compute all bindings
+  /// - Returns:
+  ///   An array that  binds each group of variables with their corresponding independant conditions (that not depends on another variable from another arc).
   func computeSortedArrayKeyToExprs(
     arrayLabelToExprs: [[Label: Multiset<String>]],
     labelSet: Set<Label>,
@@ -404,134 +422,5 @@ extension HeroNet {
     
     return arrayKeyToExprs
   }
-
-  // TODO: Improve heuristic to compute the score
-  /// Creates a string Array that optimizes key ordering for MFDD
-  /// - Parameters:
-  ///   - keyList: Variable of pre arcs of a transition
-  ///   - conditions: Conditions of the guard of the transition
-  ///   - varSave: A save of the original variable and its counterparts
-  /// - Returns:
-  ///   A string Array with an optimized order for keys.
-//  func optimizeLabelOrder(labelWeights: [Label: Int]) -> [Label] {
-//
-//
-//    var listOfVarList: [[String]] = []
-//
-//    // More a key is bigger, more the key will be in the top of the mfdd.
-//    // Having a big key means to be lower than a small key !
-//    // For instance: x_weight = 160, y_weight = 120 => x < y
-//    listOfVarList = variableLists.map({
-//      stringList in
-//      return stringList.sorted(by: {keyWeights[$0]! > keyWeights[$1]!})
-//    })
-//
-//    // Order listOfVarList using variable weights.
-//    // When a sub Array contains multiple variables, the weight corresponds to the variable with the maximum weight in this sub array
-//    let res = listOfVarList.sorted(by: {
-//      (varList1, varList2) -> Bool in
-//      let max1 = varList1.map({
-//        keyWeights[$0]!
-//      }).max()!
-//      let max2 = varList2.map({
-//        keyWeights[$0]!
-//      }).max()!
-//      return max1 > max2
-//    })
-//
-//    return res
-//  }
-  
-//  /// Apply each conditions on the current mfdd pointer.
-//  /// - Parameters:
-//  ///   - mfddPointer: Mfdd pointer that is modified depending on conditions of the transition
-//  ///   - conditions: The firing transition
-//  ///   - listKey: List of all keys in the mfdd
-//  ///   - factory: The factory of the mfdd
-//  func applyGuardFilter(
-//    mfddPointer: inout MFDD<KeyMFDD, ValueMFDD>.Pointer,
-//    transition: TransitionType,
-//    listKey: [Key],
-//    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-//  ) {
-//
-//    var listKeyForCond: [KeyMFDD] = listKey
-//
-//    if let conditions = guards[transition] {
-//      for cond in conditions {
-//        listKeyForCond.removeAll(where: {(key: Key) -> Bool in
-//          return !cond.l.contains(key.name) && !cond.r.contains(key.name)
-//        })
-//        constructExcludingValues(
-//          mfddPointer: &mfddPointer,
-//          cond: cond,
-//          listKey: listKeyForCond,
-//          factory: factory
-//        )
-//        listKeyForCond = listKey
-//      }
-//    }
-//  }
-//
-//  /// Modify mfddPointer which is inout and apply modification in it if necessary.  We explore the mfdd recursively (as a tree) and keeping a trace of the variable explored. If variables are in conditions, we keep them until we have all of them to test the condition. If the condition is not satisfied, the key points on bottom.
-//  /// - Parameters:
-//  ///   - mfddPointer: A pointer to the current mfdd
-//  ///   - cond: The condition to check
-//  ///   - save: The save of the current dictionnary which is constructed
-//  ///   - listKey: Key list implies in the condition (do not add others keys)
-//  ///   - factory: The factory of the mfdd
-//  func constructExcludingValues(
-//    mfddPointer: inout MFDD<KeyMFDD, ValueMFDD>.Pointer,
-//    cond: Pair<String>,
-//    save: [Key: String] = [:],
-//    listKey: [Key],
-//    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-//  ) {
-//
-//    let x = mfddPointer
-//    // If the current key is contained in the condition
-//    if cond.l.contains(mfddPointer.pointee.key.name) || cond.r.contains(mfddPointer.pointee.key.name) {
-//      // If we read the last key, we have all parameters to evaluate the condition and keeping it if condition is satisfied
-//      if save.count + 1 == listKey.count {
-//        for (k, _) in mfddPointer.pointee.take {
-//          if !checkCondition(
-//              condition: cond,
-//              with: save.merging([mfddPointer.pointee.key: k], uniquingKeysWith: { (current, _) in current }))
-//          {
-//            print(MFDD(pointer: mfddPointer, factory: factory))
-//            mfddPointer.pointee.take.removeValue(forKey: k)
-//            print(MFDD(pointer: mfddPointer, factory: factory))
-//          }
-//        }
-//        // If there is no more valid solution in the  take branch, the whole node becomes bottom
-//        if mfddPointer.pointee.take.count == 0 {
-//          mfddPointer = factory.zero.pointer
-//        }
-//      } else {
-//        // If It's not the last key, we add it to save and continue the recursion
-//        for (k, _) in mfddPointer.pointee.take {
-//          constructExcludingValues(
-//            mfddPointer: &mfddPointer.pointee.take[k]!,
-//            cond: cond,
-//            save: save.merging([mfddPointer.pointee.key: k], uniquingKeysWith: { (current, _) in current }),
-//            listKey: listKey,
-//            factory: factory
-//          )
-//        }
-//      }
-//    } else {
-//      // If the current k is not contained in the condition, function is recursively called with his children without modifying save
-//      for (k, _) in mfddPointer.pointee.take {
-//        constructExcludingValues(
-//          mfddPointer: &mfddPointer.pointee.take[k]!,
-//          cond: cond,
-//          save: save,
-//          listKey: listKey,
-//          factory: factory
-//        )
-//      }
-//
-//    }
-//  }
 
 }
