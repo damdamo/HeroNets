@@ -7,29 +7,47 @@
 /// and a list of pairs where each tuple represents a relation of comparison
 /// between both values.
 /// Pair(l,r) => l < r
-public struct Key: Comparable &  Hashable {
+public struct Key {
 
-  public init (name: String, couple: [Pair<String>]) {
-    self.name = name
+  let label: Label
+  let couple: [Pair<Label>]
+  
+  public init (label: Label, couple: [Pair<Label>]) {
+    self.label = label
     self.couple = couple
   }
-  
-  public static func == (lhs: Key, rhs: Key) -> Bool {
-    return lhs.name == rhs.name
-  }
+}
 
-  let name: String
-  let couple: [Pair<String>]
+
+extension Key: Comparable &  Hashable {
+  public static func == (lhs: Key, rhs: Key) -> Bool {
+    return lhs.label == rhs.label
+  }
   
   public static func < (lhs: Key, rhs: Key) -> Bool {
     return lhs.couple.contains (where: { pair in
-      return (pair.l == lhs.name && pair.r == rhs.name)
+      return (pair.l == lhs.label && pair.r == rhs.label)
     })
   }
 }
 
+
 extension Key: CustomStringConvertible {
   public var description: String {
-    return "\(self.name)"
+    return "\(self.label)"
+  }
+}
+
+
+public struct Label {
+  let name: String
+  let n: Int
+}
+
+extension Label: Hashable {}
+
+extension Label: CustomStringConvertible {
+  public var description: String {
+    return "\(self.name)_\(self.n)"
   }
 }

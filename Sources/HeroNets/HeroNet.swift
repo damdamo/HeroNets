@@ -314,7 +314,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public func bindingSubstitution(str: String, binding: [Key: String]) -> String {
     var res: String = str
     for el in binding {
-      res = res.replacingOccurrences(of: "\(el.key.name)", with: "\(el.value)")
+      res = res.replacingOccurrences(of: "\(el.key.label.name)", with: "\(el.value)")
     }
     return res
   }
