@@ -376,10 +376,11 @@ extension HeroNet {
   /// Return the array of all possibles values for each labels that are transformed into keys. MFDD requires to have a total order relation between variables, so we construct this order using the weight computed before. We transform the precedent array of labels with expressions into an array of keys related to their multiset of expressions. This result is ordered using label weights.
   ///
   /// - Parameters:
-  ///   - variableLists: List of each group of variables
-  ///   - transition: The transition for which we want to compute all bindings
+  ///   - arrayLabelToExprs: An array of grouped dictionnary that binds label to their expressions
+  ///   - labelSet: The set of labels
+  ///   - labelWeights: The weight of labels
   /// - Returns:
-  ///   An array that  binds each group of variables with their corresponding independant conditions (that not depends on another variable from another arc).
+  ///   A sorted array that binds each key to their expressions, grouped by places and sorted using label weights
   func computeSortedArrayKeyToExprs(
     arrayLabelToExprs: [[Label: Multiset<String>]],
     labelSet: Set<Label>,
