@@ -6,19 +6,6 @@ extension HeroNet {
     
   typealias KeyMFDD = Key
   typealias ValueMFDD = String
-//  typealias Label = (name: String, nb: Int)
-  
-  // createOrder creates a list of pair from a list of string
-  // to represent a total order relation. Pair(l,r) => l < r
-  func createTotalOrder(labels: [Label]) -> [Pair<Label>] {
-      var r: [Pair<Label>] = []
-      for i in 0 ..< labels.count {
-        for j in i+1 ..< labels.count {
-          r.append(Pair(labels[i],labels[j]))
-        }
-      }
-      return r
-  }
   
   /// Creates the fireable bindings of a transition.
   ///
@@ -68,6 +55,7 @@ extension HeroNet {
     
     // Get all the possibilities for each labels
     let arrayLabelToExprs = associateLabelToExprsForPlace(placeToExprs: placeToExprs, transition: transition)
+    var arrayLabelSet: [Set<Label>] = []
     var labelSet: Set<Label> = []
     
     // Get all the labels
@@ -75,28 +63,31 @@ extension HeroNet {
       for (label, _) in labelToExprs {
         labelSet.insert(label)
       }
+      arrayLabelSet.append(labelSet)
+      labelSet = []
     }
     
     // Compute a score for each label
-    let labelWeights = computeScoreOrder(labelSet: labelSet, conditions: guards[transition])
+    let labelWeights = computeScoreOrder(
+      labelSet: arrayLabelSet.reduce(Set([]), {(result, setLabel) in
+        result.union(setLabel)
+      }),
+      conditions: guards[transition]
+    )
     
     // Return the sorted key to expressions list
-    let keyToExprs = computeSortedArrayKeyToExprs(
+    let arrayKeyToExprs = computeSortedArrayKeyToExprs(
       arrayLabelToExprs: arrayLabelToExprs,
-      labelSet: labelSet,
+      arrayLabelSet: arrayLabelSet,
       labelWeights: labelWeights
     )
             
     // Construct the mfdd
-//    var mfddPointer = constructMFDD(
-//      arrayKeyToExprs: arrayKeyToExprs,
-//      index: 0,
-//      factory: factory
-//    )
-    
-//
-//    let arrayKeysToExpr = mapKeysToExpr.sorted(by: {$0.key.first! < $1.key.first!})
-//    print(arrayKeysToExpr)
+    var mfddPointer = constructMFDD(
+      arrayKeyToExprs: arrayKeyToExprs,
+      index: 0,
+      factory: factory
+    )
     
 //    let varsToConds = isolateCondForVars(variableLists: variableLists, transition: transition)
 //    var keysToCond: [[Key]: [Pair<String>]]? = [:]
@@ -128,8 +119,85 @@ extension HeroNet {
 //      listKey: listKey,
 //      factory: factory
 //    )
-    let mfddPointer = factory.one.pointer
+//    let mfddPointer = factory.one.pointer
     return MFDD(pointer: mfddPointer, factory: factory)
+  }
+  
+  /// Creates a MFDD pointer an array of key expressions.
+  /// It corresponds to all of input arcs for a transition firing
+  /// - Parameters:
+  ///   - arrayKeyToExp: An array containing a list of keys binds to their possible expressions
+  ///   - index: An indicator which the key is currently read.
+  ///   - factory: The factory to construct the MFDD
+  /// - Returns:
+  ///   A MFDD pointer that contains every valid possibilities for the given args.
+  func constructMFDD(
+    arrayKeyToExprs: [[Key: Multiset<String>]],
+    index: Int,
+    factory: MFDDFactory<KeyMFDD, ValueMFDD>
+  ) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+
+
+    if index == arrayKeyToExprs.count - 1 {
+      return constructMFDD(
+        keyToExprs: arrayKeyToExprs[index],
+        factory: factory,
+        nextPointer: factory.one.pointer
+      )
+    }
+
+    return constructMFDD(
+      keyToExprs: arrayKeyToExprs[index],
+      factory: factory,
+      nextPointer: constructMFDD(
+        arrayKeyToExprs: arrayKeyToExprs,
+        index: index+1,
+        factory: factory
+      )
+    )
+
+  }
+
+  
+  
+  /// Creates a MFDD pointer for a couple of keys and expressions.
+  /// It corresponds only to a single input arc that can contains multiple variables.
+  /// - Parameters:
+  ///   - keys: The label keys of an input arc
+  ///   - exprs: The expressions that can be taken by the variables.
+  ///   - factory: The factory to construct the MFDD
+  ///   - nextPointer: The pointer that links every arcs between them cause we construct a separate mfdd for each list of variables. Hence, we get a logic continuation. This value is Top for the last variable of the MFDD.
+  /// - Returns:
+  ///   A MFDD pointer that contains every valid possibilities for the given args.
+  func constructMFDD(
+    keyToExprs: [Key: Multiset<String>],
+    factory: MFDDFactory<KeyMFDD, ValueMFDD>,
+    nextPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer)
+  -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+    if keyToExprs.count == 0 {
+      return nextPointer
+    } else {
+      var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
+      let (key, exprs) = keyToExprs.min(by: {(el1, el2) -> Bool in
+        el1.key < el2.key
+      })!
+            
+      var rest = keyToExprs
+      rest.removeValue(forKey: key)
+      var restTemp = rest
+
+      for el in exprs {
+        for (subKey, _) in restTemp {
+          restTemp[subKey]!.remove(el)
+        }
+        take[el] = constructMFDD(
+          keyToExprs: restTemp,
+          factory: factory,
+          nextPointer: nextPointer)
+        restTemp = rest
+      }
+      return factory.node(key: key, take: take, skip: factory.zero.pointer)
+    }
   }
   
   /// Creates the list of conditions for a list of variable. It means that  we want to isolate for each group of variables (from our net) for each arc which conditions can be applied independantly from other places. Thus, we can isolate conditions for a specific submfdd which does not need any external information. For instance, if we have a condition Pair("$x","$y"), we  will add it if on one arc we have both variables  $x and $y, otherwise it won't be used at this step. When we have just the same variable on a condition, it will be always taken into account.
@@ -239,84 +307,6 @@ extension HeroNet {
     return arrayLabelToExprs
   }
   
-  /// Creates a MFDD pointer an array of key expressions.
-  /// It corresponds to all of input arcs for a transition firing
-  /// - Parameters:
-  ///   - arrayKeyToExp: An array containing a list of keys binds to their possible expressions
-  ///   - index: An indicator which the key is currently read.
-  ///   - factory: The factory to construct the MFDD
-  /// - Returns:
-  ///   A MFDD pointer that contains every valid possibilities for the given args.
-//  func constructMFDD(
-//    arrayKeyToExprs: [[Key: Multiset<String>]],
-//    index: Int,
-//    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-//  ) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
-//
-//
-//    if index == arrayKeyToExprs.count - 1 {
-//      return constructMFDD(
-//        keyToExprs: arrayKeyToExprs[index],
-//        factory: factory,
-//        nextPointer: factory.one.pointer
-//      )
-//    }
-//
-//    return constructMFDD(
-//      keyToExprs: arrayKeyToExprs[index],
-//      factory: factory,
-//      nextPointer: constructMFDD(
-//        arrayKeyToExprs: arrayKeyToExprs,
-//        index: index+1,
-//        factory: factory
-//      )
-//    )
-//
-//  }
-
-  
-  
-  /// Creates a MFDD pointer for a couple of keys and expressions.
-  /// It corresponds only to a single input arc that can contains multiple variables.
-  /// - Parameters:
-  ///   - keys: The label keys of an input arc
-  ///   - exprs: The expressions that can be taken by the variables.
-  ///   - factory: The factory to construct the MFDD
-  ///   - nextPointer: The pointer that links every arcs between them cause we construct a separate mfdd for each list of variables. Hence, we get a logic continuation. This value is Top for the last variable of the MFDD.
-  /// - Returns:
-  ///   A MFDD pointer that contains every valid possibilities for the given args.
-//  func constructMFDD(
-//    keyToExprs: [Dictionary<Key, Multiset<String>>.Element],
-//    factory: MFDDFactory<KeyMFDD, ValueMFDD>,
-//    nextPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer)
-//  -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
-//    if keyToExprs.count == 0 {
-//      return nextPointer
-//    } else {
-//      var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
-//      let (key, exprs) = keyToExprs.first!
-//      let rest = Array(keyToExprs.dropFirst())
-//      var restTemp = rest
-//
-//      for el in exprs {
-//        for (subKey, subExprs) in rest {
-//
-//          let index = restTemp!.firstIndex(where: {$0 == subExprs})!
-//          restTemp.remove(at: index)
-//        }
-////        var copyExprs: [String] = exprs
-////        let index = copyExprs.firstIndex(where: {$0 == el})!
-////        copyExprs.remove(at: index)
-//        take[el] = constructMFDD(
-//          keys: Array(keys.dropFirst()),
-//          exprs: copyExprs,
-//          factory: factory,
-//          nextPointer: nextPointer)
-//      }
-//    }
-//    return factory.node(key: keys.first!, take: take, skip: factory.zero.pointer)
-//  }
-  
   /// Compute a score for each variable using the guards
   ///
   /// - Parameters:
@@ -383,7 +373,7 @@ extension HeroNet {
   ///   A sorted array that binds each key to their expressions, grouped by places and sorted using label weights
   func computeSortedArrayKeyToExprs(
     arrayLabelToExprs: [[Label: Multiset<String>]],
-    labelSet: Set<Label>,
+    arrayLabelSet: [Set<Label>],
     labelWeights: [Label: Int]?
   ) -> [[Key: Multiset<String>]] {
     
@@ -392,14 +382,48 @@ extension HeroNet {
     var arrayKeyToExprs: [[Key: Multiset<String>]] = []
     
     if let lw = labelWeights {
-      totalOrder = createTotalOrder(
-        labels: labelSet.sorted(by: {(label1, label2) -> Bool in
-          return lw[label1]! < lw[label2]!
-      }))
+      var weightLabelsGrouped: [[Label: Int]] = []
+      var weightLabels: [Label: Int] = [:]
+      
+      for labelSet in arrayLabelSet {
+        for label in labelSet {
+          weightLabels[label] = lw[label]
+        }
+        weightLabelsGrouped.append(weightLabels)
+        weightLabels = [:]
+      }
+      
+      // Sort dictionnaries using the greater weight in each of them
+      weightLabelsGrouped = weightLabelsGrouped.sorted(
+        by: {(labelToWeight1, labelToWeight2) -> Bool in
+          let max1 = labelToWeight1.map({(key, weight) -> Int in
+            return weight
+          }).max()!
+          let max2 = labelToWeight2.map({(key, weight) -> Int in
+            return weight
+          }).max()!
+          return max1 > max2
+      })
+      
+      // Goal to achieve: Goes  from [[x0:161,y:120], [x1:160]] -> [x0,y,x1] to allow to create a total order
+      // First step: We order each dic into the array (e.g.: [x: 160, y: 120, z: 180] -> [z: 180, x: 160, y: 120])
+      // Second step: Keep only the key (e.g.: [z: 180, x: 160, y: 120] -> [z,x,y])
+      // Last step: Flatten all arrays (e.g.: [[x,y], [z]] -> [x,y,z])
+      let arrayLabelsGrouped = Array(
+        weightLabelsGrouped
+        .map({(labelToWeight: [Label: Int]) -> [Label] in
+          let labelSorted = labelToWeight.sorted(by: {$0.value > $1.value})
+          return labelSorted.map({$0.key})
+        }))
+        .flatMap({$0})
+      print(arrayLabelsGrouped)
+      totalOrder = createTotalOrder(labels: arrayLabelsGrouped)
     } else {
-      totalOrder = createTotalOrder(labels: Array(labelSet))
+      totalOrder = createTotalOrder(
+        labels: Array(arrayLabelSet.reduce(Set([]), {(result, setLabel) in result.union(setLabel)}))
+      )
     }
-    
+    print(totalOrder)
     for labelToExprs in arrayLabelToExprs {
       for (label, exprs) in labelToExprs {
         keyToExprs[Key(label: label, couple: totalOrder)] = exprs
@@ -424,4 +448,16 @@ extension HeroNet {
     return arrayKeyToExprs
   }
 
+  // createOrder creates a list of pair from a list of string
+  // to represent a total order relation. Pair(l,r) => l < r
+  func createTotalOrder(labels: [Label]) -> [Pair<Label>] {
+      var r: [Pair<Label>] = []
+      for i in 0 ..< labels.count {
+        for j in i+1 ..< labels.count {
+          r.append(Pair(labels[i],labels[j]))
+        }
+      }
+      return r
+  }
+  
 }
