@@ -158,7 +158,20 @@ extension HeroNet {
     for condition in restConditions.sorted(by: {conditionWeights[$0]! > conditionWeights[$1]!}) {
       for binding in mfdd {
         if !checkCondition(condition: condition, with: binding) {
-          mfdd = mfdd.subtracting(factory.encode(family: factory.encode(family: [binding])))
+          mfdd = mfdd.subtracting(factory.encode(family: [binding]))
+        }
+      }
+    }
+    
+    // Add conditions depending on variables with the same name ! If "x" appears 3 times, we will have 3 keys: ["x_0","x_1","x_2"] but at the end there are the same. It means that we require to add the following conditions: ((x_0,x_1), (x_1,x_2), (x_0, x_2))
+    for key1 in keySet {
+      for key2 in keySet {
+        if key1.label.name == key2.label.name {
+          for binding in mfdd {
+            if binding[key1] != binding[key2] {
+              mfdd = mfdd.subtracting(factory.encode(family: [binding]))
+            }
+          }
         }
       }
     }
@@ -240,7 +253,6 @@ extension HeroNet {
 
   }
 
-  
   
   /// Creates a MFDD pointer for a couple of keys and expressions.
   /// It corresponds only to a single input arc that can contains multiple variables.
@@ -395,7 +407,6 @@ extension HeroNet {
       varInACond = []
     }
     
-    
     // To compute a score
     // If a condition contains the same variable, it earns 50 points
     // If a condition contains a variable with other variables, every variables earn 10 points
@@ -469,9 +480,7 @@ extension HeroNet {
         .flatMap({$0})
       totalOrder = createTotalOrder(labels: arrayLabelsGrouped)
     } else {
-      totalOrder = createTotalOrder(
-        labels: Array(arrayLabelSet.reduce(Set([]), {(result, setLabel) in result.union(setLabel)}))
-      )
+      totalOrder = createTotalOrder(labels: Array(arrayLabelSet).flatMap({$0}))
     }
     
     for labelToExprs in arrayLabelToExprs {
