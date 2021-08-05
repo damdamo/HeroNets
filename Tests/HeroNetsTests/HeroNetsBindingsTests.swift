@@ -161,30 +161,9 @@ final class HeroNetsBindingsTests: XCTestCase {
     print(bindings1)
     print("-------------------------------")
     print(bindings2)
-//    var s: Set<[String: String]> = []
-//    var dic: [String: String] = [:]
-//
-//    for el in bindings1 {
-//      for (k,v) in el {
-//        dic[k.label] = v
-//      }
-//      s.insert(dic)
-//      dic = [:]
-//    }
-//
-//    XCTAssertEqual(s, Set([["$f": "div", "$x": "1"], ["$f": "div", "$x": "2"]]))
-//
-//    s = []
-//    for el in bindings2 {
-//      for (k,v) in el {
-//        dic[k.label] = v
-//      }
-//      s.insert(dic)
-//      dic = [:]
-//    }
-//
-//    XCTAssertEqual(s, Set([["$y": "1", "$g": "div(2)"]]))
-
+    
+    XCTAssertEqual(simplifyBinding(bindings: bindings1), Set([["$f": "div", "$x": "1"], ["$f": "div", "$x": "2"]]))
+    XCTAssertEqual(simplifyBinding(bindings: bindings2), Set([["$y": "1", "$g": "div(2)"]]))
   }
   
   
