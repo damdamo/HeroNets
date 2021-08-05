@@ -76,35 +76,35 @@ final class HeroNetsBindingsTests: XCTestCase {
 //
    }
   
-//  func testBinding1() {
-//
-//    let module: String = """
-//    func add(_ x: Int, _ y: Int) -> Int ::
-//      x + y
-//    """
-//
-//    var interpreter = Interpreter()
-//    try! interpreter.loadModule(fromString: module)
-//
-//    let conditionList: [Pair<String>] = [Pair("$x","1"),Pair("$y", "$x")]
-////    let conditionList: [Pair<String>] = [Pair("$z","1"),Pair("$z", "$x")]
-//
-//
-//    let model = HeroNet<P, T>(
-//      .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
-//      .pre(from: .p2, to: .t1, labeled: ["$z"]),
-//      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-//      guards: [.t1: conditionList, .t2: nil],
-//      interpreter: interpreter
-//    )
-//
-//    let factory = MFDDFactory<Key,String>()
-//    let marking1 = Marking<P>([.p1: ["1","1","5"], .p2: ["1", "2"], .p3: []])
-//
-//    let bindings1 = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+  func testBinding1() {
+
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
+
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
+    let conditionList: [Pair<String>] = [Pair("$x","1"),Pair("$y", "$x")]
+//    let conditionList: [Pair<String>]? = nil
+
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
+      .pre(from: .p2, to: .t1, labeled: ["$z"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: conditionList, .t2: nil],
+      interpreter: interpreter
+    )
+
+    let factory = MFDDFactory<Key,String>()
+    let marking1 = Marking<P>([.p1: ["1","1","2","3","3"], .p2: ["1", "2", "3"], .p3: []])
+
+    let bindings1 = model.fireableBindings(for: .t1, with: marking1, factory: factory)
 //    var s: Set<[String: String]> = []
 //    var dic: [String: String] = [:]
-//
+
+    print(bindings1)
 //    for el in bindings1 {
 //      for (k,v) in el {
 //        dic[k.label] = v
@@ -123,10 +123,10 @@ final class HeroNetsBindingsTests: XCTestCase {
 //    print(bindings1)
 //    print("--------------")
 //    print(bindings1.subtracting(factory.encode(family: [[xKey: "1",yKey: "1",zKey: "1"]])))
-//
-////    XCTAssertEqual(s, Set([["$z": "2", "$x": "1", "$y": "1"], ["$y": "1", "$z": "1", "$x": "1"]]))
-//
-//  }
+
+//    XCTAssertEqual(s, Set([["$z": "2", "$x": "1", "$y": "1"], ["$y": "1", "$z": "1", "$x": "1"]]))
+//    XCTAssertEqual(bindings1, factory.encode(family: <#T##Sequence#>))
+  }
 
 //  func testBinding2() {
 //

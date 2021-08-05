@@ -74,7 +74,7 @@ extension HeroNet {
       }),
       conditions: guards[transition]
     )
-        
+            
     // Return the sorted key to expressions list
     let arrayKeyToExprs = computeSortedArrayKeyToExprs(
       arrayLabelToExprs: arrayLabelToExprs,
@@ -83,7 +83,7 @@ extension HeroNet {
     )
             
     // Construct the mfdd
-    var mfddPointer = constructMFDD(
+    let mfddPointer = constructMFDD(
       arrayKeyToExprs: arrayKeyToExprs,
       index: 0,
       factory: factory
@@ -100,14 +100,18 @@ extension HeroNet {
     }
     
     var mfdd = MFDD(pointer: mfddPointer, factory: factory)
-    // Apply guards
-    applyConditions(
-      mfdd: &mfdd,
-      condWithOnlySameVariable: condWithOnlySameVariable,
-      restConditions: restConditions,
-      keySet: keySet,
-      factory: factory
-    )
+    
+    if let _ = guards[transition] {
+      // Apply guards
+      applyConditions(
+        mfdd: &mfdd,
+        condWithOnlySameVariable: condWithOnlySameVariable,
+        restConditions: restConditions,
+        conditionWeights: conditionWeights!,
+        keySet: keySet,
+        factory: factory
+      )
+    }
     
     return mfdd
   }
@@ -116,6 +120,7 @@ extension HeroNet {
     mfdd: inout MFDD<KeyMFDD,ValueMFDD>,
     condWithOnlySameVariable: [String: [Pair<String>]],
     restConditions: [Pair<String>],
+    conditionWeights: [Pair<String>: Int],
     keySet: Set<Key>,
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
   ) {
@@ -143,7 +148,8 @@ extension HeroNet {
     }
     
     // Test the rest of conditions directly on each value of the MFDD
-    for condition in restConditions {
+    // Conditions are sorted by a score, more it is greater, more the condition is prioritized
+    for condition in restConditions.sorted(by: {conditionWeights[$0]! > conditionWeights[$1]!}) {
       for binding in mfdd {
         if !checkCondition(condition: condition, with: binding) {
           mfdd = mfdd.subtracting(factory.encode(family: factory.encode(family: [binding])))
@@ -269,51 +275,7 @@ extension HeroNet {
       return factory.node(key: key, take: take, skip: factory.zero.pointer)
     }
   }
-  
-//  /// Creates the list of conditions for a list of variable. It means that  we want to isolate for each group of variables (from our net) for each arc which conditions can be applied independantly from other places. Thus, we can isolate conditions for a specific submfdd which does not need any external information. For instance, if we have a condition Pair("$x","$y"), we  will add it if on one arc we have both variables  $x and $y, otherwise it won't be used at this step. When we have just the same variable on a condition, it will be always taken into account.
-//  ///
-//  /// - Parameters:
-//  ///   - variableLists: List of each group of variables
-//  ///   - transition: The transition for which we want to compute all bindings
-//  /// - Returns:
-//  ///   An array that  binds each group of variables with their corresponding independant conditions (that not depends on another variable from another arc).
-//  func isolateCondForVars(variableLists: [[String]], transition: TransitionType) -> [[String]: [Pair<String>]]? {
-//
-//    guard let _ = guards[transition] else { return nil }
-//
-//    var res: [[String]: [Pair<String>]] = [:]
-//    var condToVarList: [Pair<String>: Set<String>] = [:]
-//    let flattenVariableLists = variableLists.flatMap({$0})
-//
-//    if let conditions = guards[transition] {
-//      for cond in conditions {
-//        for variable in flattenVariableLists {
-//          if cond.l.contains(variable) || cond.r.contains(variable) {
-//            if let _ = condToVarList[cond] {
-//              condToVarList[cond]!.insert(variable)
-//            } else {
-//              condToVarList[cond] = [variable]
-//            }
-//          }
-//        }
-//      }
-//    }
-//
-//    for (cond,vars) in condToVarList {
-//      for variableList in variableLists {
-//        if vars.isSubset(of: variableList) {
-//          if let _ = res[variableList] {
-//            res[variableList]!.append(cond)
-//          } else {
-//            res[variableList] = [cond]
-//          }
-//        }
-//      }
-//    }
-//
-//    return res
-//  }
-  
+    
   /// Create a label for each variable and associates the possible expressions. Labels are grouped by places.
   ///
   /// - Parameters:
@@ -377,13 +339,13 @@ extension HeroNet {
     return arrayLabelToExprs
   }
   
-  /// Compute a score for each variable using the guards
+  /// Compute a score for each variable using the guards, and the score of priority for each conditions. The score is used to determine the order to apply conditions
   ///
   /// - Parameters:
   ///   - labelSet: Set of labels
   ///   - conditions: List of condition for a specific transition
   /// - Returns:
-  ///   Return a dictionnary that binds a label to its weight
+  ///   Return a tuple with its first element a dictionnary that binds a label to its weight and second element a dictionnary that binds condition to a score !
   func computeScoreOrder(
     labelSet: Set<Label>,
     conditions: [Pair<String>]?)
@@ -513,21 +475,15 @@ extension HeroNet {
       arrayKeyToExprs.append(keyToExprs)
       keyToExprs = [:]
     }
-    
 
-    if let lw = labelWeights {
-      return arrayKeyToExprs.sorted(by: {(keyToExpr1, keyToExpr2) -> Bool in
-        let max1 = keyToExpr1.map({(key, exprs) -> Int in
-          lw[key.label]!
-        }).max()!
-        let max2 = keyToExpr2.map({(key, exprs) -> Int in
-          lw[key.label]!
-        }).max()!
-        return max1 > max2
-      })
-    }
+    // [[x], [y, z] with [x: 211, y: 212, z: 42] -> [[y,z],[x]]
+    // The smallest key has the biggest score. If score(x) = 211 and score(y) = 212 => y < x
+    return arrayKeyToExprs.sorted(by: {(keyToExpr1, keyToExpr2) -> Bool in
+      let maxKey1 = keyToExpr1.sorted(by: {$0.key < $1.key}).first!.key
+      let maxKey2 = keyToExpr2.sorted(by: {$0.key < $1.key}).first!.key
+      return maxKey1 < maxKey2
+    })
     
-    return arrayKeyToExprs
   }
 
   // createOrder creates a list of pair from a list of string
@@ -543,3 +499,48 @@ extension HeroNet {
   }
   
 }
+
+
+//  /// Creates the list of conditions for a list of variable. It means that  we want to isolate for each group of variables (from our net) for each arc which conditions can be applied independantly from other places. Thus, we can isolate conditions for a specific submfdd which does not need any external information. For instance, if we have a condition Pair("$x","$y"), we  will add it if on one arc we have both variables  $x and $y, otherwise it won't be used at this step. When we have just the same variable on a condition, it will be always taken into account.
+//  ///
+//  /// - Parameters:
+//  ///   - variableLists: List of each group of variables
+//  ///   - transition: The transition for which we want to compute all bindings
+//  /// - Returns:
+//  ///   An array that  binds each group of variables with their corresponding independant conditions (that not depends on another variable from another arc).
+//  func isolateCondForVars(variableLists: [[String]], transition: TransitionType) -> [[String]: [Pair<String>]]? {
+//
+//    guard let _ = guards[transition] else { return nil }
+//
+//    var res: [[String]: [Pair<String>]] = [:]
+//    var condToVarList: [Pair<String>: Set<String>] = [:]
+//    let flattenVariableLists = variableLists.flatMap({$0})
+//
+//    if let conditions = guards[transition] {
+//      for cond in conditions {
+//        for variable in flattenVariableLists {
+//          if cond.l.contains(variable) || cond.r.contains(variable) {
+//            if let _ = condToVarList[cond] {
+//              condToVarList[cond]!.insert(variable)
+//            } else {
+//              condToVarList[cond] = [variable]
+//            }
+//          }
+//        }
+//      }
+//    }
+//
+//    for (cond,vars) in condToVarList {
+//      for variableList in variableLists {
+//        if vars.isSubset(of: variableList) {
+//          if let _ = res[variableList] {
+//            res[variableList]!.append(cond)
+//          } else {
+//            res[variableList] = [cond]
+//          }
+//        }
+//      }
+//    }
+//
+//    return res
+//  }
