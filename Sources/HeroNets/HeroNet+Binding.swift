@@ -134,8 +134,14 @@ extension HeroNet {
       for condition in conditions {
         if condition.l.contains("$") {
           value = "\(try! interpreter.eval(string: condition.r))"
+          if value.contains("function") {
+            value = condition.r
+          }
         } else {
           value = "\(try! interpreter.eval(string: condition.l))"
+          if value.contains("function") {
+            value = condition.l
+          }
         }
         
         for key in keySet {
