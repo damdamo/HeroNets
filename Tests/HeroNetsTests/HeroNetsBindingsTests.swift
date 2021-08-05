@@ -15,6 +15,22 @@ final class HeroNetsBindingsTests: XCTestCase {
     case t1, t2
   }
   
+  // Transform mfdd into a set of dictionnaries with all possibilities
+  func simplifyBinding(bindings: MFDD<Key, String>) -> Set<[String:String]> {
+    
+    var bindingSimplify: Set<[String: String]> = []
+    var dicTemp: [String: String] = [:]
+    
+    for el in bindings {
+      for (k,v) in el {
+        dicTemp[k.label.name] = v
+      }
+      bindingSimplify.insert(dicTemp)
+      dicTemp = [:]
+    }
+    
+    return bindingSimplify
+  }
   
   func testBinding0() {
 
@@ -60,7 +76,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    let conditionList: [Pair<String>] = [Pair("$x","1"),Pair("$y", "$x")]
+    let conditionList: [Pair<String>] = [Pair("$x","1"),Pair("$y", "$z")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
@@ -71,34 +87,16 @@ final class HeroNetsBindingsTests: XCTestCase {
     )
 
     let factory = MFDDFactory<Key,String>()
-    let marking1 = Marking<P>([.p1: ["1","1","2","3","3"], .p2: ["1", "2", "3"], .p3: []])
+    let marking1 = Marking<P>([.p1: ["1","1","2","3"], .p2: ["1", "2", "3"], .p3: []])
 
-    let bindings1 = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-//    var s: Set<[String: String]> = []
-//    var dic: [String: String] = [:]
+    let bindings = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+      
+    let bindingSimplified = simplifyBinding(bindings: bindings)
+    let expectedRes: Set<[String:String]> = [["$x": "1", "$z": "2", "$y": "2"], ["$z": "1", "$x": "1", "$y": "1"], ["$y": "3", "$z": "3", "$x": "1"]]
+    
 
-    print(bindings1)
-//    for el in bindings1 {
-//      for (k,v) in el {
-//        dic[k.label] = v
-//      }
-//      s.insert(dic)
-//      dic = [:]
-//    }
-//
-//    let couple = [Pair("$z", "$x"), Pair("$z", "$y"), Pair("$y", "$x")]
-//
-//    let xKey = Key(name: "$x", couple: couple)
-//    let yKey = Key(name: "$y", couple: couple)
-//    let zKey = Key(name: "$z", couple: couple)
-//
-//
-//    print(bindings1)
-//    print("--------------")
-//    print(bindings1.subtracting(factory.encode(family: [[xKey: "1",yKey: "1",zKey: "1"]])))
+    XCTAssertEqual(bindingSimplified, expectedRes)
 
-//    XCTAssertEqual(s, Set([["$z": "2", "$x": "1", "$y": "1"], ["$y": "1", "$z": "1", "$x": "1"]]))
-//    XCTAssertEqual(bindings1, factory.encode(family: <#T##Sequence#>))
   }
 
   func testBinding2() {
