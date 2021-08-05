@@ -68,13 +68,13 @@ extension HeroNet {
     }
     
     // Compute a score for each label
-    let labelWeights = computeScoreOrder(
+    let (labelWeights, conditionWeights) = computeScoreOrder(
       labelSet: arrayLabelSet.reduce(Set([]), {(result, setLabel) in
         result.union(setLabel)
       }),
       conditions: guards[transition]
     )
-    
+        
     // Return the sorted key to expressions list
     let arrayKeyToExprs = computeSortedArrayKeyToExprs(
       arrayLabelToExprs: arrayLabelToExprs,
@@ -89,38 +89,108 @@ extension HeroNet {
       factory: factory
     )
     
-//    let varsToConds = isolateCondForVars(variableLists: variableLists, transition: transition)
-//    var keysToCond: [[Key]: [Pair<String>]]? = [:]
-//
-//    if let vToC = varsToConds {
-//      for (vars,conds) in vToC {
-//        for var_ in vars {
-//          listKeyTemp.append(Key(name: var_, couple: totalOrder))
-//        }
-//        keysToCond![listKeyTemp] = conds
-//      }
-//    } else {
-//      keysToCond = nil
-//    }
+    let (condWithOnlySameVariable, restConditions) = isolateCondWithSameVariable(variableSet: variableSet, conditions: guards[transition])
     
+    var keySet: Set<Key> = []
     
+    for keyToExprs in arrayKeyToExprs {
+      for (key,_) in keyToExprs {
+        keySet.insert(key)
+      }
+    }
     
-    // Construct the mfdd
-//    var mfddPointer = constructMFDD(
-//      arrayKeysToExpr: arrayKeysToExpr,
-//      index: 0,
-//      factory: factory
-//    )
-    
+    var mfdd = MFDD(pointer: mfddPointer, factory: factory)
     // Apply guards
-//    applyGuardFilter(
-//      mfddPointer: &mfddPointer,
-//      transition: transition,
-//      listKey: listKey,
-//      factory: factory
-//    )
-//    let mfddPointer = factory.one.pointer
-    return MFDD(pointer: mfddPointer, factory: factory)
+    applyConditions(
+      mfdd: &mfdd,
+      condWithOnlySameVariable: condWithOnlySameVariable,
+      restConditions: restConditions,
+      keySet: keySet,
+      factory: factory
+    )
+    
+    return mfdd
+  }
+  
+  func applyConditions(
+    mfdd: inout MFDD<KeyMFDD,ValueMFDD>,
+    condWithOnlySameVariable: [String: [Pair<String>]],
+    restConditions: [Pair<String>],
+    keySet: Set<Key>,
+    factory: MFDDFactory<KeyMFDD, ValueMFDD>
+  ) {
+    
+    var morphisms: MFDDMorphismFactory<KeyMFDD, ValueMFDD> { factory.morphisms }
+          
+    // Conditions with the same variable of the form: ($x, expr) or (expr, $x)
+    // Does not work for condition of the form: ($x +  1, 3)
+    for (var_, conditions) in condWithOnlySameVariable {
+      var value: String = ""
+      for condition in conditions {
+        if condition.l.contains("$") {
+          value = "\(try! interpreter.eval(string: condition.r))"
+        } else {
+          value = "\(try! interpreter.eval(string: condition.l))"
+        }
+        
+        for key in keySet {
+          if key.label.name == var_ {
+            let morphism = morphisms.filter(containing: [(key: key, values: [value])])
+            mfdd = morphism.apply(on: mfdd)
+          }
+        }
+      }
+    }
+    
+    // Test the rest of conditions directly on each value of the MFDD
+    for condition in restConditions {
+      for binding in mfdd {
+        if !checkCondition(condition: condition, with: binding) {
+          mfdd = mfdd.subtracting(factory.encode(family: factory.encode(family: [binding])))
+        }
+      }
+    }
+    
+  }
+  
+  /// Create a dictionnary of label names bind to conditions where label name is the only to appear in the condition.
+  /// A rest is given containing condition that does not match with the precedent statement.
+  /// It corresponds to all of input arcs for a transition firing. Care, it only works for condition of the form: ($x, expr) or (expr, $x)
+  /// and not of the form: ($x+1, 3) where we  apply an operation on the side of the variable. It is explainedby the fact that we do not evaluate the part with the variable. In this case it's a bit more complicated cause we need to know $x, implying to go inside the mfdd manually.
+  /// - Parameters:
+  ///   - variableSet: An array containing a list of keys binds to their possible expressions
+  ///   - conditions: List of condition for a specific transition
+  /// - Returns:
+  ///   A tuple where the first element is the label name binds to a list of condition where the label name is the only variable. The second element is the list of conditions minus conditions that are valid for the first part of the tuple.
+  func isolateCondWithSameVariable(variableSet: Set<String>, conditions: [Pair<String>]?) -> ([String: [Pair<String>]], [Pair<String>]) {
+    
+    var varSetTemp: Set<String> = []
+    var condWithOnlySameVariable: [String: [Pair<String>]] = [:]
+    var restConditions: [Pair<String>] = []
+    
+    if let conds = conditions {
+      for cond in conds {
+        for var_ in variableSet {
+          if cond.l.contains(var_) || cond.r.contains(var_) {
+            varSetTemp.insert(var_)
+          }
+        }
+        // Check that we have the same variable, and one of both side contains just this variable
+        if varSetTemp.count == 1 &&
+            (cond.l == varSetTemp.first! || cond.r == varSetTemp.first!){
+          if let _ = condWithOnlySameVariable[varSetTemp.first!] {
+            condWithOnlySameVariable[varSetTemp.first!]!.append(cond)
+          } else {
+            condWithOnlySameVariable[varSetTemp.first!] = [cond]
+          }
+        } else {
+          restConditions.append(cond)
+        }
+        varSetTemp = []
+      }
+    }
+    return (condWithOnlySameVariable, restConditions)
+
   }
   
   /// Creates a MFDD pointer an array of key expressions.
@@ -200,49 +270,49 @@ extension HeroNet {
     }
   }
   
-  /// Creates the list of conditions for a list of variable. It means that  we want to isolate for each group of variables (from our net) for each arc which conditions can be applied independantly from other places. Thus, we can isolate conditions for a specific submfdd which does not need any external information. For instance, if we have a condition Pair("$x","$y"), we  will add it if on one arc we have both variables  $x and $y, otherwise it won't be used at this step. When we have just the same variable on a condition, it will be always taken into account.
-  ///
-  /// - Parameters:
-  ///   - variableLists: List of each group of variables
-  ///   - transition: The transition for which we want to compute all bindings
-  /// - Returns:
-  ///   An array that  binds each group of variables with their corresponding independant conditions (that not depends on another variable from another arc).
-  func isolateCondForVars(variableLists: [[String]], transition: TransitionType) -> [[String]: [Pair<String>]]? {
-    
-    guard let _ = guards[transition] else { return nil }
-    
-    var res: [[String]: [Pair<String>]] = [:]
-    var condToVarList: [Pair<String>: Set<String>] = [:]
-    let flattenVariableLists = variableLists.flatMap({$0})
-    
-    if let conditions = guards[transition] {
-      for cond in conditions {
-        for variable in flattenVariableLists {
-          if cond.l.contains(variable) || cond.r.contains(variable) {
-            if let _ = condToVarList[cond] {
-              condToVarList[cond]!.insert(variable)
-            } else {
-              condToVarList[cond] = [variable]
-            }
-          }
-        }
-      }
-    }
-    
-    for (cond,vars) in condToVarList {
-      for variableList in variableLists {
-        if vars.isSubset(of: variableList) {
-          if let _ = res[variableList] {
-            res[variableList]!.append(cond)
-          } else {
-            res[variableList] = [cond]
-          }
-        }
-      }
-    }
-    
-    return res
-  }
+//  /// Creates the list of conditions for a list of variable. It means that  we want to isolate for each group of variables (from our net) for each arc which conditions can be applied independantly from other places. Thus, we can isolate conditions for a specific submfdd which does not need any external information. For instance, if we have a condition Pair("$x","$y"), we  will add it if on one arc we have both variables  $x and $y, otherwise it won't be used at this step. When we have just the same variable on a condition, it will be always taken into account.
+//  ///
+//  /// - Parameters:
+//  ///   - variableLists: List of each group of variables
+//  ///   - transition: The transition for which we want to compute all bindings
+//  /// - Returns:
+//  ///   An array that  binds each group of variables with their corresponding independant conditions (that not depends on another variable from another arc).
+//  func isolateCondForVars(variableLists: [[String]], transition: TransitionType) -> [[String]: [Pair<String>]]? {
+//
+//    guard let _ = guards[transition] else { return nil }
+//
+//    var res: [[String]: [Pair<String>]] = [:]
+//    var condToVarList: [Pair<String>: Set<String>] = [:]
+//    let flattenVariableLists = variableLists.flatMap({$0})
+//
+//    if let conditions = guards[transition] {
+//      for cond in conditions {
+//        for variable in flattenVariableLists {
+//          if cond.l.contains(variable) || cond.r.contains(variable) {
+//            if let _ = condToVarList[cond] {
+//              condToVarList[cond]!.insert(variable)
+//            } else {
+//              condToVarList[cond] = [variable]
+//            }
+//          }
+//        }
+//      }
+//    }
+//
+//    for (cond,vars) in condToVarList {
+//      for variableList in variableLists {
+//        if vars.isSubset(of: variableList) {
+//          if let _ = res[variableList] {
+//            res[variableList]!.append(cond)
+//          } else {
+//            res[variableList] = [cond]
+//          }
+//        }
+//      }
+//    }
+//
+//    return res
+//  }
   
   /// Create a label for each variable and associates the possible expressions. Labels are grouped by places.
   ///
@@ -311,19 +381,20 @@ extension HeroNet {
   ///
   /// - Parameters:
   ///   - labelSet: Set of labels
-  ///   - condition: List of condition for a specific transition
+  ///   - conditions: List of condition for a specific transition
   /// - Returns:
   ///   Return a dictionnary that binds a label to its weight
   func computeScoreOrder(
     labelSet: Set<Label>,
     conditions: [Pair<String>]?)
-  -> [Label: Int]? {
+  -> ([Label: Int]?, [Pair<String>: Int]?) {
     
     // If there is no conditions
     guard let _ = conditions else {
-      return nil
+      return (nil, nil)
     }
     var labelWeights: [Label: Int] = [:]
+    var conditionWeights: [Pair<String>: Int] = [:]
     var varForCond: [Set<String>] = []
     var varInACond: Set<String> = []
     
@@ -333,13 +404,25 @@ extension HeroNet {
       labelWeights[label] = 100 + label.n
     }
     
+    for condition in conditions! {
+      conditionWeights[condition] = 100
+    }
+    
     // To know condition variables
-    for pair in conditions! {
+    for condition in conditions! {
       for label in labelSet {
-        if pair.l.contains(label.name) || pair.r.contains(label.name) {
+        if condition.l.contains(label.name) || condition.r.contains(label.name) {
           varInACond.insert(label.name)
         }
       }
+      
+      // Compute condition weights
+      if varInACond.count != 0 {
+        conditionWeights[condition]! *= 2/varInACond.count
+      } else {
+        conditionWeights[condition]! = 0
+      }
+      
       varForCond.append(varInACond)
       varInACond = []
     }
@@ -352,7 +435,7 @@ extension HeroNet {
       for cond in varForCond {
         if cond.contains(label.name) {
           if cond.count == 1  {
-            labelWeights[label]! += 50
+            labelWeights[label]! += 100
           } else {
             labelWeights[label]! += 10
           }
@@ -360,7 +443,7 @@ extension HeroNet {
       }
     }
     
-    return labelWeights
+    return (labelWeights, conditionWeights)
   }
  
   /// Return the array of all possibles values for each labels that are transformed into keys. MFDD requires to have a total order relation between variables, so we construct this order using the weight computed before. We transform the precedent array of labels with expressions into an array of keys related to their multiset of expressions. This result is ordered using label weights.
@@ -416,14 +499,13 @@ extension HeroNet {
           return labelSorted.map({$0.key})
         }))
         .flatMap({$0})
-      print(arrayLabelsGrouped)
       totalOrder = createTotalOrder(labels: arrayLabelsGrouped)
     } else {
       totalOrder = createTotalOrder(
         labels: Array(arrayLabelSet.reduce(Set([]), {(result, setLabel) in result.union(setLabel)}))
       )
     }
-    print(totalOrder)
+    
     for labelToExprs in arrayLabelToExprs {
       for (label, exprs) in labelToExprs {
         keyToExprs[Key(label: label, couple: totalOrder)] = exprs
