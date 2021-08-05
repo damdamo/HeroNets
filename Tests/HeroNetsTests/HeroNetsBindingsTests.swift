@@ -15,6 +15,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     case t1, t2
   }
   
+  
   func testBinding0() {
 
     let module: String = """
@@ -46,34 +47,6 @@ final class HeroNetsBindingsTests: XCTestCase {
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
 
     print(mfdd)
-    // print(model.isolateCondForVars(variableLists: [["$x", "$y"],["$z"]], transition: .t1))
-    
-//    print(mfdd)
-//    model.constructExcludingValues(
-//      mfddPointer: &mfddPointer,
-//      cond: Pair("$x", "1"),
-//      save: [:],
-//      listKey: [Key(name: "$x", couple: [Pair("$x","$y")])],
-//      factory: factory
-//    )
-
-    //print(MFDD(pointer: mfddPointer, factory: factory))
-
-//
-//    print(notgood)
-//
-//    var morphisms: MFDDMorphismFactory<Key, String> { factory.morphisms }
-//
-//    let morphism = morphisms.filter(excluding: notgood)
-//
-//     print(morphism.apply(on: mfdd))
-
-//    XCTAssertEqual(morphism.apply(on: factory.zero), factory.zero)
-//    XCTAssertEqual(morphism.apply(on: factory.one), factory.one)
-//    XCTAssertEqual(
-//      morphism.apply(on: factory.encode(family: [[1: "a", 2: "b"], [1: "a", 3: "c"]])),
-//      factory.encode(family: [[1: "a", 2: "b"]]))
-//
    }
   
   func testBinding1() {
