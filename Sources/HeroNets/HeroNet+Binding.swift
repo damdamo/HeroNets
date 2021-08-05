@@ -113,9 +113,48 @@ extension HeroNet {
       )
     }
     
+    // Apply constraints when a variable appears multiple times.
+    applySameVariable(
+      mfdd: &mfdd,
+      keySet: keySet,
+      factory: factory
+    )
+    
     return mfdd
   }
   
+  /// Modify the current MFDD by checking if same variables have the same values.
+  /// - Parameters:
+  ///   - mfdd: The current mfdd
+  ///   - keySet: The set of keys
+  ///   - factory: The current factory
+  func applySameVariable(
+    mfdd: inout MFDD<KeyMFDD,ValueMFDD>,
+    keySet: Set<Key>,
+    factory: MFDDFactory<KeyMFDD, ValueMFDD>
+  ) {
+    // Add conditions depending on variables with the same name ! If "x" appears 3 times, we will have 3 keys: ["x_0","x_1","x_2"] but at the end there are the same. It means that we require to add the following conditions: ((x_0,x_1), (x_1,x_2), (x_0, x_2))
+    for key1 in keySet {
+      for key2 in keySet {
+        if key1.label.name == key2.label.name {
+          for binding in mfdd {
+            if binding[key1] != binding[key2] {
+              mfdd = mfdd.subtracting(factory.encode(family: [binding]))
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  /// Modify the current MFDD by applying conditions. There is an optimization for condition with only the same variable.
+  /// Otherwise, each solution is browsed and checked for each condition.
+  /// - Parameters:
+  ///   - mfdd: The current mfdd
+  ///   - condWithOnlySameVariable: A dictionnary that lists conditions that contain only the same variable inside for each of them
+  ///   - restConditions: Condition of a transition minus conditions added in condWithOnlySameVariable
+  ///   - keySet: The set of keys
+  ///   - factory: The current factory
   func applyConditions(
     mfdd: inout MFDD<KeyMFDD,ValueMFDD>,
     condWithOnlySameVariable: [String: [Pair<String>]],
@@ -159,19 +198,6 @@ extension HeroNet {
       for binding in mfdd {
         if !checkCondition(condition: condition, with: binding) {
           mfdd = mfdd.subtracting(factory.encode(family: [binding]))
-        }
-      }
-    }
-    
-    // Add conditions depending on variables with the same name ! If "x" appears 3 times, we will have 3 keys: ["x_0","x_1","x_2"] but at the end there are the same. It means that we require to add the following conditions: ((x_0,x_1), (x_1,x_2), (x_0, x_2))
-    for key1 in keySet {
-      for key2 in keySet {
-        if key1.label.name == key2.label.name {
-          for binding in mfdd {
-            if binding[key1] != binding[key2] {
-              mfdd = mfdd.subtracting(factory.encode(family: [binding]))
-            }
-          }
         }
       }
     }

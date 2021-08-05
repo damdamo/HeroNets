@@ -49,6 +49,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     print(mfdd)
    }
   
+  
   func testBinding1() {
 
     let module: String = """
