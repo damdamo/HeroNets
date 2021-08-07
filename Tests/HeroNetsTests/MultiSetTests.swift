@@ -33,18 +33,6 @@ final class MultiSetTests: XCTestCase {
     
   }
   
-//  func testIntersection() {
-//    let m1: Multiset<String> = ["a", "a", "b", "b", "c"]
-//    let m2: Multiset<String> = ["a", "b", "b"]
-//    let m3: Multiset<String> = []
-//    let res: Multiset<String> = ["a", "b", "b"]
-//
-//    XCTAssertEqual(m1.intersection(m3), m3)
-//    XCTAssertEqual(m1.intersection(m2), res)
-////    XCTAssertEqual(m1 - m2, res)
-//
-//  }
-  
   func testFilterInclude() {
     let m1: Multiset<String> = ["a", "a", "b", "b", "c"]
     let m2: Multiset<String> = ["a", "b", "b"]
@@ -92,6 +80,8 @@ final class MultiSetTests: XCTestCase {
   }
   
   static var allTests = [
-      ("testComparison", testComparison),
+    ("testComparison", testComparison),
+    ("testFilterInclude", testFilterInclude),
+    ("testMultiset", testMultiset),
   ]
 }
