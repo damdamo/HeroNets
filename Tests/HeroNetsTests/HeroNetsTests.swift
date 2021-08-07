@@ -171,6 +171,27 @@ final class HeroNetsTests: XCTestCase {
     XCTAssertEqual(marking3 > marking4, false)
     XCTAssertEqual(marking3 <= marking4, true)
     XCTAssertEqual(marking3 >= marking4, false)
+    
+    let tm: TotalMap<P, P.Content>  = [.p1: ["1", "2"], .p2: ["3"], .p3: ["4","5"]]
+    let marking5 = Marking(tm)
+    var marking6 = Marking<P>([.p1: ["1", "2"], .p2: ["3"], .p3: ["4","5"]])
+    XCTAssertEqual(marking1, marking5)
+    XCTAssertEqual(marking6[.p1], ["1", "2"])
+    XCTAssertEqual(marking6.places, [.p1, .p2, .p3])
+    marking6[.p1] = ["3"]
+    XCTAssertEqual(marking6[.p1], ["3"])
+    
+    let dic: [P: P.Content] = [.p1: ["1", "2"], .p2: ["3"], .p3: ["4","5"]]
+    XCTAssertEqual(Marking(dic), marking1)
+    
+    let marking7 = Marking<P>(partial: [.p1: ["1"], .p3: ["4"]])
+    XCTAssertEqual(marking7, marking3)
+    
+    let marking8 = Marking<P>([.p1: [], .p2: [], .p3: []])
+    XCTAssertEqual(marking8, Marking.zero)
+    
+    print(marking1)
+
   }
 
   static var allTests = [
