@@ -55,15 +55,7 @@ public struct Multiset<Element> where Element: Hashable {
   public func union(_ other: Multiset) -> Multiset {
     var result = self
     for (key, count) in other.storage {
-      result.storage[key] = (result.storage[key] ?? 0) + count
-    }
-    return result
-  }
-
-  public func union<S>(_ sequence: S) -> Multiset where S: Sequence, S.Element == Element {
-    var result = self
-    for key in sequence {
-      result.storage[key] = (result.storage[key] ?? 0) + 1
+      result.storage[key] = Swift.max(result.storage[key] ?? 0, count)
     }
     return result
   }
@@ -87,7 +79,7 @@ public struct Multiset<Element> where Element: Hashable {
   public func multisetToArray() -> Array<Element> {
     var arr: Array<Element> = []
     for (key,value) in storage {
-      for i in 0 ... value-1 {
+      for _ in 0 ... value-1 {
         arr.append(key)
       }
     }
@@ -215,12 +207,11 @@ extension Multiset: Comparable {
   
 extension Multiset: AdditiveArithmetic {
   public static func + (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Multiset<Element> {
-    var multiset = Multiset<Element>()
-    let keys = Set(lhs.storage.keys).union(Set(rhs.storage.keys))
-    for key in keys {
-      multiset.insert(key, occurences: lhs.occurences(of: key) + rhs.occurences(of: key))
+    var result = lhs
+    for (key, count) in rhs.storage {
+      result.storage[key] = (result.storage[key] ?? 0) + count
     }
-    return multiset
+    return result
   }
   
   public static func += (lhs: inout Multiset<Element>, rhs: Multiset<Element>) {
@@ -228,16 +219,7 @@ extension Multiset: AdditiveArithmetic {
   }
   
   public static func - (lhs: Multiset<Element>, rhs: Multiset<Element>) -> Multiset<Element> {
-    var multiset = Multiset<Element>()
-    var diff: Int = 0
-    let keys = Set(lhs.storage.keys).union(Set(rhs.storage.keys))
-    for key in keys {
-      diff = lhs.occurences(of: key) - rhs.occurences(of: key)
-      if diff != 0 {
-        multiset.insert(key, occurences: lhs.occurences(of: key) - rhs.occurences(of: key))
-      }
-    }
-    return multiset
+    return lhs.subtract(rhs)
   }
   
   public static func -= (lhs: inout Multiset<Element>, rhs: Multiset<Element>) {
@@ -285,10 +267,6 @@ extension Multiset: ExpressibleByDictionaryLiteral {
 
 
 extension Multiset: CustomStringConvertible {
-
-//  public var description: String {
-//    return "{\( map({ "\($0)" }).joined(separator: ", ") )}"
-//  }
 
   public var description: String {
     return "\(storage)"
