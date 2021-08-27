@@ -101,6 +101,13 @@ extension HeroNet {
     
     var mfdd = MFDD(pointer: mfddPointer, factory: factory)
     
+    // Ensure that keys with the same variable name has the same value !
+    applySameVariable(
+      mfdd: &mfdd,
+      keySet: keySet,
+      factory: factory
+    )
+    
     if let _ = guards[transition] {
       // Apply guards
       applyConditions(
@@ -112,13 +119,6 @@ extension HeroNet {
         factory: factory
       )
     }
-    
-    // Apply constraints when a variable appears multiple times.
-    applySameVariable(
-      mfdd: &mfdd,
-      keySet: keySet,
-      factory: factory
-    )
     
     return mfdd
   }
@@ -134,17 +134,37 @@ extension HeroNet {
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
   ) {
     // Add conditions depending on variables with the same name ! If "x" appears 3 times, we will have 3 keys: ["x_0","x_1","x_2"] but at the end there are the same. It means that we require to add the following conditions: ((x_0,x_1), (x_1,x_2), (x_0, x_2))
+    
+    var varToKeys: [String: Set<KeyMFDD>] = [:]
+    
     for key1 in keySet {
-      for key2 in keySet {
-        if key1.label.name == key2.label.name {
-          for binding in mfdd {
-            if binding[key1] != binding[key2] {
-              mfdd = mfdd.subtracting(factory.encode(family: [binding]))
+      if let _ = varToKeys[key1.label.name] {
+        varToKeys[key1.label.name]!.insert(key1)
+      } else {
+        varToKeys[key1.label.name] = [key1]
+      }
+    }
+    
+    for (varName, keyNames) in varToKeys {
+      if keyNames.count < 2 {
+        varToKeys.removeValue(forKey: varName)
+      }
+    }
+        
+    for binding in mfdd {
+      for (_, keyNames) in varToKeys {
+        for key1 in keyNames {
+          for key2 in keyNames {
+            if key1 != key2 {
+              if binding[key1] != binding[key2] {
+                mfdd = mfdd.subtracting(factory.encode(family: [binding]))
+              }
             }
           }
         }
       }
     }
+    
   }
   
   /// Modify the current MFDD by applying conditions. There is an optimization for condition with only the same variable.
@@ -207,7 +227,7 @@ extension HeroNet {
   /// Create a dictionnary of label names bind to conditions where label name is the only to appear in the condition.
   /// A rest is given containing condition that does not match with the precedent statement.
   /// It corresponds to all of input arcs for a transition firing. Care, it only works for condition of the form: ($x, expr) or (expr, $x)
-  /// and not of the form: ($x+1, 3) where we  apply an operation on the side of the variable. It is explainedby the fact that we do not evaluate the part with the variable. In this case it's a bit more complicated cause we need to know $x, implying to go inside the mfdd manually.
+  /// and not of the form: ($x+1, 3) where we  apply an operation on the side of the variable. It is explained by the fact that we do not evaluate the part with the variable. In this case it's a bit more complicated cause we need to know $x, implying to go inside the mfdd manually.
   /// - Parameters:
   ///   - variableSet: An array containing a list of keys binds to their possible expressions
   ///   - conditions: List of condition for a specific transition
