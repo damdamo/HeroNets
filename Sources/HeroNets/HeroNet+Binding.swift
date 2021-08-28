@@ -152,11 +152,12 @@ extension HeroNet {
     }
         
     for binding in mfdd {
+//      print(binding)
       for (_, keyNames) in varToKeys {
         for key1 in keyNames {
           for key2 in keyNames {
             if key1 != key2 {
-              if binding[key1] != binding[key2] {
+              if binding[key1] != binding[key2] && mfdd.contains(binding) {
                 mfdd = mfdd.subtracting(factory.encode(family: [binding]))
               }
             }
