@@ -32,38 +32,73 @@ final class HeroNetsBindingsTests: XCTestCase {
     return bindingSimplify
   }
   
-  func testBinding0() {
-
-    let module: String = """
-    func add(_ x: Int, _ y: Int) -> Int ::
-      x + y
-    """
-
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
-
-    let conditionList: [Pair<String>]? = nil
-
-//    let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$y")]
-    
-    let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
-      .pre(from: .p2, to: .t1, labeled: ["$x", "2"]),
-      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-      guards: [.t1: conditionList, .t2: nil],
-      interpreter: interpreter
-    )
-
-    let marking1 = Marking<P>([.p1: ["1", "1", "2", "2", "3"], .p2: ["1", "2", "3"], .p3: []])
-    
-    print("----------------------------")
-
-    let factory = MFDDFactory<Key, String>()
-
-    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-
-    print(mfdd)
-   }
+//  func testBinding0() {
+//
+//    let module: String = """
+//    func add(_ x: Int, _ y: Int) -> Int ::
+//      x + y
+//    """
+//
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
+//
+////    let conditionList: [Pair<String>]? = nil
+//
+//    let conditionList: [Pair<String>] = [Pair("$y","1"), Pair("$x", "$z")]
+//    
+//    let model = HeroNet<P, T>(
+//      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
+////      .pre(from: .p2, to: .t1, labeled: ["$x", "2"]),
+//      .pre(from: .p2, to: .t1, labeled: ["$x", "$z"]),
+//      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+//      guards: [.t1: conditionList, .t2: nil],
+//      interpreter: interpreter
+//    )
+//
+//    let marking1 = Marking<P>([.p1: ["1", "1", "2", "3"], .p2: ["1", "1", "2", "3"], .p3: []])
+//    
+//    print("----------------------------")
+//
+//    let factory = MFDDFactory<Key, String>()
+//
+//    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+//
+//    print(mfdd)
+//   }
+//  
+//  func testBinding01() {
+//
+//    let module: String = """
+//    func add(_ x: Int, _ y: Int) -> Int ::
+//      x + y
+//    """
+//
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
+//
+//    let conditionList: [Pair<String>]? = nil
+//
+////    let conditionList: [Pair<String>] = [Pair("$y","1"), Pair("$x", "$z")]
+//    
+//    let model = HeroNet<P, T>(
+//      .pre(from: .p1, to: .t1, labeled: ["$x"]),
+////      .pre(from: .p2, to: .t1, labeled: ["$x", "2"]),
+//      .pre(from: .p2, to: .t1, labeled: ["$x"]),
+//      .post(from: .t1, to: .p3, labeled: ["$x"]),
+//      guards: [.t1: conditionList, .t2: nil],
+//      interpreter: interpreter
+//    )
+//
+//    let marking1 = Marking<P>([.p1: ["1", "2"], .p2: ["1", "2", "3"], .p3: []])
+//    
+//    print("----------------------------")
+//
+//    let factory = MFDDFactory<Key, String>()
+//
+//    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+//
+//    print(mfdd)
+//   }
   
   
   func testBinding1() {
