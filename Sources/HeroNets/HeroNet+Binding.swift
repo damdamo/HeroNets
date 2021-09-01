@@ -83,11 +83,14 @@ extension HeroNet {
     )
             
     // Construct the mfdd
+    var s: Stopwatch = Stopwatch()
     let mfddPointer = constructMFDD(
       arrayKeyToExprs: arrayKeyToExprs,
       index: 0,
       factory: factory
     )
+    print("Time just to construct: \(s.elapsed.humanFormat)")
+
     
     let (condWithOnlySameVariable, restConditions) = isolateCondWithSameVariable(variableSet: variableSet, conditions: guards[transition])
     
@@ -279,24 +282,29 @@ extension HeroNet {
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
   ) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
 
-
-    if index == arrayKeyToExprs.count - 1 {
-      return constructMFDD(
-        keyToExprs: arrayKeyToExprs[index],
-        factory: factory,
-        nextPointer: factory.one.pointer
-      )
+    var pointer = factory.one.pointer
+    for keyToExprs in arrayKeyToExprs.reversed() {
+      pointer = constructMFDD(keyToExprs: keyToExprs, factory: factory, endPointer: pointer)
     }
-
-    return constructMFDD(
-      keyToExprs: arrayKeyToExprs[index],
-      factory: factory,
-      nextPointer: constructMFDD(
-        arrayKeyToExprs: arrayKeyToExprs,
-        index: index+1,
-        factory: factory
-      )
-    )
+    
+    return pointer
+//    if index == arrayKeyToExprs.count - 1 {
+//      return constructMFDD(
+//        keyToExprs: arrayKeyToExprs[index],
+//        factory: factory,
+//        nextPointer: factory.one.pointer
+//      )
+//    }
+//
+//    return constructMFDD(
+//      keyToExprs: arrayKeyToExprs[index],
+//      factory: factory,
+//      nextPointer: constructMFDD(
+//        arrayKeyToExprs: arrayKeyToExprs,
+//        index: index+1,
+//        factory: factory
+//      )
+//    )
 
   }
 
@@ -307,16 +315,16 @@ extension HeroNet {
   ///   - keys: The label keys of an input arc
   ///   - exprs: The expressions that can be taken by the variables.
   ///   - factory: The factory to construct the MFDD
-  ///   - nextPointer: The pointer that links every arcs between them cause we construct a separate mfdd for each list of variables. Hence, we get a logic continuation. This value is Top for the last variable of the MFDD.
+  ///   - endPointer: The last pointer where each leaf will point. At the beginning  it's just T (top).
   /// - Returns:
   ///   A MFDD pointer that contains every valid possibilities for the given args.
   func constructMFDD(
     keyToExprs: [Key: Multiset<String>],
     factory: MFDDFactory<KeyMFDD, ValueMFDD>,
-    nextPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer)
+    endPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer)
   -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
     if keyToExprs.count == 0 {
-      return nextPointer
+      return endPointer
     } else {
       var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
       let (key, exprs) = keyToExprs.min(by: {(el1, el2) -> Bool in
@@ -334,7 +342,7 @@ extension HeroNet {
         take[el] = constructMFDD(
           keyToExprs: restTemp,
           factory: factory,
-          nextPointer: nextPointer)
+          endPointer: endPointer)
         restTemp = rest
       }
       return factory.node(key: key, take: take, skip: factory.zero.pointer)
