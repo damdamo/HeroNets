@@ -284,37 +284,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     return true
   }
   
-  public func checkCondition(condition: Pair<String>, with binding: [Key: String]) -> Bool {
-    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)
-    let rhs: String = bindingSubstitution(str: condition.r, binding: binding)
-    
-    if lhs != rhs {
-      let v1 = try! interpreter.eval(string: lhs)
-      let v2 = try! interpreter.eval(string: rhs)
-      // If values are different and not are signature functions
-      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
-        return false
-      }
-    }
-    return true
-  }
-  
   /// Substitute variables inside a string by corresponding binding
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
   public func bindingSubstitution(str: String, binding: [String: String]) -> String {
     var res: String = str
     for el in binding {
       res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")
-    }
-    return res
-  }
-  
-  /// Substitute variables inside a string by corresponding binding
-  /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-  public func bindingSubstitution(str: String, binding: [Key: String]) -> String {
-    var res: String = str
-    for el in binding {
-      res = res.replacingOccurrences(of: "\(el.key.label.name)", with: "\(el.value)")
     }
     return res
   }
