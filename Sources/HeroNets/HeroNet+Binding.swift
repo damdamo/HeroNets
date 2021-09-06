@@ -72,6 +72,7 @@ extension HeroNet {
       labelToExprs: labelToExprs
     )
 
+    print(keyToExprs.sorted(by: {$0<$1}).map({$0.key}))
 
     // Construct the mfdd
     let s: Stopwatch = Stopwatch()
@@ -274,114 +275,85 @@ extension HeroNet {
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
   ) -> MFDD<KeyMFDD,ValueMFDD>? {
 
-    var mfdd: MFDD<KeyMFDD,ValueMFDD>? = nil
-    let keyToExprsSorted = keyToExprs.sorted(by: {$0 < $1})
-    let arrayTupleKeyToExprsSorted = keyToExprsSorted.map({(key, multiset) in
-      return (key,multiset)
-    })
+    var keyToExprsForAPlace: [KeyMFDD: Multiset<String>] =  [:]
+    var varToKey: [Label: KeyMFDD] = [:]
+    
+    for (key, _) in keyToExprs {
+      varToKey[key.label] = key
+    }
     
     if let pre = input[transition] {
+      
+      // Create a dependance dictionnary for variables
+      // It means that if we have a variable that appears on multiple arcs, if we choose a value for a x, it removes a value in the multisot of all related variables.
+//      for (_, labels) in  pre {
+//        for l1 in labels {
+//          for l2 in labels {
+//            if l1 != l2 {
+//              if let _ = relatedVariables[l1] {
+//                relatedVariables[l1]!.insert(l2)
+//              } else {
+//                relatedVariables[l1] = [l2]
+//              }
+//            }
+//          }
+//        }
+//      }
+      var cache: [[MFDD<KeyMFDD,ValueMFDD>.Pointer]: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
+      var mfddPointer = factory.zero.pointer
+      
       for (_, labels) in pre {
-        if let m = mfdd {
-          mfdd = m.intersection(
-            MFDD(
-              pointer: constructMFDD(
-                arrayTupleKeyToExprs: arrayTupleKeyToExprsSorted,
-                labelsForAPlace: labels,
-                factory: factory),
-              factory: factory
-            )
-          )
-        } else {
-          mfdd = MFDD(
-            pointer: constructMFDD(
-              arrayTupleKeyToExprs: arrayTupleKeyToExprsSorted,
-              labelsForAPlace: labels,
-              factory: factory),
-            factory: factory
-          )
+        for label in labels {
+          keyToExprsForAPlace[varToKey[label]!] = keyToExprs[varToKey[label]!]!
         }
+        let mfddTemp = constructMFDD(keyToExprs: keyToExprsForAPlace, factory: factory)
         
+        mfddPointer = factory.concatAndFilterInclude(
+          mfddPointer,
+          mfddTemp,
+          cache: &cache,
+          factory: factory
+        )
+        keyToExprsForAPlace = [:]
       }
+      
+      return MFDD(pointer: mfddPointer, factory: factory)
     }
-    return mfdd
+    
+    return MFDD(pointer: factory.zero.pointer, factory: factory)
     
   }
-
+  
   func constructMFDD(
-    arrayTupleKeyToExprs: [(KeyMFDD, Multiset<String>)],
-    labelsForAPlace: [String],
+    keyToExprs: [KeyMFDD: Multiset<String>],
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
   ) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
     
-    if arrayTupleKeyToExprs.count == 0 {
+    if keyToExprs.count == 0 {
       return factory.one.pointer
     }
     
-    if let (key,multiset) = arrayTupleKeyToExprs.first {
+    if let (key,multiset) = keyToExprs.sorted(by: {$0 < $1}).first {
       var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
-      let tupleKeyToExprsFirstDrop = Array(arrayTupleKeyToExprs.dropFirst())
+      var keyToExprsFirstDrop = keyToExprs
+      keyToExprsFirstDrop.removeValue(forKey: key)
       
       for el in multiset {
-        // We remove a value in a multiset if the labels are in the same arc
-        let newTupleKeyToExprs = tupleKeyToExprsFirstDrop.map({(k, ms) -> (KeyMFDD, Multiset<String>) in
-          var m = ms
-          if labelsForAPlace.contains(k.label) && labelsForAPlace.contains(key.label) {
-            m.remove(el, occurences: 1)
-          }
-          return (k,m)
-        })
         take[el] = constructMFDD(
-          arrayTupleKeyToExprs: newTupleKeyToExprs,
-          labelsForAPlace: labelsForAPlace,
-          factory: factory)
+          keyToExprs: keyToExprsFirstDrop.reduce(into: [:], {(res, couple) in
+            var coupleTemp = couple
+            coupleTemp.value.remove(el, occurences: 1)
+            res[couple.key] = coupleTemp.value
+          }),
+          factory: factory
+        )
       }
       return factory.node(key: key, take: take, skip: factory.zero.pointer)
     }
-    
     return factory.zero.pointer
   }
+
   
-  /// Creates a MFDD pointer for a couple of keys and expressions.
-  /// It corresponds only to a single input arc that can contains multiple variables.
-  /// - Parameters:
-  ///   - keys: The label keys of an input arc
-  ///   - exprs: The expressions that can be taken by the variables.
-  ///   - factory: The factory to construct the MFDD
-  ///   - endPointer: The last pointer where each leaf will point. At the beginning  it's just T (top).
-  /// - Returns:
-  ///   A MFDD pointer that contains every valid possibilities for the given args.
-//  func constructMFDD(
-//    keyToExprs: [Key<Label>: Multiset<String>],
-//    factory: MFDDFactory<KeyMFDD, ValueMFDD>,
-//    endPointer: MFDD<KeyMFDD,ValueMFDD>.Pointer)
-//  -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
-//    if keyToExprs.count == 0 {
-//      return endPointer
-//    } else {
-//      var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
-//      let (key, exprs) = keyToExprs.min(by: {(el1, el2) -> Bool in
-//        el1.key < el2.key
-//      })!
-//
-//      var rest = keyToExprs
-//      rest.removeValue(forKey: key)
-//      var restTemp = rest
-//
-//      for el in exprs {
-//        for (subKey, _) in restTemp {
-//          restTemp[subKey]!.remove(el)
-//        }
-//        take[el] = constructMFDD(
-//          keyToExprs: restTemp,
-//          factory: factory,
-//          endPointer: endPointer)
-//        restTemp = rest
-//      }
-//      return factory.node(key: key, take: take, skip: factory.zero.pointer)
-//    }
-//  }
-    
   /// Create a label for each variable and associates the possible expressions. If the same variable appears multiple times, an intersection is made between multisets to keep only possible values. e.g.: ["1": 2, "2": 1, "4": 1] ∩ ["1": 1, "2": 1, "3": 1] = ["1": 1, "2": 1].
   /// Hence, if two places have different values, a variable that appears in precondition arcs of both can only take a value in the intersection.
   ///

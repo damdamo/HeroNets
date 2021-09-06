@@ -86,6 +86,7 @@ final class HeroNetsPerformancesTests: XCTestCase {
         print("Try nb: \(i)")
         s.reset()
         let x = model.fireableBindings(for: .apply, with: marking1, factory: factory)
+        print(x.count)
         times.append(s.elapsed.s)
         s.reset()
         count = x.count
