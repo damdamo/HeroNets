@@ -79,9 +79,7 @@ extension MFDD {
     }
 
     public func apply(on pointer: MFDD.Pointer) -> MFDD.Pointer {
-      
       let substitution: [Key: Value] = [:]
-      
       return apply(on: pointer, with: substitution, keyCondOrdered: keyCond.sorted(by: { a, b in a < b }))
     }
 

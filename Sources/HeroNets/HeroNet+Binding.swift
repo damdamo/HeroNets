@@ -64,7 +64,6 @@ extension HeroNet {
       conditions: guards[transition]
     )
     
-    
     // Return the sorted key to expressions list
     let keyToExprs = computeKeyToExprs(
       labelSet: labelSet,
@@ -73,7 +72,7 @@ extension HeroNet {
     )
 
     // Construct the mfdd
-    var mfdd = constructMFDD(
+    var mfddPointer = constructMFDD(
       keyToExprs: keyToExprs,
       transition: transition,
       factory: factory
@@ -85,11 +84,10 @@ extension HeroNet {
       keySet.insert(key)
     }
   
-    var mfddPointer = mfdd!.pointer
     let s: Stopwatch = Stopwatch()
     
     if let conditions = guards[transition] {
-      for condition in conditions {
+      for condition in conditions.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
         // Apply guards
         mfddPointer = applyCondition(
           mfddPointer: mfddPointer,
@@ -179,7 +177,7 @@ extension HeroNet {
     keyToExprs: [KeyMFDD: Multiset<String>],
     transition: TransitionType,
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
-  ) -> MFDD<KeyMFDD,ValueMFDD>? {
+  ) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
 
     var keyToExprsForAPlace: [KeyMFDD: Multiset<String>] =  [:]
     var varToKey: [Label: KeyMFDD] = [:]
@@ -208,10 +206,10 @@ extension HeroNet {
         keyToExprsForAPlace = [:]
       }
       
-      return MFDD(pointer: mfddPointer, factory: factory)
+      return mfddPointer
     }
     
-    return MFDD(pointer: factory.zero.pointer, factory: factory)
+    return factory.zero.pointer
     
   }
   
