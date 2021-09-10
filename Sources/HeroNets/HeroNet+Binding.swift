@@ -103,6 +103,14 @@ extension HeroNet {
         
   }
   
+  /// Create a new mfdd pointer from the current mfdd where we filter values which does not satisfy the condition
+  /// - Parameters:
+  ///   - mfddPointer: The complete mfdd pointer without any guards.
+  ///   - condition: The condition the mfdd has to satisfy
+  ///   - keySet: The list of all keys imply in the transition
+  ///   - factory: The mfdd factory
+  /// - Returns:
+  ///   Returns the new mfdd that have applied the condition.
   func applyCondition(
     mfddPointer: MFDD<KeyMFDD, ValueMFDD>.Pointer,
     condition: Pair<String>,
@@ -165,14 +173,15 @@ extension HeroNet {
 
   }
   
-  /// Creates a MFDD pointer an array of key expressions.
-  /// It corresponds to all of input arcs for a transition firing
+  /// Creates a MFDD pointer that represents all possibilities for a transition without guards.
+  /// A MFDD pointer is computed for each place before being merge with a specific homomorphism.
+  ///
   /// - Parameters:
-  ///   - arrayKeyToExp: An array containing a list of keys binds to their possible expressions
-  ///   - index: An indicator which the key is currently read.
+  ///   - keyToExprs: A dictionnary that binds a key to its possible expressions
+  ///   - transition: The transition that we're looking at.
   ///   - factory: The factory to construct the MFDD
   /// - Returns:
-  ///   A MFDD pointer that contains every valid possibilities for the given args.
+  ///   A MFDD pointer that contains every possibilities for the given args.
   func constructMFDD(
     keyToExprs: [KeyMFDD: Multiset<String>],
     transition: TransitionType,
@@ -197,6 +206,7 @@ extension HeroNet {
         }
         let mfddTemp = constructMFDD(keyToExprs: keyToExprsForAPlace, factory: factory)
         
+        // Apply the homomorphism
         mfddPointer = factory.concatAndFilterInclude(
           mfddPointer,
           mfddTemp,
@@ -205,14 +215,20 @@ extension HeroNet {
         )
         keyToExprsForAPlace = [:]
       }
-      
       return mfddPointer
     }
-    
     return factory.zero.pointer
     
   }
   
+  /// Creates a MFDD pointer that represents all possibilities for a place without guards
+  /// The MFDD is specific for a place.
+  ///
+  /// - Parameters:
+  ///   - keyToExprs: A dictionnary that binds a key to its possible expressions, where keyToExprs contains only key for the given pre arc of a transition
+  ///   - factory: The factory to construct the MFDD
+  /// - Returns:
+  ///   A MFDD pointer that contains every possibilities for the given args for a place.
   func constructMFDD(
     keyToExprs: [KeyMFDD: Multiset<String>],
     factory: MFDDFactory<KeyMFDD, ValueMFDD>
