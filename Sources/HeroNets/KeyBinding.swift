@@ -36,17 +36,3 @@ extension Key: CustomStringConvertible {
     return "\(self.label)"
   }
 }
-
-
-//public struct Label {
-//  let name: String
-//  let n: Int
-//}
-//
-//extension Label: Hashable {}
-//
-//extension Label: CustomStringConvertible {
-//  public var description: String {
-//    return "\(self.name)_\(self.n)"
-//  }
-//}
