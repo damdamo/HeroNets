@@ -73,35 +73,20 @@ extension HeroNet {
     )
 
     // Construct the mfdd
-    let s: Stopwatch = Stopwatch()
     var mfdd = constructMFDD(
       keyToExprs: keyToExprs,
       transition: transition,
       factory: factory
     )
-    print("Time just to construct: \(s.elapsed.humanFormat)")
     
-//
-//
-//    let (condWithOnlySameVariable, restConditions) = isolateCondWithSameVariable(variableSet: labelSet, conditions: guards[transition])
-//
     var keySet: Set<KeyMFDD> = []
 
     for (key, _) in keyToExprs {
       keySet.insert(key)
     }
   
-//
-//    var mfdd = MFDD(pointer: mfddPointer, factory: factory)
-//
-//    // Ensure that keys with the same variable name has the same value !
-//    applySameVariable(
-//      mfdd: &mfdd,
-//      keySet: keySet,
-//      factory: factory
-//    )
-//
     var mfddPointer = mfdd!.pointer
+    let s: Stopwatch = Stopwatch()
     
     if let conditions = guards[transition] {
       for condition in conditions {
@@ -114,8 +99,10 @@ extension HeroNet {
         )
       }
     }
-    return MFDD(pointer: mfddPointer, factory: factory)
     
+    print("Time to apply guards: \(s.elapsed.humanFormat)")
+    return MFDD(pointer: mfddPointer, factory: factory)
+        
   }
   
   func applyCondition(
@@ -135,112 +122,10 @@ extension HeroNet {
         
     let morphism = morphisms.guardFilter(condition: condition, keyCond: Array(keyCond), interpreter: interpreter, factory: factory)
     
-    let lol = morphism.apply(on: mfddPointer)
-    print("Result after morphism: \(MFDD(pointer: lol, factory: factory))")
-    return lol
+    return morphism.apply(on: mfddPointer)
     
   }
   
-  /// Modify the current MFDD by checking if same variables have the same values.
-  /// - Parameters:
-  ///   - mfdd: The current mfdd
-  ///   - keySet: The set of keys
-  ///   - factory: The current factory
-//  func applySameVariable(
-//    mfdd: inout MFDD<KeyMFDD,ValueMFDD>,
-//    keySet: Set<KeyMFDD>,
-//    factory: MFDDFactory<KeyMFDD,ValueMFDD>
-//  ) {
-//    // Add conditions depending on variables with the same name ! If "x" appears 3 times, we will have 3 keys: ["x_0","x_1","x_2"] but at the end there are the same. It means that we require to add the following conditions: ((x_0,x_1), (x_1,x_2), (x_0, x_2))
-//
-//    var varToKeys: [String: Set<KeyMFDD>] = [:]
-//
-//    for key1 in keySet {
-//      if let _ = varToKeys[key1.label] {
-//        varToKeys[key1.label]!.insert(key1)
-//      } else {
-//        varToKeys[key1.label] = [key1]
-//      }
-//    }
-//
-//    for (varName, keyNames) in varToKeys {
-//      if keyNames.count < 2 {
-//        varToKeys.removeValue(forKey: varName)
-//      }
-//    }
-//
-//    for binding in mfdd {
-//      for (_, keyNames) in varToKeys {
-//        for key1 in keyNames {
-//          for key2 in keyNames {
-//            if key1 != key2 {
-//              if binding[key1] != binding[key2] && mfdd.contains(binding) {
-//                mfdd = mfdd.subtracting(factory.encode(family: [binding]))
-//              }
-//            }
-//          }
-//        }
-//      }
-//    }
-//
-//  }
-  
-  /// Modify the current MFDD by applying conditions. There is an optimization for condition with only the same variable.
-  /// Otherwise, each solution is browsed and checked for each condition.
-  /// - Parameters:
-  ///   - mfdd: The current mfdd
-  ///   - condWithOnlySameVariable: A dictionnary that lists conditions that contain only the same variable inside for each of them
-  ///   - restConditions: Condition of a transition minus conditions added in condWithOnlySameVariable
-  ///   - keySet: The set of keys
-  ///   - factory: The current factory
-//  func applyConditions(
-//    mfdd: MFDD<KeyMFDD,ValueMFDD>,
-//    condWithOnlySameVariable: [String: [Pair<String>]],
-//    restConditions: [Pair<String>],
-//    conditionWeights: [Pair<String>: Int],
-//    keySet: Set<KeyMFDD>,
-//    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-//  ) {
-//
-//    var morphisms: MFDDMorphismFactory<KeyMFDD, ValueMFDD> { factory.morphisms }
-//
-//    // Conditions with the same variable of the form: ($x, expr) or (expr, $x)
-//    // Does not work for condition of the form: ($x +  1, 3)
-//    for (var_, conditions) in condWithOnlySameVariable {
-//      var value: String = ""
-//      for condition in conditions {
-//        if condition.l.contains("$") {
-//          value = "\(try! interpreter.eval(string: condition.r))"
-//          if value.contains("function") {
-//            value = condition.r
-//          }
-//        } else {
-//          value = "\(try! interpreter.eval(string: condition.l))"
-//          if value.contains("function") {
-//            value = condition.l
-//          }
-//        }
-//
-//        for key in keySet {
-//          if key.label == var_ {
-//            let morphism = morphisms.filter(containing: [(key: key, values: [value])])
-//            mfdd = morphism.apply(on: mfdd)
-//          }
-//        }
-//      }
-//    }
-//
-//    // Test the rest of conditions directly on each value of the MFDD
-//    // Conditions are sorted by a score, more it is greater, more the condition is prioritized
-//    for condition in restConditions.sorted(by: {conditionWeights[$0]! > conditionWeights[$1]!}) {
-//      for binding in mfdd {
-//        if !checkCondition(condition: condition, with: binding) {
-//          mfdd = mfdd.subtracting(factory.encode(family: [binding]))
-//        }
-//      }
-//    }
-//
-//  }
   
   /// Create a dictionnary of label names bind to conditions where label name is the only to appear in the condition.
   /// A rest is given containing condition that does not match with the precedent statement.
@@ -305,21 +190,6 @@ extension HeroNet {
     
     if let pre = input[transition] {
       
-      // Create a dependance dictionnary for variables
-      // It means that if we have a variable that appears on multiple arcs, if we choose a value for a x, it removes a value in the multisot of all related variables.
-//      for (_, labels) in  pre {
-//        for l1 in labels {
-//          for l2 in labels {
-//            if l1 != l2 {
-//              if let _ = relatedVariables[l1] {
-//                relatedVariables[l1]!.insert(l2)
-//              } else {
-//                relatedVariables[l1] = [l2]
-//              }
-//            }
-//          }
-//        }
-//      }
       var cache: [[MFDD<KeyMFDD,ValueMFDD>.Pointer]: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
       var mfddPointer = factory.zero.pointer
       

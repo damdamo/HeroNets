@@ -46,9 +46,9 @@ extension MFDD {
         else { return pointer }
 
       // Query the cache.
-//      if let result = cache[pointer] {
-//        return result
-//      }
+      if let result = cache[pointer] {
+        return result
+      }
       
       // Apply the morphism.
       let result: MFDD.Pointer
@@ -74,7 +74,7 @@ extension MFDD {
         return pointer
       }
 
-//      cache[pointer] = result
+      cache[pointer] = result
       return result
     }
 
@@ -100,19 +100,14 @@ extension MFDD {
     public func checkGuards(conditions: [Pair<Value>], with binding: [Key: Value]) -> Bool {
       var lhs: String = ""
       var rhs: String = ""
-      print(binding)
       for condition in conditions {
         lhs = bindingSubstitution(str: condition.l, binding: binding)
         rhs = bindingSubstitution(str: condition.r, binding: binding)
         // Check if both term are equals, thanks to the syntactic equivalence !
         // Moreover, allows to compare functions in a syntactic way
         if lhs != rhs {
-          print(lhs)
-          print(rhs)
           let v1 = try! interpreter.eval(string: lhs)
-          print(v1)
           let v2 = try! interpreter.eval(string: rhs)
-          print(v2)
           // If values are different and not are signature functions
           if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
             return false

@@ -366,7 +366,7 @@ final class HeroNetsPerformancesTests: XCTestCase {
 
     // How many values in the place
 //    let nb_el_in_place = [100,500,1000,2000]
-    let nb_el_in_place = [20]
+    let nb_el_in_place = [100]
     var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 
     var seq: Multiset<String>  = []
