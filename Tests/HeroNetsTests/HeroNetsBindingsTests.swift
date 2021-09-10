@@ -82,9 +82,10 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    let conditionList: [Pair<String>]? = nil
+//    let conditionList: [Pair<String>]? = nil
 
 //    let conditionList: [Pair<String>] = [Pair("$y","1"), Pair("$x", "$z")]
+    let conditionList: [Pair<String>] = [Pair("$x","1")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x"]),
@@ -102,8 +103,11 @@ final class HeroNetsBindingsTests: XCTestCase {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+    
+
 
     print(mfdd)
+    print("END")
    }
   
   
@@ -117,7 +121,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    let conditionList: [Pair<String>] = [Pair("$x","1"),Pair("$y", "$z")]
+    let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$y", "$z")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
@@ -136,6 +140,9 @@ final class HeroNetsBindingsTests: XCTestCase {
     let expectedRes: Set<[String:String]> = [["$x": "1", "$z": "2", "$y": "2"], ["$z": "1", "$x": "1", "$y": "1"], ["$y": "3", "$z": "3", "$x": "1"]]
     
 
+    print("---------------")
+    print(bindings)
+    print("---------------")
     XCTAssertEqual(bindingSimplified, expectedRes)
 
   }
@@ -234,9 +241,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-    print(mfdd)
-    print(mfdd.count)
-//    XCTAssertEqual(simplifyBinding(bindings: mfdd), Set([["$f": "div", "$x": "1"], ["$f": "div", "$x": "2"]]))
+    XCTAssertEqual(simplifyBinding(bindings: mfdd), Set([["$x": "1", "$y": "2", "$z": "2"], ["$x": "2", "$y": "1", "$z": "1"]]))
   }
   
   

@@ -126,16 +126,13 @@ extension HeroNet {
   ) -> MFDD<KeyMFDD, ValueMFDD>.Pointer {
     
     var morphisms: MFDDMorphismFactory<KeyMFDD, ValueMFDD> { factory.morphisms }
-    let interpreter = Interpreter()
     let keyCond = keySet.filter({(key) in
       if condition.l.contains(key.label) || condition.r.contains(key.label) {
         return true
       }
       return false
     })
-    
-    print("Vars implies: \(keyCond)")
-    
+        
     let morphism = morphisms.guardFilter(condition: condition, keyCond: Array(keyCond), interpreter: interpreter, factory: factory)
     
     let lol = morphism.apply(on: mfddPointer)
