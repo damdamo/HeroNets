@@ -59,7 +59,10 @@ public struct HeroNet<PlaceType, TransitionType>
 where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: Transition
 {
 
-  public typealias ArcLabel = [String]
+  public typealias Label = String
+  public typealias Value = String
+  public typealias ArcLabel = [Label]
+  
   
   /// The description of an arc.
   public struct ArcDescription {
@@ -170,7 +173,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   /// - Returns:
   ///   The marking that results from the firing of the given transition if it is fireable and guards check, or
   ///   `nil` otherwise.
-  public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String])
+  public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Label: Value])
     -> Marking<PlaceType>? {
     
     guard isFireable(transition: transition, from: marking, with: binding) else {
@@ -230,7 +233,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check the fireability of a transition
-  public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [String: String]) -> Bool {
+  public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Label: String]) -> Bool {
     var multiset: Multiset<String>
     if let pre = input[transition] {
       for (place,variables) in pre {
@@ -255,7 +258,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards of a transition
-  public func checkGuards(transition: TransitionType, with binding: [String: String]) -> Bool {
+  public func checkGuards(transition: TransitionType, with binding: [Label: Value]) -> Bool {
     if let conditions = guards[transition] {
       return checkGuards(conditions: conditions, with: binding)
     }
@@ -263,7 +266,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards of a transition
-  public func checkGuards(conditions: [Pair<String>], with binding: [String: String]) -> Bool {
+  public func checkGuards(conditions: [Pair<Value>], with binding: [Label: Value]) -> Bool {
     var lhs: String = ""
     var rhs: String = ""
     for condition in conditions {
@@ -286,7 +289,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   
   /// Substitute variables inside a string by corresponding binding
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-  public func bindingSubstitution(str: String, binding: [String: String]) -> String {
+  public func bindingSubstitution(str: String, binding: [Label: Value]) -> String {
     var res: String = str
     for el in binding {
       res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")

@@ -35,6 +35,10 @@ public struct Multiset<Element> where Element: Hashable {
       ? n - occurences
       : nil
   }
+  
+  public mutating func removeAll(_ member: Element) {
+    storage[member] = nil
+  }
 
   public func contains(_ member: Element) -> Bool {
     return storage[member] != nil

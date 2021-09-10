@@ -33,6 +33,7 @@ extension MFDD {
     
     public func apply(on pointer: MFDD.Pointer, with substitution: [Key: Value], keyCondOrdered: [Key]) -> MFDD.Pointer {
       
+      print(substitution)
       if substitution.count == keyCond.count {
         if checkGuards(conditions: [condition], with: substitution) {
           return pointer
@@ -46,9 +47,9 @@ extension MFDD {
         else { return pointer }
 
       // Query the cache.
-      if let result = cache[pointer] {
-        return result
-      }
+//      if let result = cache[pointer] {
+//        return result
+//      }
       
       // Apply the morphism.
       let result: MFDD.Pointer
@@ -74,7 +75,7 @@ extension MFDD {
         return pointer
       }
 
-      cache[pointer] = result
+//      cache[pointer] = result
       return result
     }
 

@@ -5,9 +5,7 @@ import Interpreter
 extension HeroNet {
     
   //Label: Type of keys
-  typealias Label = String
   typealias KeyMFDD = Key<String>
-  typealias ValueMFDD = String
   
   /// Creates the fireable bindings of a transition.
   ///
@@ -20,8 +18,8 @@ extension HeroNet {
   func fireableBindings(
     for transition: TransitionType,
     with marking: Marking<PlaceType>,
-    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-  ) -> MFDD<KeyMFDD,ValueMFDD> {
+    factory: MFDDFactory<KeyMFDD, Value>
+  ) -> MFDD<KeyMFDD,Value> {
     
     // All variables imply in the transition firing keeping the group by arc
     var labelSet: Set<String> = []
@@ -56,13 +54,19 @@ extension HeroNet {
     }
     
     // Get all the possibilities for each labels
-    let labelToExprs = associateLabelToExprsForPlace(placeToExprs: placeToExprs, transition: transition)
+    var labelToExprs = associateLabelToExprsForPlace(placeToExprs: placeToExprs, transition: transition)
     
     // Compute a score for each label
     let (labelWeights, conditionWeights) = computeScoreOrder(
       labelSet: labelSet,
       conditions: guards[transition]
     )
+    
+//    let (condWithUniqueLab, condRest) = isolateCondWithUniqueLabel(labelSet: labelSet, conditions: guards[transition])
+//
+//    labelToExprs = constantPropagation(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
+    
+//    print(labelToExprs)
     
     // Return the sorted key to expressions list
     let keyToExprs = computeKeyToExprs(
@@ -86,6 +90,10 @@ extension HeroNet {
   
     let s: Stopwatch = Stopwatch()
     
+    print("---------------------------")
+    print(MFDD(pointer: mfddPointer, factory: factory))
+    print("---------------------------")
+    
     if let conditions = guards[transition] {
       for condition in conditions.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
         // Apply guards
@@ -95,12 +103,30 @@ extension HeroNet {
           keySet: keySet,
           factory: factory
         )
+        print("---------------------------")
+        print(MFDD(pointer: mfddPointer, factory: factory))
+        print("---------------------------")
       }
     }
     
     print("Time to apply guards: \(s.elapsed.humanFormat)")
     return MFDD(pointer: mfddPointer, factory: factory)
         
+  }
+  
+  func constantPropagation(labelToExprs: [Label: Multiset<Value>], conditionsWithUniqueLabel: [Label: [Pair<Value>]]) -> [Label: Multiset<Value>] {
+    
+    var labelToExprsTemp = labelToExprs
+    
+    for (labCond, cond) in conditionsWithUniqueLabel {
+      for expr in labelToExprs[labCond]! {
+        if !checkGuards(conditions: cond, with: [labCond: expr]) {
+          labelToExprsTemp[labCond]!.removeAll(expr)
+        }
+      }
+    }
+    
+    return labelToExprsTemp
   }
   
   /// Create a new mfdd pointer from the current mfdd where we filter values which does not satisfy the condition
@@ -112,13 +138,13 @@ extension HeroNet {
   /// - Returns:
   ///   Returns the new mfdd that have applied the condition.
   func applyCondition(
-    mfddPointer: MFDD<KeyMFDD, ValueMFDD>.Pointer,
+    mfddPointer: MFDD<KeyMFDD, Value>.Pointer,
     condition: Pair<String>,
     keySet: Set<KeyMFDD>,
-    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-  ) -> MFDD<KeyMFDD, ValueMFDD>.Pointer {
+    factory: MFDDFactory<KeyMFDD, Value>
+  ) -> MFDD<KeyMFDD, Value>.Pointer {
     
-    var morphisms: MFDDMorphismFactory<KeyMFDD, ValueMFDD> { factory.morphisms }
+    var morphisms: MFDDMorphismFactory<KeyMFDD, Value> { factory.morphisms }
     let keyCond = keySet.filter({(key) in
       if condition.l.contains(key.label) || condition.r.contains(key.label) {
         return true
@@ -133,43 +159,40 @@ extension HeroNet {
   }
   
   
-  /// Create a dictionnary of label names bind to conditions where label name is the only to appear in the condition.
-  /// A rest is given containing condition that does not match with the precedent statement.
-  /// It corresponds to all of input arcs for a transition firing. Care, it only works for condition of the form: ($x, expr) or (expr, $x)
-  /// and not of the form: ($x+1, 3) where we  apply an operation on the side of the variable. It is explained by the fact that we do not evaluate the part with the variable. In this case it's a bit more complicated cause we need to know $x, implying to go inside the mfdd manually.
+  /// Isolate conditions with a unique variable to apply the constant propagation
   /// - Parameters:
-  ///   - variableSet: An array containing a list of keys binds to their possible expressions
+  ///   - LabelSet: An array containing a list of keys binds to their possible expressions
   ///   - conditions: List of condition for a specific transition
   /// - Returns:
-  ///   A tuple where the first element is the label name binds to a list of condition where the label name is the only variable. The second element is the list of conditions minus conditions that are valid for the first part of the tuple.
-  func isolateCondWithSameVariable(variableSet: Set<String>, conditions: [Pair<String>]?) -> ([String: [Pair<String>]], [Pair<String>]) {
+  ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
+  func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<String>]?) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
     
-    var varSetTemp: Set<String> = []
-    var condWithOnlySameVariable: [String: [Pair<String>]] = [:]
-    var restConditions: [Pair<String>] = []
-    
+
+    var labelSetTemp: Set<Label> = []
+    var condWithUniqueVariable: [Label: [Pair<Value>]] = [:]
+    var restConditions: [Pair<Value>] = []
+
     if let conds = conditions {
       for cond in conds {
-        for var_ in variableSet {
-          if cond.l.contains(var_) || cond.r.contains(var_) {
-            varSetTemp.insert(var_)
+        for label in labelSet {
+          if cond.l.contains(label) || cond.r.contains(label) {
+            labelSetTemp.insert(label)
           }
         }
         // Check that we have the same variable, and one of both side contains just this variable
-        if varSetTemp.count == 1 &&
-            (cond.l == varSetTemp.first! || cond.r == varSetTemp.first!){
-          if let _ = condWithOnlySameVariable[varSetTemp.first!] {
-            condWithOnlySameVariable[varSetTemp.first!]!.append(cond)
+        if labelSetTemp.count == 1 {
+          if let _ = condWithUniqueVariable[labelSetTemp.first!] {
+            condWithUniqueVariable[labelSetTemp.first!]!.append(cond)
           } else {
-            condWithOnlySameVariable[varSetTemp.first!] = [cond]
+            condWithUniqueVariable[labelSetTemp.first!] = [cond]
           }
         } else {
           restConditions.append(cond)
         }
-        varSetTemp = []
+        labelSetTemp = []
       }
     }
-    return (condWithOnlySameVariable, restConditions)
+    return (condWithUniqueVariable, restConditions)
 
   }
   
@@ -185,8 +208,8 @@ extension HeroNet {
   func constructMFDD(
     keyToExprs: [KeyMFDD: Multiset<String>],
     transition: TransitionType,
-    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-  ) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+    factory: MFDDFactory<KeyMFDD, Value>
+  ) -> MFDD<KeyMFDD,Value>.Pointer {
 
     var keyToExprsForAPlace: [KeyMFDD: Multiset<String>] =  [:]
     var varToKey: [Label: KeyMFDD] = [:]
@@ -197,7 +220,7 @@ extension HeroNet {
     
     if let pre = input[transition] {
       
-      var cache: [[MFDD<KeyMFDD,ValueMFDD>.Pointer]: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
+      var cache: [[MFDD<KeyMFDD,Value>.Pointer]: MFDD<KeyMFDD,Value>.Pointer] = [:]
       var mfddPointer = factory.zero.pointer
       
       for (_, labels) in pre {
@@ -231,15 +254,15 @@ extension HeroNet {
   ///   A MFDD pointer that contains every possibilities for the given args for a place.
   func constructMFDD(
     keyToExprs: [KeyMFDD: Multiset<String>],
-    factory: MFDDFactory<KeyMFDD, ValueMFDD>
-  ) -> MFDD<KeyMFDD,ValueMFDD>.Pointer {
+    factory: MFDDFactory<KeyMFDD, Value>
+  ) -> MFDD<KeyMFDD,Value>.Pointer {
     
     if keyToExprs.count == 0 {
       return factory.one.pointer
     }
     
     if let (key,multiset) = keyToExprs.sorted(by: {$0 < $1}).first {
-      var take: [ValueMFDD: MFDD<KeyMFDD,ValueMFDD>.Pointer] = [:]
+      var take: [Value: MFDD<KeyMFDD,Value>.Pointer] = [:]
       var keyToExprsFirstDrop = keyToExprs
       keyToExprsFirstDrop.removeValue(forKey: key)
       
@@ -270,7 +293,7 @@ extension HeroNet {
   func associateLabelToExprsForPlace(
     placeToExprs: [PlaceType: Multiset<String>],
     transition: TransitionType)
-  -> [Label: Multiset<String>] {
+  -> [Label: Multiset<Value>] {
     
     var labelToExprs: [Label: Multiset<String>] = [:]
     if let pre = input[transition] {
@@ -424,5 +447,21 @@ extension HeroNet {
     }
     return true
   }
+  
+  func checkCondition(condition: Pair<String>, with binding: [Label: String]) -> Bool {
+    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)
+    let rhs: String = bindingSubstitution(str: condition.r, binding: binding)
+    
+    if lhs != rhs {
+      let v1 = try! interpreter.eval(string: lhs)
+      let v2 = try! interpreter.eval(string: rhs)
+      // If values are different and not are signature functions
+      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
+        return false
+      }
+    }
+    return true
+  }
+
   
 }
