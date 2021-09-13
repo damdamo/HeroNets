@@ -4,8 +4,9 @@ import Interpreter
 /// A Hero net binding computes all the possibles marking for a given  transition
 extension HeroNet {
     
-  //Label: Type of keys
-  typealias KeyMFDD = Key<Value>
+  public typealias KeyMFDD = Key<Value>
+  public typealias HeroMFDD = MFDD<KeyMFDD,Value>
+  public typealias HeroMFDDFactory = MFDDFactory<KeyMFDD,Value>
   
   /// Creates the fireable bindings of a transition.
   ///
@@ -18,8 +19,8 @@ extension HeroNet {
   func fireableBindings(
     for transition: TransitionType,
     with marking: Marking<PlaceType>,
-    factory: MFDDFactory<KeyMFDD, Value>
-  ) -> MFDD<KeyMFDD,Value> {
+    factory: HeroMFDDFactory
+  ) -> HeroMFDD {
     
     // All variables imply in the transition firing keeping the group by arc
     var labelSet: Set<Label> = []
@@ -131,11 +132,11 @@ extension HeroNet {
   /// - Returns:
   ///   Returns the new mfdd that have applied the condition.
   func applyCondition(
-    mfddPointer: MFDD<KeyMFDD, Value>.Pointer,
+    mfddPointer: HeroMFDD.Pointer,
     condition: Pair<Value>,
     keySet: Set<KeyMFDD>,
-    factory: MFDDFactory<KeyMFDD, Value>
-  ) -> MFDD<KeyMFDD, Value>.Pointer {
+    factory: HeroMFDDFactory
+  ) -> HeroMFDD.Pointer {
     
     var morphisms: MFDDMorphismFactory<KeyMFDD, Value> { factory.morphisms }
     let keyCond = keySet.filter({(key) in
@@ -159,7 +160,6 @@ extension HeroNet {
   /// - Returns:
   ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
   func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<Value>]?) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
-    
 
     var labelSetTemp: Set<Label> = []
     var condWithUniqueVariable: [Label: [Pair<Value>]] = [:]
@@ -201,8 +201,8 @@ extension HeroNet {
   func constructMFDD(
     keyToExprs: [KeyMFDD: Multiset<Value>],
     transition: TransitionType,
-    factory: MFDDFactory<KeyMFDD, Value>
-  ) -> MFDD<KeyMFDD,Value>.Pointer {
+    factory: HeroMFDDFactory
+  ) -> HeroMFDD.Pointer {
 
     var keyToExprsForAPlace: [KeyMFDD: Multiset<Value>] =  [:]
     var varToKey: [Label: KeyMFDD] = [:]
@@ -213,7 +213,7 @@ extension HeroNet {
     
     if let pre = input[transition] {
       
-      var cache: [[MFDD<KeyMFDD,Value>.Pointer]: MFDD<KeyMFDD,Value>.Pointer] = [:]
+      var cache: [[HeroMFDD.Pointer]: HeroMFDD.Pointer] = [:]
       var mfddPointer = factory.zero.pointer
       
       for (_, labels) in pre {
@@ -247,15 +247,15 @@ extension HeroNet {
   ///   A MFDD pointer that contains every possibilities for the given args for a place.
   func constructMFDD(
     keyToExprs: [KeyMFDD: Multiset<Value>],
-    factory: MFDDFactory<KeyMFDD, Value>
-  ) -> MFDD<KeyMFDD,Value>.Pointer {
+    factory: HeroMFDDFactory
+  ) -> HeroMFDD.Pointer {
     
     if keyToExprs.count == 0 {
       return factory.one.pointer
     }
     
     if let (key,multiset) = keyToExprs.sorted(by: {$0 < $1}).first {
-      var take: [Value: MFDD<KeyMFDD,Value>.Pointer] = [:]
+      var take: [Value: HeroMFDD.Pointer] = [:]
       var keyToExprsFirstDrop = keyToExprs
       keyToExprsFirstDrop.removeValue(forKey: key)
       
@@ -418,13 +418,13 @@ extension HeroNet {
   
   /// Substitute variables inside a string by corresponding binding
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-  func bindingSubstitution(str: String, binding: [Key<Label>: String]) -> String {
-    var res: String = str
-    for el in binding {
-      res = res.replacingOccurrences(of: "\(el.key.label)", with: "\(el.value)")
-    }
-    return res
-  }
+//  func bindingSubstitution(str: String, binding: [Key<Label>: String]) -> String {
+//    var res: String = str
+//    for el in binding {
+//      res = res.replacingOccurrences(of: "\(el.key.label)", with: "\(el.value)")
+//    }
+//    return res
+//  }
   
 //  func checkCondition(condition: Pair<String>, with binding: [KeyMFDD: Value]) -> Bool {
 //    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)

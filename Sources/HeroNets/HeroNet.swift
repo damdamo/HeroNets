@@ -212,7 +212,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       // In the case of post, expressions is a list of strings containing variables
       for (place,expressions) in post {
         for expr in expressions {
-          exprSubs = bindingSubstitution(str: expr, binding: binding)
+          exprSubs = bindingSubstitution(expr: expr, binding: binding)
           valOutput = "\(try! interpreter.eval(string: exprSubs))"
           // In the case or we get the signature of a function, we just return the function name
           if valOutput.contains("function") {
@@ -265,32 +265,37 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     return true
   }
   
-  // Check guards of a transition
+  // Check guards for a list of conditions
   public func checkGuards(conditions: [Pair<Value>], with binding: [Label: Value]) -> Bool {
-    var lhs: String = ""
-    var rhs: String = ""
     for condition in conditions {
-      lhs = bindingSubstitution(str: condition.l, binding: binding)
-      rhs = bindingSubstitution(str: condition.r, binding: binding)
-      // Check if both term are equals, thanks to the syntactic equivalence !
-      // Moreover, allows to compare functions in a syntactic way
-      if lhs != rhs {
-        let v1 = try! interpreter.eval(string: lhs)
-        let v2 = try! interpreter.eval(string: rhs)
-        // If values are different and not are signature functions
-        if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
-          return false
-        }
+      if !checkGuards(condition: condition, with: binding) {
+        return false
       }
     }
-
+    return true
+  }
+  
+  // Check guards for a condition
+  public func checkGuards(condition: Pair<Value>, with binding: [Label: Value]) -> Bool {
+    let lhs = bindingSubstitution(expr: condition.l, binding: binding)
+    let rhs = bindingSubstitution(expr: condition.r, binding: binding)
+    // Check if both term are equals, thanks to the syntactic equivalence !
+    // Moreover, allows to compare functions in a syntactic way
+    if lhs != rhs {
+      let v1 = try! interpreter.eval(string: lhs)
+      let v2 = try! interpreter.eval(string: rhs)
+      // If values are different and not are signature functions
+      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
+        return false
+      }
+    }
     return true
   }
   
   /// Substitute variables inside a string by corresponding binding
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-  public func bindingSubstitution(str: String, binding: [Label: Value]) -> String {
-    var res: String = str
+  public func bindingSubstitution(expr: Value, binding: [Label: Value]) -> String {
+    var res: String = "\(expr)"
     for el in binding {
       res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")
     }
