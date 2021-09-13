@@ -4,7 +4,7 @@ import Interpreter
 /// A Hero net binding computes all the possibles marking for a given  transition
 extension HeroNet {
     
-  public typealias KeyMFDD = Key<Value>
+  public typealias KeyMFDD = Key<Label>
   public typealias HeroMFDD = MFDD<KeyMFDD,Value>
   public typealias HeroMFDDFactory = MFDDFactory<KeyMFDD,Value>
   
@@ -387,7 +387,7 @@ extension HeroNet {
   ) -> [KeyMFDD: Multiset<Value>] {
 
     let totalOrder: [Pair<Label>]
-    var keyToExprs: [Key<Label>: Multiset<Value>] = [:]
+    var keyToExprs: [KeyMFDD: Multiset<Value>] = [:]
     
     if let lw = labelWeights {
       totalOrder = createTotalOrder(labels: labelSet.sorted(by: {(label1, label2) -> Bool in

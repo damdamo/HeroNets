@@ -60,7 +60,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 {
 
   public typealias Label = String
-  public typealias Value = String
+  // The content inside the multiset (e.g.: String)
+  public typealias Value = PlaceType.Content.Key
   public typealias ArcLabel = [Label]
   
   
