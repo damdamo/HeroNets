@@ -1,41 +1,44 @@
 import DDKit
 import Interpreter
 
-extension MFDD {
+extension HeroNet {
 
   public final class GuardFilter: Morphism {
-
-    public typealias DD = MFDD
     
+    public typealias DD = HeroMFDD
+
     /// The guard to evaluate
     public let condition: Pair<Value>
     
     /// Key vars
-    public let keyCond: [Key]
-    
-    /// Interpret
-    public let interpreter: Interpreter
+    public let keyCond: [KeyMFDD]
 
     /// The factory that creates the nodes handled by this morphism.
-    public unowned let factory: MFDDFactory<Key, Value>
+    public unowned let factory: MFDDFactory<KeyMFDD, Value>
+    
+    /// Current heroNet
+    let heroNet: HeroNet
 
     /// The morphism's cache.
-    private var cache: [MFDD.Pointer: MFDD.Pointer] = [:]
+    private var cache: [HeroMFDD.Pointer: HeroMFDD.Pointer] = [:]
 
-//    public var lowestRelevantKey: Key { subsVars.min(by: { a, b in a < b })! }
-
-    init(condition: Pair<Value>, keyCond: [Key], interpreter: Interpreter, factory: MFDDFactory<Key, Value>) {
+    init(condition: Pair<Value>, keyCond: [KeyMFDD], factory: MFDDFactory<KeyMFDD, Value>, heroNet: HeroNet) {
       self.condition = condition
       self.keyCond = keyCond
-      self.interpreter = interpreter
       self.factory = factory
+      self.heroNet = heroNet
     }
     
-    public func apply(on pointer: MFDD.Pointer, with substitution: [Key: Value], keyCondOrdered: [Key]) -> MFDD.Pointer {
+    public func apply(on pointer: HeroMFDD.Pointer, with substitution: [KeyMFDD: Value], keyCondOrdered: [KeyMFDD]) -> HeroMFDD.Pointer {
       
-      print(substitution)
       if substitution.count == keyCond.count {
-        if checkGuards(conditions: [condition], with: substitution) {
+        // Transform: [KeyMFDD: Value] -> [Label: Value]
+        let s = substitution.reduce([:]) { (partialResult: [Label: Value], tuple: (key: KeyMFDD, value: Value)) in
+          var result = partialResult
+          result[tuple.key.label] = tuple.value
+          return result
+        }
+        if heroNet.checkGuards(condition: condition, with: s) {
           return pointer
         } else {
           return factory.zero.pointer
@@ -46,13 +49,8 @@ extension MFDD {
       guard !factory.isTerminal(pointer)
         else { return pointer }
 
-      // Query the cache.
-//      if let result = cache[pointer] {
-//        return result
-//      }
-      
       // Apply the morphism.
-      let result: MFDD.Pointer
+      let result: HeroMFDD.Pointer
       if pointer.pointee.key < keyCondOrdered[0] {
         let take = Dictionary(
           uniqueKeysWithValues: pointer.pointee.take.map({ (value, pointer) in
@@ -75,12 +73,11 @@ extension MFDD {
         return pointer
       }
 
-//      cache[pointer] = result
       return result
     }
 
-    public func apply(on pointer: MFDD.Pointer) -> MFDD.Pointer {
-      let substitution: [Key: Value] = [:]
+    public func apply(on pointer: HeroMFDD.Pointer) -> HeroMFDD.Pointer {
+      let substitution: [KeyMFDD: Value] = [:]
       return apply(on: pointer, with: substitution, keyCondOrdered: keyCond.sorted(by: { a, b in a < b }))
     }
 
@@ -95,149 +92,16 @@ extension MFDD {
       lhs === rhs
     }
 
-    // Check guards of a transition
-    public func checkGuards(conditions: [Pair<Value>], with binding: [Key: Value]) -> Bool {
-      var lhs: String = ""
-      var rhs: String = ""
-      for condition in conditions {
-        lhs = bindingSubstitution(str: condition.l, binding: binding)
-        rhs = bindingSubstitution(str: condition.r, binding: binding)
-        // Check if both term are equals, thanks to the syntactic equivalence !
-        // Moreover, allows to compare functions in a syntactic way
-        if lhs != rhs {
-          let v1 = try! interpreter.eval(string: lhs)
-          let v2 = try! interpreter.eval(string: rhs)
-          // If values are different and not are signature functions
-          if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
-            return false
-          }
-        }
-      }
-
-      return true
-    }
-
-    /// Substitute variables inside a string by corresponding binding
-    /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-    public func bindingSubstitution(str: Value, binding: [Key: Value]) -> String {
-      var res: String = "\(str)"
-      for el in binding {
-        res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")
-      }
-      return res
-    }
-    
   }
   
-}
-
-extension MFDDMorphismFactory {
   public func guardFilter(
     condition: Pair<Value>,
-    keyCond: [Key],
-    interpreter: Interpreter,
-    factory: MFDDFactory<Key,Value>
-  ) -> MFDD<Key, Value>.GuardFilter
+    keyCond: [KeyMFDD],
+    factory: MFDDFactory<KeyMFDD,Value>,
+    heroNet: HeroNet
+  ) -> GuardFilter
   {
-    MFDD.GuardFilter(condition: condition, keyCond: keyCond, interpreter: interpreter, factory: factory)
+    GuardFilter(condition: condition, keyCond: keyCond, factory: factory, heroNet: heroNet)
   }
-}
-
   
-//extension MFDD {
-//
-//  public final class GuardFilter: Morphism, MFDDSaturable {
-//
-//    public typealias DD = MFDD
-//
-//    /// The substitution list of variables by this morphism.
-//    public let subsVars: [Key]
-//
-//    /// The guard to evaluate
-//    public let condition: Pair<Value>
-//
-//    /// The next morphism to apply once the first assignment has been processed.
-//    private var next: SaturatedMorphism<GuardFilter>?
-//
-//    /// The factory that creates the nodes handled by this morphism.
-//    public unowned let factory: MFDDFactory<Key, Value>
-//
-//    /// The morphism's cache.
-//    private var cache: [MFDD.Pointer: MFDD.Pointer] = [:]
-//
-//    public var lowestRelevantKey: Key { subsVars.min(by: { a, b in a < b })! }
-//
-//    init(subsVars: [Key], condition: Pair<Value>, factory: MFDDFactory<Key, Value>) {
-//
-//      self.subsVars = subsVars.sorted(by: { a, b in a < b })
-//      self.condition = condition
-//      self.next = subsVars.count > 1
-//        ? factory.morphisms.saturate(
-//          factory.morphisms.guardFilter(subsVars: self.subsVars.dropFirst(), condition: condition))
-//        : nil
-//
-//      self.factory = factory
-//    }
-//
-//    public func apply(on pointer: MFDD.Pointer) -> MFDD.Pointer {
-//      // Check for trivial cases.
-//      guard !factory.isTerminal(pointer)
-//        else { return pointer }
-//
-//      // Query the cache.
-//      if let result = cache[pointer] {
-//        return result
-//      }
-//
-//
-//      // Apply the morphism.
-//      let result: MFDD.Pointer
-//      if pointer.pointee.key < subsVars[0] {
-//        result = factory.node(
-//          key: pointer.pointee.key,
-//          take: pointer.pointee.take.mapValues(apply(on:)),
-//          skip: factory.zero.pointer)
-//      } else if pointer.pointee.key == subsVars[0] {
-//        var take: [Value: MFDD.Pointer] = pointer.pointee.take
-//        for value in subsVars[0].values {
-//          take[value] = nil
-//        }
-//
-//        result = factory.node(
-//          key: pointer.pointee.key,
-//          take: next != nil ? take.mapValues(next!.apply(on:)) : take,
-//          skip: factory.zero.pointer)
-//      } else {
-//        result = next?.apply(on: pointer) ?? pointer
-//      }
-//
-//      cache[pointer] = result
-//      return result
-//    }
-//
-//    public func hash(into hasher: inout Hasher) {
-//      for key in subsVars {
-//        hasher.combine(key)
-//        hasher.combine(condition)
-//      }
-//    }
-//
-//    public static func == (lhs: GuardFilter, rhs: GuardFilter) -> Bool {
-//      lhs === rhs
-//    }
-//
-//  }
-//
-//}
-//
-//extension MFDDMorphismFactory {
-//  /// Creates an _guard filter_ morphism.
-//  ///
-//  /// - Parameter assignments: A sequence with the assignments that the member must not contain.
-//  public func guardFilter<S>(subsVars: S, condition: Pair<Value>) -> MFDD<Key, Value>.GuardFilter
-//    where S: Sequence, S.Element == Key
-//  {
-//    let morphism = uniquify(MFDD.GuardFilter(subsVars: Array(subsVars), condition: condition, factory: nodeFactory))
-//    return morphism
-//  }
-//}
+}
