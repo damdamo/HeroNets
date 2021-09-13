@@ -416,45 +416,4 @@ extension HeroNet {
       return r
   }
   
-  /// Substitute variables inside a string by corresponding binding
-  /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-//  func bindingSubstitution(str: String, binding: [Key<Label>: String]) -> String {
-//    var res: String = str
-//    for el in binding {
-//      res = res.replacingOccurrences(of: "\(el.key.label)", with: "\(el.value)")
-//    }
-//    return res
-//  }
-  
-//  func checkCondition(condition: Pair<String>, with binding: [KeyMFDD: Value]) -> Bool {
-//    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)
-//    let rhs: String = bindingSubstitution(str: condition.r, binding: binding)
-//    
-//    if lhs != rhs {
-//      let v1 = try! interpreter.eval(string: lhs)
-//      let v2 = try! interpreter.eval(string: rhs)
-//      // If values are different and not are signature functions
-//      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
-//        return false
-//      }
-//    }
-//    return true
-//  }
-  
-//  func checkCondition(condition: Pair<String>, with binding: [Label: Value]) -> Bool {
-//    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)
-//    let rhs: String = bindingSubstitution(str: condition.r, binding: binding)
-//
-//    if lhs != rhs {
-//      let v1 = try! interpreter.eval(string: lhs)
-//      let v2 = try! interpreter.eval(string: rhs)
-//      // If values are different and not are signature functions
-//      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
-//        return false
-//      }
-//    }
-//    return true
-//  }
-
-  
 }
