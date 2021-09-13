@@ -14,7 +14,7 @@ extension HeroNet {
     public let keyCond: [KeyMFDD]
 
     /// The factory that creates the nodes handled by this morphism.
-    public unowned let factory: MFDDFactory<KeyMFDD, Value>
+    public unowned let factory: HeroMFDDFactory
     
     /// Current heroNet
     let heroNet: HeroNet
@@ -22,7 +22,7 @@ extension HeroNet {
     /// The morphism's cache.
     private var cache: [HeroMFDD.Pointer: HeroMFDD.Pointer] = [:]
 
-    init(condition: Pair<Value>, keyCond: [KeyMFDD], factory: MFDDFactory<KeyMFDD, Value>, heroNet: HeroNet) {
+    init(condition: Pair<Value>, keyCond: [KeyMFDD], factory: HeroMFDDFactory, heroNet: HeroNet) {
       self.condition = condition
       self.keyCond = keyCond
       self.factory = factory
