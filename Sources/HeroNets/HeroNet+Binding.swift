@@ -62,12 +62,12 @@ extension HeroNet {
       conditions: guards[transition]
     )
     
-//    let (condWithUniqueLab, condRest) = isolateCondWithUniqueLabel(labelSet: labelSet, conditions: guards[transition])
-//
-//    labelToExprs = constantPropagation(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
-    
+    let (condWithUniqueLab, condRest) = isolateCondWithUniqueLabel(labelSet: labelSet, conditions: guards[transition])
+
+    labelToExprs = constantPropagation(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
+
 //    print(labelToExprs)
-    
+
     // Return the sorted key to expressions list
     let keyToExprs = computeKeyToExprs(
       labelSet: labelSet,
@@ -88,11 +88,7 @@ extension HeroNet {
       keySet.insert(key)
     }
   
-    let s: Stopwatch = Stopwatch()
-    
-    print("---------------------------")
-    print(MFDD(pointer: mfddPointer, factory: factory))
-    print("---------------------------")
+//    let s: Stopwatch = Stopwatch()
     
     if let conditions = guards[transition] {
       for condition in conditions.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
@@ -103,13 +99,10 @@ extension HeroNet {
           keySet: keySet,
           factory: factory
         )
-        print("---------------------------")
-        print(MFDD(pointer: mfddPointer, factory: factory))
-        print("---------------------------")
       }
     }
     
-    print("Time to apply guards: \(s.elapsed.humanFormat)")
+//    print("Time to apply guards: \(s.elapsed.humanFormat)")
     return MFDD(pointer: mfddPointer, factory: factory)
         
   }
