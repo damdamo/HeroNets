@@ -74,12 +74,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     fileprivate let transition: TransitionType
 
     /// The arc's label.
-    fileprivate let labels: [String]
+    fileprivate let labels: [Label]
 
     /// The arc's direction.
     fileprivate let isPre: Bool
 
-    private init(place: PlaceType, transition: TransitionType, labels: [String], isPre: Bool) {
+    private init(place: PlaceType, transition: TransitionType, labels: [Label], isPre: Bool) {
       self.place = place
       self.transition = transition
       self.labels = labels
@@ -95,7 +95,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     public static func pre(
       from place: PlaceType,
       to transition: TransitionType,
-      labeled labels: [String])
+      labeled labels: [Label])
       -> ArcDescription
     {
       return ArcDescription(place: place, transition: transition, labels: labels, isPre: true)
@@ -110,7 +110,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     public static func post(
       from transition: TransitionType,
       to place: PlaceType,
-      labeled labels: [String])
+      labeled labels: [Label])
       -> ArcDescription
     {
       return ArcDescription(place: place, transition: transition, labels: labels, isPre: false)
@@ -125,7 +125,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public let output: [TransitionType: [PlaceType: ArcLabel]]
   
   /// Guards for transitions.
-  public let guards: TotalMap<TransitionType, [Pair<String>]?>
+  public let guards: TotalMap<TransitionType, [Pair<Value>]?>
   
   /// Interpreter needs to evaluate Hero terms.
   public let interpreter: Interpreter
@@ -137,7 +137,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///   - arcs: A sequence containing the descriptions of the Petri net's arcs.
   ///   - guards: Conditions to fire a transition
   ///   - interpreter: Interpreter needed to evaluate terms
-  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Pair<String>]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
+  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Pair<Value>]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
     var pre: [TransitionType: [PlaceType: ArcLabel]] = [:]
     var post: [TransitionType: [PlaceType: ArcLabel]] = [:]
 
@@ -159,7 +159,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///
   /// - Parameters:
   ///   - arcs: A variadic argument representing the descriptions of the Petri net's arcs.
-  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<String>]?],  interpreter: Interpreter) {
+  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<Value>]?],  interpreter: Interpreter) {
     self.init(arcs, guards: guards, interpreter: interpreter)
   }
 

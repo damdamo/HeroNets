@@ -5,7 +5,7 @@ import Interpreter
 extension HeroNet {
     
   //Label: Type of keys
-  typealias KeyMFDD = Key<String>
+  typealias KeyMFDD = Key<Value>
   
   /// Creates the fireable bindings of a transition.
   ///
@@ -22,14 +22,14 @@ extension HeroNet {
   ) -> MFDD<KeyMFDD,Value> {
     
     // All variables imply in the transition firing keeping the group by arc
-    var labelSet: Set<String> = []
+    var labelSet: Set<Label> = []
     
     // placeToExprs: Expressions contain in a place
     // placeToVars: Vars related to a place
-    var placeToExprs: [PlaceType: Multiset<String>] = [:]
-    var placeToVars: [PlaceType: Multiset<String>] = [:]
+    var placeToExprs: [PlaceType: Multiset<Value>] = [:]
+    var placeToVars: [PlaceType: Multiset<Value>] = [:]
     
-    var varMultiset: Multiset<String> = []
+    var varMultiset: Multiset<Label> = []
     // Preprocess the net, removing constant on the arc and consuming the value in the corresponding place
     // and creates the list of variables
     if let pre = input[transition] {
@@ -132,7 +132,7 @@ extension HeroNet {
   ///   Returns the new mfdd that have applied the condition.
   func applyCondition(
     mfddPointer: MFDD<KeyMFDD, Value>.Pointer,
-    condition: Pair<String>,
+    condition: Pair<Value>,
     keySet: Set<KeyMFDD>,
     factory: MFDDFactory<KeyMFDD, Value>
   ) -> MFDD<KeyMFDD, Value>.Pointer {
@@ -158,7 +158,7 @@ extension HeroNet {
   ///   - conditions: List of condition for a specific transition
   /// - Returns:
   ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
-  func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<String>]?) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
+  func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<Value>]?) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
     
 
     var labelSetTemp: Set<Label> = []
@@ -199,12 +199,12 @@ extension HeroNet {
   /// - Returns:
   ///   A MFDD pointer that contains every possibilities for the given args.
   func constructMFDD(
-    keyToExprs: [KeyMFDD: Multiset<String>],
+    keyToExprs: [KeyMFDD: Multiset<Value>],
     transition: TransitionType,
     factory: MFDDFactory<KeyMFDD, Value>
   ) -> MFDD<KeyMFDD,Value>.Pointer {
 
-    var keyToExprsForAPlace: [KeyMFDD: Multiset<String>] =  [:]
+    var keyToExprsForAPlace: [KeyMFDD: Multiset<Value>] =  [:]
     var varToKey: [Label: KeyMFDD] = [:]
     
     for (key, _) in keyToExprs {
@@ -246,7 +246,7 @@ extension HeroNet {
   /// - Returns:
   ///   A MFDD pointer that contains every possibilities for the given args for a place.
   func constructMFDD(
-    keyToExprs: [KeyMFDD: Multiset<String>],
+    keyToExprs: [KeyMFDD: Multiset<Value>],
     factory: MFDDFactory<KeyMFDD, Value>
   ) -> MFDD<KeyMFDD,Value>.Pointer {
     
@@ -284,11 +284,11 @@ extension HeroNet {
   /// - Returns:
   ///   A dictionnary that associates each label to their expressions
   func associateLabelToExprsForPlace(
-    placeToExprs: [PlaceType: Multiset<String>],
+    placeToExprs: [PlaceType: Multiset<Value>],
     transition: TransitionType)
   -> [Label: Multiset<Value>] {
     
-    var labelToExprs: [Label: Multiset<String>] = [:]
+    var labelToExprs: [Label: Multiset<Value>] = [:]
     if let pre = input[transition] {
       for (place, labels) in pre {
         for label in labels {
@@ -313,17 +313,17 @@ extension HeroNet {
   ///   Return a tuple with its first element a dictionnary that binds a label to its weight and second element a dictionnary that binds condition to a score !
   func computeScoreOrder(
     labelSet: Set<Label>,
-    conditions: [Pair<String>]?)
-  -> ([Label: Int]?, [Pair<String>: Int]?) {
+    conditions: [Pair<Value>]?)
+  -> ([Label: Int]?, [Pair<Value>: Int]?) {
     
     // If there is no conditions
     guard let _ = conditions else {
       return (nil, nil)
     }
     var labelWeights: [Label: Int] = [:]
-    var conditionWeights: [Pair<String>: Int] = [:]
-    var varForCond: [Set<String>] = []
-    var varInACond: Set<String> = []
+    var conditionWeights: [Pair<Value>: Int] = [:]
+    var labelForCond: [Set<Label>] = []
+    var labelInACond: Set<Label> = []
     
     // Initialize the score to 100 for each variable
     // To avoid that a same variable has the same score, we increment its n value, allowing to distingue them
@@ -339,26 +339,26 @@ extension HeroNet {
     for condition in conditions! {
       for label in labelSet {
         if condition.l.contains(label) || condition.r.contains(label) {
-          varInACond.insert(label)
+          labelInACond.insert(label)
         }
       }
       
       // Compute condition weights
-      if varInACond.count != 0 {
-        conditionWeights[condition]! *= 2/varInACond.count
+      if labelInACond.count != 0 {
+        conditionWeights[condition]! *= 2/labelInACond.count
       } else {
         conditionWeights[condition]! = 0
       }
       
-      varForCond.append(varInACond)
-      varInACond = []
+      labelForCond.append(labelInACond)
+      labelInACond = []
     }
     
     // To compute a score
     // If a condition contains the same variable, it earns 50 points
     // If a condition contains a variable with other variables, every variables earn 10 points
     for (label, _) in labelWeights {
-      for cond in varForCond {
+      for cond in labelForCond {
         if cond.contains(label) {
           if cond.count == 1  {
             labelWeights[label]! += 100
@@ -383,11 +383,11 @@ extension HeroNet {
   func computeKeyToExprs(
     labelSet: Set<Label>,
     labelWeights: [Label: Int]?,
-    labelToExprs: [Label: Multiset<String>]
-  ) -> [KeyMFDD: Multiset<String>] {
+    labelToExprs: [Label: Multiset<Value>]
+  ) -> [KeyMFDD: Multiset<Value>] {
 
     let totalOrder: [Pair<Label>]
-    var keyToExprs: [Key<Label>: Multiset<String>] = [:]
+    var keyToExprs: [Key<Label>: Multiset<Value>] = [:]
     
     if let lw = labelWeights {
       totalOrder = createTotalOrder(labels: labelSet.sorted(by: {(label1, label2) -> Bool in
@@ -426,35 +426,35 @@ extension HeroNet {
     return res
   }
   
-  func checkCondition(condition: Pair<String>, with binding: [KeyMFDD: String]) -> Bool {
-    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)
-    let rhs: String = bindingSubstitution(str: condition.r, binding: binding)
-    
-    if lhs != rhs {
-      let v1 = try! interpreter.eval(string: lhs)
-      let v2 = try! interpreter.eval(string: rhs)
-      // If values are different and not are signature functions
-      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
-        return false
-      }
-    }
-    return true
-  }
+//  func checkCondition(condition: Pair<String>, with binding: [KeyMFDD: Value]) -> Bool {
+//    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)
+//    let rhs: String = bindingSubstitution(str: condition.r, binding: binding)
+//    
+//    if lhs != rhs {
+//      let v1 = try! interpreter.eval(string: lhs)
+//      let v2 = try! interpreter.eval(string: rhs)
+//      // If values are different and not are signature functions
+//      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
+//        return false
+//      }
+//    }
+//    return true
+//  }
   
-  func checkCondition(condition: Pair<String>, with binding: [Label: String]) -> Bool {
-    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)
-    let rhs: String = bindingSubstitution(str: condition.r, binding: binding)
-    
-    if lhs != rhs {
-      let v1 = try! interpreter.eval(string: lhs)
-      let v2 = try! interpreter.eval(string: rhs)
-      // If values are different and not are signature functions
-      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
-        return false
-      }
-    }
-    return true
-  }
+//  func checkCondition(condition: Pair<String>, with binding: [Label: Value]) -> Bool {
+//    let lhs: String = bindingSubstitution(str: condition.l, binding: binding)
+//    let rhs: String = bindingSubstitution(str: condition.r, binding: binding)
+//
+//    if lhs != rhs {
+//      let v1 = try! interpreter.eval(string: lhs)
+//      let v2 = try! interpreter.eval(string: rhs)
+//      // If values are different and not are signature functions
+//      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
+//        return false
+//      }
+//    }
+//    return true
+//  }
 
   
 }
