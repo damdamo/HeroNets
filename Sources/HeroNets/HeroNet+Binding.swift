@@ -146,7 +146,10 @@ extension HeroNet {
       return false
     })
         
-    let morphism = guardFilter(condition: condition, keyCond: Array(keyCond), factory: factory, heroNet: self)
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
+    let morphism = guardFilter(condition: condition, keyCond: Array(keyCond), factory: factory, heroNet: self, interpreter: interpreter)
     
     return morphism.apply(on: mfddPointer)
     

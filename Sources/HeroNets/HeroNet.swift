@@ -273,8 +273,10 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   
   // Check guards for a list of conditions
   public func checkGuards(conditions: [Pair<Value>], with binding: [Label: Value]) -> Bool {
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
     for condition in conditions {
-      if !checkGuards(condition: condition, with: binding) {
+      if !checkGuards(condition: condition, with: binding, interpreter: interpreter) {
         return false
       }
     }
@@ -282,13 +284,13 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards for a condition
-  public func checkGuards(condition: Pair<Value>, with binding: [Label: Value]) -> Bool {
+  public func checkGuards(condition: Pair<Value>, with binding: [Label: Value], interpreter: Interpreter) -> Bool {
     let lhs = bindingSubstitution(expr: condition.l, binding: binding)
     let rhs = bindingSubstitution(expr: condition.r, binding: binding)
     // Check if both term are equals, thanks to the syntactic equivalence !
     // Moreover, allows to compare functions in a syntactic way
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
     if lhs != rhs {
       let v1 = try! interpreter.eval(string: lhs)
       let v2 = try! interpreter.eval(string: rhs)

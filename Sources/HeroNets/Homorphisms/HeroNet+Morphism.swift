@@ -7,6 +7,8 @@ extension HeroNet {
     
     public typealias DD = HeroMFDD
 
+    public let interpreter: Interpreter
+    
     /// The guard to evaluate
     public let condition: Pair<Value>
     
@@ -22,11 +24,12 @@ extension HeroNet {
     /// The morphism's cache.
     private var cache: [HeroMFDD.Pointer: HeroMFDD.Pointer] = [:]
 
-    init(condition: Pair<Value>, keyCond: [KeyMFDD], factory: HeroMFDDFactory, heroNet: HeroNet) {
+    init(condition: Pair<Value>, keyCond: [KeyMFDD], factory: HeroMFDDFactory, heroNet: HeroNet, interpreter: Interpreter) {
       self.condition = condition
       self.keyCond = keyCond
       self.factory = factory
       self.heroNet = heroNet
+      self.interpreter = interpreter
     }
     
     public func apply(on pointer: HeroMFDD.Pointer, with substitution: [KeyMFDD: Value], keyCondOrdered: [KeyMFDD]) -> HeroMFDD.Pointer {
@@ -38,7 +41,7 @@ extension HeroNet {
           result[tuple.key.label] = tuple.value
           return result
         }
-        if heroNet.checkGuards(condition: condition, with: s) {
+        if heroNet.checkGuards(condition: condition, with: s, interpreter: interpreter) {
           return pointer
         } else {
           return factory.zero.pointer
@@ -98,10 +101,11 @@ extension HeroNet {
     condition: Pair<Value>,
     keyCond: [KeyMFDD],
     factory: MFDDFactory<KeyMFDD,Value>,
-    heroNet: HeroNet
+    heroNet: HeroNet,
+    interpreter: Interpreter
   ) -> GuardFilter
   {
-    GuardFilter(condition: condition, keyCond: keyCond, factory: factory, heroNet: heroNet)
+    GuardFilter(condition: condition, keyCond: keyCond, factory: factory, heroNet: heroNet, interpreter: interpreter)
   }
   
 }
