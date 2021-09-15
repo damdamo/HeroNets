@@ -67,8 +67,6 @@ extension HeroNet {
 
     labelToExprs = constantPropagation(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
 
-//    print(labelToExprs)
-
     // Return the sorted key to expressions list
     let keyToExprs = computeKeyToExprs(
       labelSet: labelSet,
@@ -112,10 +110,16 @@ extension HeroNet {
     
     var labelToExprsTemp = labelToExprs
     
-    for (labCond, cond) in conditionsWithUniqueLabel {
+    // Need to create the interpreter here for performance
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
+    for (labCond, conds) in conditionsWithUniqueLabel {
       for expr in labelToExprs[labCond]! {
-        if !checkGuards(conditions: cond, with: [labCond: expr]) {
-          labelToExprsTemp[labCond]!.removeAll(expr)
+        for cond in conds {
+          if !checkGuards(condition: cond, with: [labCond: expr], interpreter: interpreter) {
+            labelToExprsTemp[labCond]!.removeAll(expr)
+          }
         }
       }
     }
