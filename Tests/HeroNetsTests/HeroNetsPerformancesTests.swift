@@ -46,8 +46,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
     """
 
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 
     let conditionList: [Pair<String>]? = nil
 
@@ -56,7 +56,7 @@ final class HeroNetsPerformancesTests: XCTestCase {
       .pre(from: .p2, to: .apply, labeled: ["$f"]),
       .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
       guards: [.apply: conditionList],
-      interpreter: interpreter
+      module: module
     )
 
     // Number of tests
@@ -146,8 +146,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
     """
 
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 
     let conditionList: [Pair<String>]? = nil
 
@@ -156,7 +156,7 @@ final class HeroNetsPerformancesTests: XCTestCase {
       .pre(from: .p2, to: .apply, labeled: ["$x"]),
       .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
       guards: [.apply: conditionList],
-      interpreter: interpreter
+      module: module
     )
 
     // Number of tests
@@ -245,8 +245,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
     """
 
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 
     let conditionList: [Pair<String>]? = [Pair("$x","2")]
 
@@ -255,7 +255,7 @@ final class HeroNetsPerformancesTests: XCTestCase {
       .pre(from: .p2, to: .apply, labeled: ["$f"]),
       .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
       guards: [.apply: conditionList],
-      interpreter: interpreter
+      module: module
     )
 
     // Number of tests
@@ -346,8 +346,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
     """
 
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 
     let conditionList: [Pair<String>]? = [Pair("$x","$y+1")]
 
@@ -356,7 +356,7 @@ final class HeroNetsPerformancesTests: XCTestCase {
       .pre(from: .p2, to: .apply, labeled: ["$f"]),
       .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
       guards: [.apply: conditionList],
-      interpreter: interpreter
+      module: module
     )
 
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
@@ -451,8 +451,8 @@ final class HeroNetsPerformancesTests: XCTestCase {
         else false
     """
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
     // print(try! interpreter.eval(string: "eq(mod(25,5),0)"))
 
 //    let conditionList: [Pair<String>]? = [Pair("eq(mod($a,2),0)","true")]
@@ -464,10 +464,10 @@ final class HeroNetsPerformancesTests: XCTestCase {
       .post(from: .apply, to: .res, labeled: ["$f($a,$b)"]),
       .post(from: .apply, to: .op, labeled: ["$f", "$g"]),
       guards: [.apply: conditionList],
-      interpreter: interpreter
+      module: module
     )
 
-    let len = 5
+    let len = 20
 
     var seq: Multiset<String>  = []
     for i in 0...len {

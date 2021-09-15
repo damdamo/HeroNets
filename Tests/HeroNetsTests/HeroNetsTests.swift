@@ -21,15 +21,15 @@ final class HeroNetsTests: XCTestCase {
       x + y
     """
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
     
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
       guards: [.t1: [Pair("$x","$z"), Pair("$x","$y-1")], .t2: nil],
-      interpreter: interpreter
+      module: module
     )
     
     let marking1 = Marking<P>([.p1: ["1","2","3","4"], .p2: ["1", "1", "2", "3", "4"], .p3: []])
@@ -63,8 +63,8 @@ final class HeroNetsTests: XCTestCase {
       x / y
     """
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
     
     let model = HeroNet<P1, T1>(
       .pre(from: .op, to: .apply, labeled: ["$f"]),
@@ -72,7 +72,7 @@ final class HeroNetsTests: XCTestCase {
       .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
       .post(from: .apply, to: .op, labeled: ["$f"]),
       guards: [.apply: [Pair("$f","add")]],
-      interpreter: interpreter
+      module: module
     )
     
     let marking1 = Marking<P1>([.op: ["add","sub","mul","div"], .n: ["1", "1", "2", "3", "4"], .res: []])
@@ -113,8 +113,8 @@ final class HeroNetsTests: XCTestCase {
         x / y
     """
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
     
     let model = HeroNet<P2, T2>(
       .pre(from: .op, to: .curry, labeled: ["$f"]),
@@ -124,7 +124,7 @@ final class HeroNetsTests: XCTestCase {
       .post(from: .curry, to: .p2, labeled: ["$f($x)"]),
       .post(from: .apply, to: .res, labeled: ["$g($y)"]),
       guards: [.curry: nil, .apply: nil],
-      interpreter: interpreter
+      module: module
     )
     
     let marking1 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["1", "1", "2", "3", "4"], .p2: [], .res: []])

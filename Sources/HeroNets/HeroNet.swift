@@ -129,7 +129,10 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public let guards: TotalMap<TransitionType, [Pair<Value>]?>
   
   /// Interpreter needs to evaluate Hero terms.
-  public let interpreter: Interpreter
+//  public var interpreter: Interpreter
+  
+  /// Code for the interpreter
+  public let module: String
 
 
   /// Initializes a Petri net with a sequence describing its preconditions and postconditions.
@@ -138,7 +141,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///   - arcs: A sequence containing the descriptions of the Petri net's arcs.
   ///   - guards: Conditions to fire a transition
   ///   - interpreter: Interpreter needed to evaluate terms
-  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Pair<Value>]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
+  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Pair<Value>]?], module: String) where Arcs: Sequence, Arcs.Element == ArcDescription {
     var pre: [TransitionType: [PlaceType: ArcLabel]] = [:]
     var post: [TransitionType: [PlaceType: ArcLabel]] = [:]
 
@@ -153,15 +156,15 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     self.input = pre
     self.output = post
     self.guards = TotalMap(guards)
-    self.interpreter = interpreter
+    self.module = module
   }
 
   /// Initializes a Petri net with descriptions of its preconditions and postconditions.
   ///
   /// - Parameters:
   ///   - arcs: A variadic argument representing the descriptions of the Petri net's arcs.
-  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<Value>]?],  interpreter: Interpreter) {
-    self.init(arcs, guards: guards, interpreter: interpreter)
+  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<Value>]?], module: String) {
+    self.init(arcs, guards: guards, module: module)
   }
 
   /// Computes the marking resulting from the firing of the given transition, from the given
@@ -214,6 +217,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       for (place,expressions) in post {
         for expr in expressions {
           exprSubs = bindingSubstitution(expr: expr, binding: binding)
+          var interpreter = Interpreter()
+          try! interpreter.loadModule(fromString: module)
           valOutput = "\(try! interpreter.eval(string: exprSubs))"
           // In the case or we get the signature of a function, we just return the function name
           if valOutput.contains("function") {
@@ -282,6 +287,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     let rhs = bindingSubstitution(expr: condition.r, binding: binding)
     // Check if both term are equals, thanks to the syntactic equivalence !
     // Moreover, allows to compare functions in a syntactic way
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
     if lhs != rhs {
       let v1 = try! interpreter.eval(string: lhs)
       let v2 = try! interpreter.eval(string: rhs)

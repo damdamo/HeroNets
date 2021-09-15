@@ -43,8 +43,8 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 
 //    let conditionList: [Pair<String>]? = nil
 
@@ -56,7 +56,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .pre(from: .p2, to: .t1, labeled: ["$x", "$z"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
       guards: [.t1: conditionList, .t2: nil],
-      interpreter: interpreter
+      module: module
     )
 
     let marking1 = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "1", "2"], .p3: []])
@@ -79,8 +79,8 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 
 //    let conditionList: [Pair<String>]? = nil
 
@@ -93,7 +93,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .pre(from: .p2, to: .t1, labeled: ["$x"]),
       .post(from: .t1, to: .p3, labeled: ["$x"]),
       guards: [.t1: conditionList, .t2: nil],
-      interpreter: interpreter
+      module: module
     )
 
     let marking1 = Marking<P>([.p1: ["1", "1", "2", "4"], .p2: ["1", "2", "3"], .p3: []])
@@ -118,8 +118,8 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 
     let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$y", "$z")]
 
@@ -128,7 +128,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
       guards: [.t1: conditionList, .t2: nil],
-      interpreter: interpreter
+      module: module
     )
 
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
@@ -196,7 +196,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .post(from: .curry, to: .p2, labeled: ["$f($x)"]),
       .post(from: .apply, to: .res, labeled: ["$g($y)"]),
       guards: [.curry: conditionListCurry, .apply: conditionListApply],
-      interpreter: interpreter
+      module: module
     )
 
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
@@ -221,8 +221,8 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 
     let conditionList: [Pair<String>]? = nil
 
@@ -231,7 +231,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .pre(from: .p2, to: .t1, labeled: ["$x","$z"]),
       .post(from: .t1, to: .p3, labeled: ["$x"]),
       guards: [.t1: conditionList, .t2: nil],
-      interpreter: interpreter
+      module: module
     )
 
     let marking1 = Marking<P>([.p1: ["1", "2"], .p2: ["1", "2"], .p3: []])

@@ -10,7 +10,7 @@ extension HeroNet {
     /// The guard to evaluate
     public let condition: Pair<Value>
     
-    /// Key vars
+    /// Key of the condition
     public let keyCond: [KeyMFDD]
 
     /// The factory that creates the nodes handled by this morphism.
