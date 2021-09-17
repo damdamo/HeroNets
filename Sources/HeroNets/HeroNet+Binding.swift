@@ -22,75 +22,82 @@ extension HeroNet {
     factory: HeroMFDDFactory
   ) -> HeroMFDD {
     
+    let (arcLabels, listCondition) = optimizationEqualityGuard(transition: transition)
+    
+//    print("New input: \(arcLabels)")
+//    print("List condition: \(listCondition)")
+    
     // All variables imply in the transition firing keeping the group by arc
     var labelSet: Set<Label> = []
     
     // placeToExprs: Expressions contain in a place
     // placeToVars: Vars related to a place
     var placeToExprs: [PlaceType: Multiset<Value>] = [:]
-    var placeToVars: [PlaceType: Multiset<Value>] = [:]
+    var placeToLabels: [PlaceType: Multiset<Label>] = [:]
     
     var varMultiset: Multiset<Label> = []
     // Preprocess the net, removing constant on the arc and consuming the value in the corresponding place
     // and creates the list of variables
-    if let pre = input[transition] {
-      for (place, labels) in pre {
-        placeToExprs[place] = marking[place]
-        for lab in labels {
-          if !lab.contains("$") {
-            if placeToExprs[place]!.contains(lab) {
-              // Remove one occurence
-              placeToExprs[place]!.remove(lab)
-            } else {
-              return factory.zero
-            }
+    for (place, labels) in arcLabels {
+      placeToExprs[place] = marking[place]
+      for lab in labels {
+        if !lab.contains("$") {
+          if placeToExprs[place]!.contains(lab) {
+            // Remove one occurence
+            placeToExprs[place]!.remove(lab)
           } else {
-            varMultiset.insert(lab)
-            labelSet.insert(lab)
+            return factory.zero
           }
+        } else {
+          varMultiset.insert(lab)
+          labelSet.insert(lab)
         }
-        placeToVars[place] = varMultiset
-        varMultiset = []
       }
+      placeToLabels[place] = varMultiset
+      varMultiset = []
     }
     
     // Get all the possibilities for each labels
-    var labelToExprs = associateLabelToExprsForPlace(placeToExprs: placeToExprs, transition: transition)
+    var labelToExprs = associateLabelToExprsForPlace(placeToExprs: placeToExprs, arcLabels: arcLabels)
     
-    // Compute a score for each label
+    // Isolate condition with a unique variable
+    let (condWithUniqueLab, condRest) = isolateCondWithUniqueLabel(labelSet: labelSet, conditions: listCondition)
+
+    // Check for condition with a unique label and simplify the range of possibility for the corresponding label
+    // E.g.: Suppose the guard: (x,1), x can be only 1.
+    labelToExprs = constantPropagation(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
+        
+    // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
     let (labelWeights, conditionWeights) = computeScoreOrder(
       labelSet: labelSet,
-      conditions: guards[transition]
+      conditions: condRest
     )
-    
-    let (condWithUniqueLab, condRest) = isolateCondWithUniqueLabel(labelSet: labelSet, conditions: guards[transition])
-
-    labelToExprs = constantPropagation(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
-
+        
     // Return the sorted key to expressions list
     let keyToExprs = computeKeyToExprs(
       labelSet: labelSet,
       labelWeights: labelWeights,
       labelToExprs: labelToExprs
     )
-
+    
     // Construct the mfdd
     var mfddPointer = constructMFDD(
       keyToExprs: keyToExprs,
-      transition: transition,
-      factory: factory
+      arcLabels: arcLabels,
+      factory: factory,
+      placeToExprs: placeToExprs,
+      placeToLabels: placeToLabels
     )
     
-    var keySet: Set<KeyMFDD> = []
-
-    for (key, _) in keyToExprs {
-      keySet.insert(key)
-    }
-  
-//    let s: Stopwatch = Stopwatch()
     
-    if let conditions = guards[transition] {
-      for condition in conditions.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
+    if condRest != []  {
+      var keySet: Set<KeyMFDD> = []
+
+      for (key, _) in keyToExprs {
+        keySet.insert(key)
+      }
+        
+      for condition in condRest.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
         // Apply guards
         mfddPointer = applyCondition(
           mfddPointer: mfddPointer,
@@ -101,9 +108,73 @@ extension HeroNet {
       }
     }
     
-//    print("Time to apply guards: \(s.elapsed.humanFormat)")
     return MFDD(pointer: mfddPointer, factory: factory)
         
+  }
+  
+  func optimizationEqualityGuard(transition: TransitionType) -> ([PlaceType: [Label]], [Pair<Value>]) {
+    
+    guard let _ = guards[transition] else { return (input[transition]!, [])}
+    
+    var labelList: Set<Label> = []
+    var newInput = input[transition]!
+    
+    if let pre = input[transition] {
+      for (_, labels) in pre {
+        for label in labels {
+          labelList.insert(label)
+        }
+      }
+    }
+    
+    var eqLabelList: [Pair<Label>] = []
+    var conditionList: [Pair<Value>] = []
+    
+    if let conditions = guards[transition] {
+      for condition in conditions {
+        if labelList.contains(condition.l) && labelList.contains(condition.r) {
+          eqLabelList.append(Pair(condition.l, condition.r))
+        } else {
+          conditionList.append(condition)
+        }
+      }
+    }
+        
+    while eqLabelList != [] {
+      let pair = eqLabelList.first!
+      eqLabelList.removeFirst()
+            
+      for i in 0 ..< conditionList.count {
+        if conditionList[i].l.contains(pair.l) {
+          conditionList[i].l = conditionList[i].l.replacingOccurrences(of: pair.l, with: pair.r)
+        }
+        if conditionList[i].r.contains(pair.l) {
+          conditionList[i].r = conditionList[i].r.replacingOccurrences(of: pair.l, with: pair.r)
+        }
+      }
+      
+      for i in 0 ..< eqLabelList.count {
+        if eqLabelList[i].l == pair.l {
+          eqLabelList[i].l = pair.r
+        }
+        if eqLabelList[i].r == pair.l {
+          eqLabelList[i].r = pair.r
+        }
+      }
+      
+      for (place, labels) in newInput {
+        
+        newInput[place] = labels.map({(lab) in
+          if lab == pair.l {
+            return pair.r
+          }
+          return lab
+        })
+      }
+      
+    }
+
+    return (newInput, conditionList)
   }
   
   func constantPropagation(labelToExprs: [Label: Multiset<Value>], conditionsWithUniqueLabel: [Label: [Pair<Value>]]) -> [Label: Multiset<Value>] {
@@ -114,9 +185,9 @@ extension HeroNet {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    for (labCond, conds) in conditionsWithUniqueLabel {
+    for (labCond, condRest) in conditionsWithUniqueLabel {
       for expr in labelToExprs[labCond]! {
-        for cond in conds {
+        for cond in condRest {
           if !checkGuards(condition: cond, with: [labCond: expr], interpreter: interpreter) {
             labelToExprsTemp[labCond]!.removeAll(expr)
           }
@@ -207,41 +278,78 @@ extension HeroNet {
   ///   A MFDD pointer that contains every possibilities for the given args.
   func constructMFDD(
     keyToExprs: [KeyMFDD: Multiset<Value>],
-    transition: TransitionType,
-    factory: HeroMFDDFactory
+    arcLabels: [PlaceType: [Label]],
+    factory: HeroMFDDFactory,
+    placeToExprs: [PlaceType: Multiset<Value>],
+    placeToLabels: [PlaceType: Multiset<Label>]
   ) -> HeroMFDD.Pointer {
 
     var keyToExprsForAPlace: [KeyMFDD: Multiset<Value>] =  [:]
-    var varToKey: [Label: KeyMFDD] = [:]
+    var labelToKey: [Label: KeyMFDD] = [:]
     
     for (key, _) in keyToExprs {
-      varToKey[key.label] = key
+      labelToKey[key.label] = key
     }
+          
+    var cache: [[HeroMFDD.Pointer]: HeroMFDD.Pointer] = [:]
+    var mfddPointer = factory.zero.pointer
     
-    if let pre = input[transition] {
+    for (place, labels) in arcLabels {
+      keyToExprsForAPlace = computeExprsForALabelOfAPlace(
+        place: place,
+        labels: labels,
+        labelToKey: labelToKey,
+        keyToExprs: keyToExprs,
+        placeToExprs: placeToExprs)
+
+      let mfddTemp = constructMFDD(keyToExprs: keyToExprsForAPlace, factory: factory)
       
-      var cache: [[HeroMFDD.Pointer]: HeroMFDD.Pointer] = [:]
-      var mfddPointer = factory.zero.pointer
-      
-      for (_, labels) in pre {
-        for label in labels {
-          keyToExprsForAPlace[varToKey[label]!] = keyToExprs[varToKey[label]!]!
-        }
-        let mfddTemp = constructMFDD(keyToExprs: keyToExprsForAPlace, factory: factory)
-        
-        // Apply the homomorphism
-        mfddPointer = factory.concatAndFilterInclude(
-          mfddPointer,
-          mfddTemp,
-          cache: &cache,
-          factory: factory
-        )
-        keyToExprsForAPlace = [:]
-      }
-      return mfddPointer
+      // Apply the homomorphism
+      mfddPointer = factory.concatAndFilterInclude(
+        mfddPointer,
+        mfddTemp,
+        cache: &cache,
+        factory: factory
+      )
+      keyToExprsForAPlace = [:]
     }
-    return factory.zero.pointer
+
+    return mfddPointer
     
+  }
+  
+  /// Creates a dictionnary of key to multiset of expressions for a specific place
+  /// Therefore, we get each possible values for a key.
+  /// In addition, there is another trick here. Earlier in the process, we do an intersection to keep only possible values for a same variable.
+  /// It could be a problem when there is no the same amount of a same value in two places (either it is more or less).
+  /// Let suppose: P1 -(x,y)-> T1, P2 -(x)-> T1, with P1: {"1", "1", "2"}, P2: {"1"}
+  /// When we do the first intersection at the beginning of the process, we get "x": {"1"}, even though "x" appears two times in P1
+  /// If we try to create the MFDD with this information, we can have a scenario where "y" is at the top of the MFDD and takes "1".
+  /// So, "x" cannot select "1" again if we do not know there is two "1" in P1.
+  /// The same logic is applicable in the other way, if we try to take the upperbound directly, cause we could suppose that a place has more a value than it is supposed to be.
+  /// Therefore, the intersection upperbound is called only at the time we want to have the correct number of values for a place and a label.
+  /// - Parameters:
+  ///   - place: The current place
+  ///   - labels: List of labels of the place,
+  ///   - labelToKey: Associates each label to its own key
+  ///   - keyToExprs. Associates each key to its possible expressions
+  ///   - placeToExprs: Original values available in a place
+  /// - Returns:
+  ///   The real number of expressions for each label of a place
+  func computeExprsForALabelOfAPlace(
+    place: PlaceType,
+    labels: [Label],
+    labelToKey: [Label: KeyMFDD],
+    keyToExprs: [KeyMFDD: Multiset<Value>],
+    placeToExprs: [PlaceType: Multiset<Value>])
+  -> [KeyMFDD: Multiset<Value>] {
+    
+    var keyToExprsForAPlace: [KeyMFDD: Multiset<Value>] =  [:]
+
+    for label in labels {
+      keyToExprsForAPlace[labelToKey[label]!] = keyToExprs[labelToKey[label]!]!.intersectionUpperBound(placeToExprs[place]!)
+    }
+    return keyToExprsForAPlace
   }
   
   /// Creates a MFDD pointer that represents all possibilities for a place without guards
@@ -264,6 +372,7 @@ extension HeroNet {
     if let (key,multiset) = keyToExprs.sorted(by: {$0 < $1}).first {
       var take: [Value: HeroMFDD.Pointer] = [:]
       var keyToExprsFirstDrop = keyToExprs
+//      print("COUPABLE KEY: \(key)")
       keyToExprsFirstDrop.removeValue(forKey: key)
       
       for el in multiset {
@@ -292,18 +401,16 @@ extension HeroNet {
   ///   A dictionnary that associates each label to their expressions
   func associateLabelToExprsForPlace(
     placeToExprs: [PlaceType: Multiset<Value>],
-    transition: TransitionType)
+    arcLabels: [PlaceType: [Label]])
   -> [Label: Multiset<Value>] {
     
     var labelToExprs: [Label: Multiset<Value>] = [:]
-    if let pre = input[transition] {
-      for (place, labels) in pre {
-        for label in labels {
-          if let _ = labelToExprs[label] {
-            labelToExprs[label] = labelToExprs[label]!.intersection(placeToExprs[place]!)
-          } else {
-            labelToExprs[label] = placeToExprs[place]!
-          }
+    for (place, labels) in arcLabels {
+      for label in labels {
+        if let _ = labelToExprs[label] {
+          labelToExprs[label] = labelToExprs[label]!.intersection(placeToExprs[place]!)
+        } else {
+          labelToExprs[label] = placeToExprs[place]!
         }
       }
     }
