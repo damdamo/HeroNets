@@ -1,7 +1,7 @@
 public struct Pair<T>: Hashable where T: Hashable {
   
-  let l:  T
-  let r: T
+  var l:  T
+  var r: T
   
   public init (_ l: T, _ r: T) {
     self.l = l

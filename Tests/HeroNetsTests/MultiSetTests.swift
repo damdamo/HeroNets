@@ -53,6 +53,7 @@ final class MultiSetTests: XCTestCase {
     let m6: Multiset<String> = ["a", "a", "a", "b", "b", "c", "c", "d"]
     let m7: Multiset<String> = [ "a","b", "b"]
     let m8: Multiset<String> = ["a", "c"]
+    let m9: Multiset<String> = ["a", "b", "c", "c"]
     let d1: Multiset<String> = ["a": 2, "b": 2, "c": 1]
     
     XCTAssertEqual(m1.multisetToArray(), [])
@@ -66,6 +67,9 @@ final class MultiSetTests: XCTestCase {
     XCTAssertEqual(m2.subtract(Array(["a", "b", "b"])), m8)
     XCTAssertEqual(m2 - m7, m8)
     XCTAssertEqual(m2, d1)
+    XCTAssertEqual(m2.intersectionUpperBound(m4), ["a", "a", "c"])
+    XCTAssertEqual(m2.intersectionUpperBound(m9), ["a", "a", "b", "b", "c", "c"])
+
     
     var s1: Set<String> = []
     for el in m2 {
