@@ -92,6 +92,8 @@ final class GuardTests: XCTestCase {
     var expectedRes: Set<[String:String]> = [["$x": "2", "$y": "1", "$z": "2"], ["$x": "3", "$y": "1", "$z": "2"]]
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
     
+    print("------------------------------")
+    
     marking = Marking<P>([.p1: ["1", "1", "2", "3"], .p2: ["2", "3"], .p3: []])
     mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     expectedRes = [["$x": "1", "$y": "1", "$z": "2"], ["$x": "2", "$y": "1", "$z": "2"], ["$x": "3", "$y": "1", "$z": "2"]]

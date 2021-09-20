@@ -284,7 +284,7 @@ extension HeroNet {
     placeToLabels: [PlaceType: Multiset<Label>]
   ) -> HeroMFDD.Pointer {
 
-    var keyToExprsForAPlace: [KeyMFDD: Multiset<Value>] =  [:]
+    var keyToExprsForAPlace: [KeyMFDD: (Multiset<Value>, Int)] =  [:]
     var labelToKey: [Label: KeyMFDD] = [:]
     
     for (key, _) in keyToExprs {
@@ -302,7 +302,9 @@ extension HeroNet {
         keyToExprs: keyToExprs,
         placeToExprs: placeToExprs)
 
+      print(keyToExprsForAPlace)
       let mfddTemp = constructMFDD(keyToExprs: keyToExprsForAPlace, factory: factory)
+      print("MFDD: \(MFDD(pointer: mfddTemp, factory: factory))")
       
       // Apply the homomorphism
       mfddPointer = factory.concatAndFilterInclude(
@@ -342,12 +344,23 @@ extension HeroNet {
     labelToKey: [Label: KeyMFDD],
     keyToExprs: [KeyMFDD: Multiset<Value>],
     placeToExprs: [PlaceType: Multiset<Value>])
-  -> [KeyMFDD: Multiset<Value>] {
+  -> [KeyMFDD: (Multiset<Value>, Int)] {
     
-    var keyToExprsForAPlace: [KeyMFDD: Multiset<Value>] =  [:]
+    var keyToExprsForAPlace: [KeyMFDD: (Multiset<Value>, Int)] =  [:]
 
     for label in labels {
-      keyToExprsForAPlace[labelToKey[label]!] = keyToExprs[labelToKey[label]!]!.intersectionUpperBound(placeToExprs[place]!)
+      let key = labelToKey[label]!
+      if let _ = keyToExprsForAPlace[key] {
+        keyToExprsForAPlace[key]!.1 += 1
+      } else {
+        keyToExprsForAPlace[key] = (
+          keyToExprs[labelToKey[label]!]!.intersectionUpperBound(placeToExprs[place]!),
+          1
+        )
+      }
+//      keyToExprsForAPlace.append(
+//        (labelToKey[label]! , keyToExprs[labelToKey[label]!]!.intersectionUpperBound(placeToExprs[place]!))
+//      )
     }
     return keyToExprsForAPlace
   }
@@ -361,7 +374,7 @@ extension HeroNet {
   /// - Returns:
   ///   A MFDD pointer that contains every possibilities for the given args for a place.
   func constructMFDD(
-    keyToExprs: [KeyMFDD: Multiset<Value>],
+    keyToExprs: [KeyMFDD: (Multiset<Value>, Int)],
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
     
@@ -369,21 +382,23 @@ extension HeroNet {
       return factory.one.pointer
     }
     
-    if let (key,multiset) = keyToExprs.sorted(by: {$0 < $1}).first {
+    if let (key, (values, n)) = keyToExprs.sorted(by: {$0.key < $1.key}).first {
       var take: [Value: HeroMFDD.Pointer] = [:]
       var keyToExprsFirstDrop = keyToExprs
-//      print("COUPABLE KEY: \(key)")
       keyToExprsFirstDrop.removeValue(forKey: key)
       
-      for el in multiset {
-        take[el] = constructMFDD(
-          keyToExprs: keyToExprsFirstDrop.reduce(into: [:], {(res, couple) in
-            var coupleTemp = couple
-            coupleTemp.value.remove(el, occurences: 1)
-            res[couple.key] = coupleTemp.value
-          }),
-          factory: factory
-        )
+      for el in values {
+        // Check we have enough element in values
+        if values.occurences(of: el) >= n {
+          take[el] = constructMFDD(
+            keyToExprs: keyToExprsFirstDrop.reduce(into: [:], {(res, couple) in
+              var coupleTemp = couple
+              coupleTemp.value.0.remove(el, occurences: n)
+              res[couple.key] = coupleTemp.value
+            }),
+            factory: factory
+          )
+        }
       }
       return factory.node(key: key, take: take, skip: factory.zero.pointer)
     }
