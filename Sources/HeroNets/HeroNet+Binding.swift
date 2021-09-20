@@ -302,9 +302,7 @@ extension HeroNet {
         keyToExprs: keyToExprs,
         placeToExprs: placeToExprs)
 
-      print(keyToExprsForAPlace)
       let mfddTemp = constructMFDD(keyToExprs: keyToExprsForAPlace, factory: factory)
-      print("MFDD: \(MFDD(pointer: mfddTemp, factory: factory))")
       
       // Apply the homomorphism
       mfddPointer = factory.concatAndFilterInclude(
