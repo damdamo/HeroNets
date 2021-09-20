@@ -156,6 +156,9 @@ final class HeroNetsTests: XCTestCase {
     let marking2 = Marking<P>([.p1: ["6", "7"], .p2: ["8"], .p3: ["9","10"]])
     let marking3 = Marking<P>([.p1: ["1"], .p2: [], .p3: ["4"]])
     let marking4 = Marking<P>([.p1: ["1", "1"], .p2: [], .p3: ["4","4"]])
+    let marking3Bis = Marking<P>([.p1: ["1", "1"], .p2: ["2"], .p3: ["4", "4"]])
+    let marking3Second = Marking<P>([.p1: ["1", "1"], .p2: [], .p3: ["4", "4"]])
+    
 
     XCTAssertEqual(marking1 < marking1, false)
     XCTAssertEqual(marking1 > marking1, false)
@@ -171,6 +174,12 @@ final class HeroNetsTests: XCTestCase {
     XCTAssertEqual(marking3 > marking4, false)
     XCTAssertEqual(marking3 <= marking4, true)
     XCTAssertEqual(marking3 >= marking4, false)
+    
+    XCTAssertEqual(marking3Bis > marking3, true)
+    XCTAssertEqual(marking3Bis < marking3, false)
+    
+    XCTAssertEqual(marking3Second > marking3, false)
+    XCTAssertEqual(marking3Second < marking3, false)
     
     let tm: TotalMap<P, P.Content>  = [.p1: ["1", "2"], .p2: ["3"], .p3: ["4","5"]]
     let marking5 = Marking(tm)
@@ -190,7 +199,16 @@ final class HeroNetsTests: XCTestCase {
     let marking8 = Marking<P>([.p1: [], .p2: [], .p3: []])
     XCTAssertEqual(marking8, Marking.zero)
     
-    print(marking1)
+    var marking9 = Marking<P>([.p1: ["1"], .p2: [], .p3: ["4"]])
+    let marking10 = Marking<P>([.p1: ["3"], .p2: ["4"], .p3: ["6"]])
+    marking9 += marking10
+    
+    var expectedRes = Marking<P>([.p1: ["1", "3"], .p2: ["4"], .p3: ["4", "6"]])
+    XCTAssertEqual(marking9, expectedRes)
+    
+    expectedRes = Marking<P>([.p1: ["1"], .p2: [], .p3: ["4"]])
+    marking9 -= marking10
+    XCTAssertEqual(marking9, expectedRes)
 
   }
 
