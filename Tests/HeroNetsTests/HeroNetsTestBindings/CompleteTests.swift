@@ -43,11 +43,6 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
-//    var interpreter = Interpreter()
-//    try! interpreter.loadModule(fromString: module)
-
-//    let conditionList: [Pair<String>]? = nil
-
     let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$z")]
 
     let model = HeroNet<P, T>(
@@ -79,18 +74,14 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
-//    var interpreter = Interpreter()
-//    try! interpreter.loadModule(fromString: module)
-
-//    let conditionList: [Pair<String>]? = nil
 
 //    let conditionList: [Pair<String>] = [Pair("$y","1"), Pair("$x", "$z")]
     let conditionList: [Pair<String>] = [Pair("$x","1")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$x"]),
-//      .pre(from: .p2, to: .t1, labeled: ["$x", "2"]),
-      .pre(from: .p2, to: .t1, labeled: ["$x"]),
+      .pre(from: .p2, to: .t1, labeled: ["$x", "2"]),
+//      .pre(from: .p2, to: .t1, labeled: ["$x"]),
       .post(from: .t1, to: .p3, labeled: ["$x"]),
       guards: [.t1: conditionList, .t2: nil],
       module: module
@@ -107,7 +98,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     print(mfdd)
    }
   
-  
+  // Test with guards and a constant on an arc
   func testBinding1() {
 
     let module: String = """
@@ -115,14 +106,11 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
-//    var interpreter = Interpreter()
-//    try! interpreter.loadModule(fromString: module)
-
     let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$y", "$z")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
-      .pre(from: .p2, to: .t1, labeled: ["$z"]),
+      .pre(from: .p2, to: .t1, labeled: ["$z","3"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
       guards: [.t1: conditionList, .t2: nil],
       module: module
@@ -134,17 +122,13 @@ final class HeroNetsBindingsTests: XCTestCase {
     let bindings = model.fireableBindings(for: .t1, with: marking1, factory: factory)
       
     let bindingSimplified = simplifyBinding(bindings: bindings)
-//    let expectedRes: Set<[String:String]> = [["$x": "1", "$z": "2", "$y": "2"], ["$z": "1", "$x": "1", "$y": "1"], ["$y": "3", "$z": "3", "$x": "1"]]
-    let expectedRes: Set<[String:String]> = [["$x": "1", "$z": "1"], ["$z": "2", "$x": "1"], ["$z": "3", "$x": "1"]]
-    
+    let expectedRes: Set<[String:String]> = [["$x": "1", "$z": "1"], ["$z": "2", "$x": "1"]]
 
-    print("---------------")
-    print(bindings)
-    print("---------------")
     XCTAssertEqual(bindingSimplified, expectedRes)
 
   }
 
+  // Two different transitions firing
   func testBinding2() {
 
     enum P2: Place {
@@ -204,14 +188,11 @@ final class HeroNetsBindingsTests: XCTestCase {
     let bindings1: MFDD<KeyMFDD,ValueMFDD> = model.fireableBindings(for: .curry, with: marking1, factory: factory)
     let bindings2: MFDD<KeyMFDD,ValueMFDD> = model.fireableBindings(for: .apply, with: marking2, factory: factory)
     
-    print(bindings1)
-    print("-------------------------------")
-    print(bindings2)
-    
     XCTAssertEqual(simplifyBinding(bindings: bindings1), Set([["$f": "div", "$x": "1"], ["$f": "div", "$x": "2"]]))
     XCTAssertEqual(simplifyBinding(bindings: bindings2), Set([["$y": "1", "$g": "div(2)"]]))
   }
   
+  // Conditions + same variables + constant
   func testBinding3() {
 
     let module: String = """
@@ -219,63 +200,23 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
-//    var interpreter = Interpreter()
-//    try! interpreter.loadModule(fromString: module)
-
-    let conditionList: [Pair<String>]? = nil
+    let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z")]
 
     let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
-      .pre(from: .p2, to: .t1, labeled: ["$x","$z"]),
-      .post(from: .t1, to: .p3, labeled: ["$x"]),
+      .pre(from: .p1, to: .t1, labeled: ["$x", "$x"]),
+      .pre(from: .p2, to: .t1, labeled: ["$y"]),
+      .pre(from: .p3, to: .t1, labeled: ["$z", "3"]),
       guards: [.t1: conditionList, .t2: nil],
       module: module
     )
 
-    let marking1 = Marking<P>([.p1: ["1", "2"], .p2: ["1", "2"], .p3: []])
-
-    print("----------------------------")
-
+    let marking1 = Marking<P>([.p1: ["1", "1", "2", "2", "3", "3"], .p2: ["1", "2", "3"], .p3: ["1", "2", "3"]])
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
-
+    let expectedRes = Set([["$z": "2", "$x": "1"]])
+    
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-    XCTAssertEqual(simplifyBinding(bindings: mfdd), Set([["$x": "1", "$y": "2", "$z": "2"], ["$x": "2", "$y": "1", "$z": "1"]]))
+    XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
   }
-  
-  func testGuardsEqualVar() {
 
-    let module: String = """
-    func add(_ x: Int, _ y: Int) -> Int ::
-      x + y
-    """
-
-    let conditionList: [Pair<String>] = [Pair("$x","$z"), Pair("$z", "$x"), Pair("$y","$x+1")]
-
-    let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
-//      .pre(from: .p2, to: .t1, labeled: ["$x", "2"]),
-      .pre(from: .p2, to: .t1, labeled: ["$x", "$z"]),
-      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-      guards: [.t1: conditionList, .t2: nil],
-      module: module
-    )
-
-    let marking1 = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "1", "2"], .p3: []])
-
-    print("----------------------------")
-
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
-
-    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-
-    // Cas bug: [$y, $z, $x]
-    print(mfdd)
-    print(mfdd.count)
-   }  
-  
-//  static var allTests = [
-//    ("testBinding1", testBinding1),
-//    ("testBinding2", testBinding2),
-//  ]
 }
 

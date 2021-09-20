@@ -117,6 +117,12 @@ extension HeroNet {
         
   }
   
+  /// Remove constants on arcs and filter the values inside the place. A constant as a label can be just removed if we remove a value in the corresponding place.
+  /// - Parameters:
+  ///   - placeToExprs: Each place is bound to a multiset of expressions
+  ///   - arcLabels: Each label for each arc
+  /// - Returns:
+  ///   Returns a tuple where the first element is a dictionnary that binds place with its possible expressions (removing constant), and the second element is the new list of label for each place,  where constants are removed from it
   func removeConstant(
     placeToExprs: [PlaceType: Multiset<Value>],
     arcLabels: [PlaceType: [Label]]
@@ -137,6 +143,11 @@ extension HeroNet {
     return (placeToExprsConstantFiltered, arcLabelsWithoutConstant)
   }
   
+  /// Find and remove guards of the form: ($x, $y). It unifies label to have a unique label if there are the same. Therefore, every label in arcs and transitions are renamed with a unique label. For instance, if we have: ($x, $y), ($y, $z), we will have an only label at the end, $z for instance and all occurences of $x and $y will be replaced by $z.
+  /// - Parameters:
+  ///   - transition: The transition to compute bindings
+  /// - Returns:
+  ///   Returns a tuple where the first element is a dictionnary that binds place with its renamed labels (if there are, otherwise nothing change), the second element is the list of conditions where we removed the conditions that have been applied.
   func optimizationEqualityGuard(transition: TransitionType) -> ([PlaceType: [Label]], [Pair<Value>]) {
     
     guard let _ = guards[transition] else { return (input[transition]!, [])}
@@ -202,6 +213,13 @@ extension HeroNet {
     return (newInput, conditionList)
   }
   
+  /// Find and remove guards of the form: ($x, constant). It filters values that have the same label to keep only values that are true applying the condition.
+  /// It is an optimisation to reduce the number of conditions and the number of possible values that will be generated at the begining.
+  /// - Parameters:
+  ///   - labelToExprs: Label with their corresponding expressions
+  ///   - conditionsWithUniqueLabel: Conditions with a unique label inside (e.g.: ($x, 1)), wrong example: ($y,$x+1))
+  /// - Returns:
+  ///   Returns the possible multiset values for each label
   func constantPropagation(labelToExprs: [Label: Multiset<Value>], conditionsWithUniqueLabel: [Label: [Pair<Value>]]) -> [Label: Multiset<Value>] {
     
     var labelToExprsTemp = labelToExprs
