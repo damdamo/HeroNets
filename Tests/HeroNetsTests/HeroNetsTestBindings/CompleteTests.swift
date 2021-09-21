@@ -56,15 +56,13 @@ final class HeroNetsBindingsTests: XCTestCase {
 
     let marking1 = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "1", "2"], .p3: []])
 
-    print("----------------------------")
-
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
 
     // Cas bug: [$y, $z, $x]
-    print(mfdd)
-    print(mfdd.count)
+//    print(mfdd)
+//    print(mfdd.count)
    }
 
   func testBinding01() {

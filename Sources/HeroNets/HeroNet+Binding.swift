@@ -24,14 +24,11 @@ extension HeroNet {
     
     let (arcLabels, listCondition) = optimizationEqualityGuard(transition: transition)
     
-//    print("New input: \(arcLabels)")
-//    print("List condition: \(listCondition)")
-    
     // All variables imply in the transition firing keeping the group by arc
     var labelSet: Set<Label> = []
     
     // placeToExprs: Expressions contain in a place
-    // placeToVars: Vars related to a place
+    // placeToLabels: Labels related to a place
     var placeToExprs: [PlaceType: Multiset<Value>] = [:]
     var placeToLabels: [PlaceType: Multiset<Label>] = [:]
     
@@ -62,8 +59,6 @@ extension HeroNet {
     
     // Get all the possibilities for each labels
     var labelToExprs = associateLabelToExprsForPlace(placeToExprs: placeToExprsConstantFiltered, arcLabels: arcLabelsWithoutConstant)
-    print(labelToExprs)
-    print("--------------------------")
     
     // Isolate condition with a unique variable
     let (condWithUniqueLab, condRest) = isolateCondWithUniqueLabel(labelSet: labelSet, conditions: listCondition)
@@ -85,10 +80,24 @@ extension HeroNet {
       labelToExprs: labelToExprs
     )
     
+    let (independantKeysToExprs, dependantKeysToExprs) = computeIndependantAndDependantKeys(
+      keyToExprs: keyToExprs,
+      conditions: condRest,
+      arcLabels: arcLabelsWithoutConstant
+    )
+    
+    let arcLabelsDependantKeys = Dictionary(uniqueKeysWithValues: arcLabels.map({(el) in
+      return (el.key,
+        el.value.filter({(label) in
+          dependantKeysToExprs.contains(where: {$0.key.label == label})
+        })
+      )
+    }))
+    
     // Construct the mfdd
     var mfddPointer = constructMFDD(
-      keyToExprs: keyToExprs,
-      arcLabelsWithoutConstant: arcLabelsWithoutConstant,
+      keyToExprs: dependantKeysToExprs,
+      arcLabels: arcLabelsDependantKeys,
       factory: factory,
       placeToExprs: placeToExprs,
       placeToLabels: placeToLabels
@@ -113,8 +122,103 @@ extension HeroNet {
       }
     }
     
+    // Add independant labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
+    mfddPointer = addIndependantVariable(mfddPointer: mfddPointer, independantKeyToExprs: independantKeysToExprs, factory: factory)
+    
     return MFDD(pointer: mfddPointer, factory: factory)
-        
+
+  }
+  
+  /// Separate the dictionnary of key to expressions in two distinct dictionnaries where one contains independant keys (resp. dependant keys) bind to their expressions.
+  /// - Parameters:
+  ///   - keyToExprs: Each key is bound to a multiset of expressions
+  ///   - conditions: List of conditions
+  ///   - arcLabels: Each label for each arc
+  /// - Returns:
+  ///   Returns a tuple of two dictionnary, where the first one is for independant keys and the second one for dependant keys.
+  func computeIndependantAndDependantKeys(
+    keyToExprs: [KeyMFDD: Multiset<Value>],
+    conditions: [Pair<Value>],
+    arcLabels: [PlaceType: [Label]])
+  -> (independantKeys: [KeyMFDD: Multiset<Value>], dependantKeys: [KeyMFDD: Multiset<Value>]) {
+    
+    var independantKeys: [KeyMFDD: Multiset<Value>] = [:]
+    var dependantKeys: [KeyMFDD: Multiset<Value>] = [:]
+    var independant: Bool = true
+    for (key, exprs) in keyToExprs {
+      
+      for (_, labels) in arcLabels {
+        if labels.count >= 2 && labels.contains(key.label) {
+          independant = false
+          break
+        }
+      }
+      
+      if independant != false {
+        for condition in conditions {
+          if condition.l.contains(key.label) || condition.r.contains(key.label) {
+            independant = false
+            break
+          }
+        }
+      }
+      
+      if independant == true {
+        independantKeys[key] = exprs
+      } else {
+        dependantKeys[key] = exprs
+      }
+      
+      independant = true
+    }
+    
+    return (independantKeys: independantKeys, dependantKeys: dependantKeys)
+  }
+  
+  /// Takes the current MFDD and adds values for independant keys. It allows to construct the first mfdd with conditions only on variables that can be affected by it, then just adding like a simple concatenation for the rest of values.
+  /// Do not need to evaluate anything !
+  /// - Parameters:
+  ///   - mfddPointer:Current mfdd pointer
+  ///   - independantKeyToExprs: List of keys with their expressions with no influenced between keys in the net.
+  ///   - factory: Current factory
+  /// - Returns:
+  ///   Returns a new mfdd pointer where values of the independant keys have been added.
+  func addIndependantVariable(mfddPointer: HeroMFDD.Pointer, independantKeyToExprs: [KeyMFDD: Multiset<Value>], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
+    let mfddPointerForIndependantKeys = constructMFDDIndependantKeys(keyToExprs: independantKeyToExprs, factory: factory)
+    var cache: [[HeroMFDD.Pointer]: HeroMFDD.Pointer] = [:]
+    return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependantKeys, cache: &cache, factory: factory)
+  }
+  
+  /// Construct the MFDD for independant keys, without the need to filter.
+  /// - Parameters:
+  ///   - keyToExprs: Each key is bound to a multiset of expressions
+  ///   - factory: Current factory
+  /// - Returns:
+  ///   Returns the MFDD that represents all independant keys with their corresponding values
+  func constructMFDDIndependantKeys(
+    keyToExprs: [KeyMFDD: Multiset<Value>],
+    factory: HeroMFDDFactory
+  ) -> HeroMFDD.Pointer {
+    
+    if keyToExprs.count == 0 {
+      return factory.one.pointer
+    }
+    
+    if let (key, values) = keyToExprs.sorted(by: {$0.key < $1.key}).first {
+      var take: [Value: HeroMFDD.Pointer] = [:]
+      var keyToExprsFirstDrop = keyToExprs
+      keyToExprsFirstDrop.removeValue(forKey: key)
+      
+      for el in values {
+        // Check we have enough element in values
+        take[el] = constructMFDDIndependantKeys(
+          keyToExprs: keyToExprsFirstDrop,
+          factory: factory
+        )
+      }
+      return factory.node(key: key, take: take, skip: factory.zero.pointer)
+    }
+    return factory.zero.pointer
   }
   
   /// Remove constants on arcs and filter the values inside the place. A constant as a label can be just removed if we remove a value in the corresponding place.
@@ -135,7 +239,6 @@ extension HeroNet {
         if !label.contains("$") {
           placeToExprsConstantFiltered[place]!.remove(label)
           arcLabelsWithoutConstant[place]!.removeAll(where: {$0 == label})
-          print(arcLabelsWithoutConstant)
         }
       }
     }
@@ -324,7 +427,7 @@ extension HeroNet {
   ///   A MFDD pointer that contains every possibilities for the given args.
   func constructMFDD(
     keyToExprs: [KeyMFDD: Multiset<Value>],
-    arcLabelsWithoutConstant: [PlaceType: [Label]],
+    arcLabels: [PlaceType: [Label]],
     factory: HeroMFDDFactory,
     placeToExprs: [PlaceType: Multiset<Value>],
     placeToLabels: [PlaceType: Multiset<Label>]
@@ -340,7 +443,7 @@ extension HeroNet {
     var cache: [[HeroMFDD.Pointer]: HeroMFDD.Pointer] = [:]
     var mfddPointer = factory.zero.pointer
     
-    for (place, labels) in arcLabelsWithoutConstant {
+    for (place, labels) in arcLabels {
       keyToExprsForAPlace = computeExprsForALabelOfAPlace(
         place: place,
         labels: labels,
