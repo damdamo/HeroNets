@@ -18,13 +18,12 @@ extension MFDDFactory {
   public func concatAndFilterInclude(
     _ lhs: MFDD<Key, Value>.Pointer,
     _ rhs: MFDD<Key, Value>.Pointer,
-    cache: inout [[MFDD<Key,Value>.Pointer]: MFDD<Key,Value>.Pointer],
-    factory: MFDDFactory<Key,Value>
+    cache: inout [[MFDD<Key,Value>.Pointer]: MFDD<Key,Value>.Pointer]
   ) -> MFDD<Key, Value>.Pointer
   {
 
-    let zeroPointer = factory.zero.pointer
-    let onePointer = factory.one.pointer
+    let zeroPointer = self.zero.pointer
+    let onePointer = self.one.pointer
 
     // Check for trivial cases.
     if lhs == zeroPointer {
@@ -49,13 +48,13 @@ extension MFDDFactory {
     } else if lhs.pointee.key < rhs.pointee.key {
       result = node(
                 key: lhs.pointee.key,
-                take: lhs.pointee.take.mapValues({(pointer) in concatAndFilterInclude(pointer, rhs, cache: &cache, factory: factory)}),
+                take: lhs.pointee.take.mapValues({(pointer) in concatAndFilterInclude(pointer, rhs, cache: &cache)}),
                 skip: zeroPointer
       )
     } else if lhs.pointee.key > rhs.pointee.key {
       result = node(
                 key: rhs.pointee.key,
-                take: rhs.pointee.take.mapValues({(pointer) in concatAndFilterInclude(pointer, lhs, cache: &cache, factory: factory)}),
+                take: rhs.pointee.take.mapValues({(pointer) in concatAndFilterInclude(pointer, lhs, cache: &cache)}),
                 skip: zeroPointer
       )
     } else {
@@ -68,7 +67,7 @@ extension MFDDFactory {
         }
         })
         .reduce(into: [:]) { (res,el) in
-          res[el.key] = concatAndFilterInclude(el.value, rhs.pointee.take[el.key]!, cache: &cache, factory: factory)
+          res[el.key] = concatAndFilterInclude(el.value, rhs.pointee.take[el.key]!, cache: &cache)
         }
       
       result = node(
@@ -80,6 +79,15 @@ extension MFDDFactory {
 
     cache[cacheKey] = result
     return result
+  }
+  
+  
+  public func concatAndFilterInclude(
+    _ lhs: MFDD<Key, Value>.Pointer,
+    _ rhs: MFDD<Key, Value>.Pointer
+  ) -> MFDD<Key, Value>.Pointer {
+    var cache: [[MFDD<Key, Value>.Pointer]: MFDD<Key, Value>.Pointer] = [:]
+    return concatAndFilterInclude(lhs, rhs, cache: &cache)
   }
 
 }

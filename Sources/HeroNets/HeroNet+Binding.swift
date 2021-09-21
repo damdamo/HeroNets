@@ -185,8 +185,7 @@ extension HeroNet {
   ///   Returns a new mfdd pointer where values of the independant keys have been added.
   func addIndependantVariable(mfddPointer: HeroMFDD.Pointer, independantKeyToExprs: [KeyMFDD: Multiset<Value>], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
     let mfddPointerForIndependantKeys = constructMFDDIndependantKeys(keyToExprs: independantKeyToExprs, factory: factory)
-    var cache: [[HeroMFDD.Pointer]: HeroMFDD.Pointer] = [:]
-    return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependantKeys, cache: &cache, factory: factory)
+    return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependantKeys)
   }
   
   /// Construct the MFDD for independant keys, without the need to filter.
@@ -440,7 +439,6 @@ extension HeroNet {
       labelToKey[key.label] = key
     }
               
-    var cache: [[HeroMFDD.Pointer]: HeroMFDD.Pointer] = [:]
     var mfddPointer = factory.zero.pointer
     
     for (place, labels) in arcLabels {
@@ -454,12 +452,7 @@ extension HeroNet {
       let mfddTemp = constructMFDD(keyToExprs: keyToExprsForAPlace, factory: factory)
       
       // Apply the homomorphism
-      mfddPointer = factory.concatAndFilterInclude(
-        mfddPointer,
-        mfddTemp,
-        cache: &cache,
-        factory: factory
-      )
+      mfddPointer = factory.concatAndFilterInclude(mfddPointer, mfddTemp)
       keyToExprsForAPlace = [:]
     }
 
