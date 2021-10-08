@@ -64,7 +64,6 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public typealias Value = PlaceType.Content.Key
   public typealias ArcLabel = [Label]
   
-  
   /// The description of an arc.
   public struct ArcDescription {
 
@@ -166,6 +165,33 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<Value>]?], module: String) {
     self.init(arcs, guards: guards, module: module)
   }
+    
+  /// Initializes a Petri net with all components.
+  init(
+    input: [TransitionType: [PlaceType: ArcLabel]],
+    output: [TransitionType: [PlaceType: ArcLabel]],
+    guards: TotalMap<TransitionType, [Pair<Value>]?>,
+    module: String
+  ) {
+    self.input = input
+    self.output = output
+    self.guards = guards
+    self.module = module
+  }
+  
+//  public let input: [TransitionType: [PlaceType: ArcLabel]]
+//
+//  /// This net's output matrix.
+//  public let output: [TransitionType: [PlaceType: ArcLabel]]
+//
+//  /// Guards for transitions.
+//  public let guards: TotalMap<TransitionType, [Pair<Value>]?>
+//
+//  /// Interpreter needs to evaluate Hero terms.
+////  public var interpreter: Interpreter
+//
+//  /// Code for the interpreter
+//  public let module: String
 
   /// Computes the marking resulting from the firing of the given transition, from the given
   /// marking, assuming the former is fireable.
