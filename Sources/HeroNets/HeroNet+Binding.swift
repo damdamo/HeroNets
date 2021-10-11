@@ -24,32 +24,6 @@ extension HeroNet {
     return factory.zero
   }
   
-  func fireableBindings(for transition: TransitionType, placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]], factory: HeroMFDDFactory) -> HeroMFDD {
-    
-    let labelSet = createLabelSet(net: self, transition: transition)
-    
-    // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
-    let (labelWeights, conditionWeights) = computeScoreOrder(
-      labelSet: labelSet,
-      conditions: guards[transition]
-    )
-    
-    // Return the sorted key to expressions list
-//    let keyToExprs = computeKeyToExprs(
-//      labelSet: labelSet,
-//      labelWeights: labelWeights,
-//      labelToExprs: labelToExprs
-//    )
-//    
-//    let (independantKeysToExprs, dependantKeysToExprs) = computeIndependantAndDependantKeys(
-//      keyToExprs: keyToExprs,
-//      conditions: condRest,
-//      transition: transition
-//    )
-    
-    return factory.zero
-  }
-  
   
   /// Creates the fireable bindings of a transition.
   ///
@@ -59,120 +33,120 @@ extension HeroNet {
   ///   - factory: The factory to construct the MFDD
   /// - Returns:
   ///   The MFDD which represents all fireable bindings.
-  private func computeBindings(for transition: TransitionType, with marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
-    
-    
-    // --------------------------------------------------------------------------------- //
-    // --------------- Compute first MFDD (Apply homomorphism on places) --------------- //
-    // --------------------------------------------------------------------------------- //
-    
-    // All variables imply in the transition firing keeping the group by arc
-    var labelSet: Set<Label> = []
-    
-    // placeToExprs: Expressions contain in a place
-    // placeToLabels: Labels related to a place
-    var placeToExprs: [PlaceType: Multiset<Value>] = [:]
-    var placeToLabels: [PlaceType: Multiset<Label>] = [:]
-    
-    var varMultiset: Multiset<Label> = []
-    // Preprocess the net, removing constant on the arc and consuming the value in the corresponding place
-    // and creates the list of variables
-    if let pre = input[transition] {
-      for (place, labels) in pre {
-        placeToExprs[place] = marking[place]
-        for lab in labels {
-          if !lab.contains("$") {
-            if placeToExprs[place]!.contains(lab) {
-              // Remove one occurence
-              placeToExprs[place]!.remove(lab)
-            } else {
-              return factory.zero
-            }
-          } else {
-            varMultiset.insert(lab)
-            labelSet.insert(lab)
-          }
-        }
-        placeToLabels[place] = varMultiset
-        varMultiset = []
-      }
-    }
-    
-    // Get all the possibilities for each labels
-    var labelToExprs = associateLabelToExprsForPlace(placeToExprs: placeToExprs, transition: transition)
-    
-    // Isolate condition with a unique variable
-    let (condWithUniqueLab, condRest) = isolateCondWithSameLabel(labelSet: labelSet, transition: transition)
-      
-
-    // Check for condition with a unique label and simplify the range of possibility for the corresponding label
-    // E.g.: Suppose the guard: (x,1), x can be only 1.
-    labelToExprs = optimizationSameVariable(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
-        
-    // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
-    let (labelWeights, conditionWeights) = computeScoreOrder(
-      labelSet: labelSet,
-      conditions: condRest
-    )
-        
-    // Return the sorted key to expressions list
-    let keyToExprs = computeKeyToExprs(
-      labelSet: labelSet,
-      labelWeights: labelWeights,
-      labelToExprs: labelToExprs
-    )
-    
-    let (independantKeysToExprs, dependantKeysToExprs) = computeIndependantAndDependantKeys(
-      keyToExprs: keyToExprs,
-      conditions: condRest,
-      transition: transition
-    )
-    
-    if let pre = input[transition] {
-      let arcLabelsDependantKeys = Dictionary(uniqueKeysWithValues: pre.map({(el) in
-        return (el.key,
-          el.value.filter({(label) in
-            dependantKeysToExprs.contains(where: {$0.key.label == label})
-          })
-        )
-      }))
-      
-      // Construct the mfdd
-      var mfddPointer = constructMFDD(
-        keyToExprs: dependantKeysToExprs,
-        arcLabels: arcLabelsDependantKeys,
-        factory: factory,
-        placeToExprs: placeToExprs,
-        placeToLabels: placeToLabels
-      )
-      
-      
-      if condRest != []  {
-        var keySet: Set<KeyMFDD> = []
-
-        for (key, _) in keyToExprs {
-          keySet.insert(key)
-        }
-          
-        for condition in condRest.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
-          // Apply guards
-          mfddPointer = applyCondition(
-            mfddPointer: mfddPointer,
-            condition: condition,
-            keySet: keySet,
-            factory: factory
-          )
-        }
-      }
-      
-      // Add independant labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
-      mfddPointer = addIndependantVariable(mfddPointer: mfddPointer, independantKeyToExprs: independantKeysToExprs, factory: factory)
-      
-      return MFDD(pointer: mfddPointer, factory: factory)
-    }
-    return factory.one
-
-  }
+//  private func computeBindings(for transition: TransitionType, with marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
+//
+//
+//    // --------------------------------------------------------------------------------- //
+//    // --------------- Compute first MFDD (Apply homomorphism on places) --------------- //
+//    // --------------------------------------------------------------------------------- //
+//
+//    // All variables imply in the transition firing keeping the group by arc
+//    var labelSet: Set<Label> = []
+//
+//    // placeToExprs: Expressions contain in a place
+//    // placeToLabels: Labels related to a place
+//    var placeToExprs: [PlaceType: Multiset<Value>] = [:]
+//    var placeToLabels: [PlaceType: Multiset<Label>] = [:]
+//
+//    var varMultiset: Multiset<Label> = []
+//    // Preprocess the net, removing constant on the arc and consuming the value in the corresponding place
+//    // and creates the list of variables
+//    if let pre = input[transition] {
+//      for (place, labels) in pre {
+//        placeToExprs[place] = marking[place]
+//        for lab in labels {
+//          if !lab.contains("$") {
+//            if placeToExprs[place]!.contains(lab) {
+//              // Remove one occurence
+//              placeToExprs[place]!.remove(lab)
+//            } else {
+//              return factory.zero
+//            }
+//          } else {
+//            varMultiset.insert(lab)
+//            labelSet.insert(lab)
+//          }
+//        }
+//        placeToLabels[place] = varMultiset
+//        varMultiset = []
+//      }
+//    }
+//
+//    // Get all the possibilities for each labels
+//    var labelToExprs = associateLabelToExprsForPlace(placeToExprs: placeToExprs, transition: transition)
+//
+//    // Isolate condition with a unique variable
+//    let (condWithUniqueLab, condRest) = isolateCondWithSameLabel(labelSet: labelSet, transition: transition)
+//
+//
+//    // Check for condition with a unique label and simplify the range of possibility for the corresponding label
+//    // E.g.: Suppose the guard: (x,1), x can be only 1.
+//    labelToExprs = optimizationSameVariable(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
+//
+//    // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
+//    let (labelWeights, conditionWeights) = computeScoreOrder(
+//      labelSet: labelSet,
+//      conditions: condRest
+//    )
+//
+//    // Return the sorted key to expressions list
+//    let keyToExprs = computeKeyToExprs(
+//      labelSet: labelSet,
+//      labelWeights: labelWeights,
+//      labelToExprs: labelToExprs
+//    )
+//
+//    let (independantKeysToExprs, dependantKeysToExprs) = computeIndependantAndDependantKeys(
+//      keyToExprs: keyToExprs,
+//      conditions: condRest,
+//      transition: transition
+//    )
+//
+//    if let pre = input[transition] {
+//      let arcLabelsDependantKeys = Dictionary(uniqueKeysWithValues: pre.map({(el) in
+//        return (el.key,
+//          el.value.filter({(label) in
+//            dependantKeysToExprs.contains(where: {$0.key.label == label})
+//          })
+//        )
+//      }))
+//
+//      // Construct the mfdd
+//      var mfddPointer = constructMFDD(
+//        keyToExprs: dependantKeysToExprs,
+//        arcLabels: arcLabelsDependantKeys,
+//        factory: factory,
+//        placeToExprs: placeToExprs,
+//        placeToLabels: placeToLabels
+//      )
+//
+//
+//      if condRest != []  {
+//        var keySet: Set<KeyMFDD> = []
+//
+//        for (key, _) in keyToExprs {
+//          keySet.insert(key)
+//        }
+//
+//        for condition in condRest.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
+//          // Apply guards
+//          mfddPointer = applyCondition(
+//            mfddPointer: mfddPointer,
+//            condition: condition,
+//            keySet: keySet,
+//            factory: factory
+//          )
+//        }
+//      }
+//
+//      // Add independant labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
+//      mfddPointer = addIndependantVariable(mfddPointer: mfddPointer, independantKeyToExprs: independantKeysToExprs, factory: factory)
+//
+//      return MFDD(pointer: mfddPointer, factory: factory)
+//    }
+//    return factory.one
+//
+//  }
   
   // --------------------------------------------------------------------------------- //
   // ----------------------- Functions for static optimization ----------------------  //
@@ -368,6 +342,48 @@ extension HeroNet {
     }
     
     return eqLabelDic
+  }
+  
+  /// Isolate conditions with the same variable to apply
+  /// - Parameters:
+  ///   - LabelSet: An array containing a list of keys binds to their possible expressions
+  ///   - conditions: List of condition for a specific transition
+  /// - Returns:
+  ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
+  func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<Value>]?) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
+
+    var condWithUniqueVariable: [Label: [Pair<Value>]] = [:]
+    var restConditions: [Pair<Value>] = []
+
+    if let conds = conditions {
+      for cond in conds {
+        if labelSet.contains(cond.l) {
+          if !cond.r.contains("$") {
+            if let _ = condWithUniqueVariable[cond.l] {
+              condWithUniqueVariable[cond.l]!.append(cond)
+            } else {
+              condWithUniqueVariable[cond.l] = [cond]
+            }
+          } else {
+            restConditions.append(cond)
+          }
+        } else if labelSet.contains(cond.r) {
+          if !cond.l.contains("$") {
+            if let _ = condWithUniqueVariable[cond.r] {
+              condWithUniqueVariable[cond.r]!.append(cond)
+            } else {
+              condWithUniqueVariable[cond.r] = [cond]
+            }
+          } else {
+            restConditions.append(cond)
+          }
+        } else {
+          restConditions.append(cond)
+        }
+      }
+    }
+    return (condWithUniqueVariable, restConditions)
+
   }
   
   // --------------------------------------------------------------------------------- //
@@ -574,8 +590,134 @@ extension HeroNet {
   // ----------------------------- Functions for MFDD -------------------------------- //
   // --------------------------------------------------------------------------------- //
   
+  func fireableBindings(for transition: TransitionType, placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]], factory: HeroMFDDFactory) -> HeroMFDD {
+    
+    let labelSet = createLabelSet(net: self, transition: transition)
+    
+    // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
+    let (labelWeights, conditionWeights) = computeScoreOrder(
+      labelSet: labelSet,
+      conditions: guards[transition]
+    )
+    
+    // Return the precedent placeToLabelToValues value to the same one where label are now key
+    let placeToKeyToValues = fromLabelToKey(labelSet: labelSet, labelWeights: labelWeights, placeToLabelToValues: placeToLabelToValues)
 
+    let (dependentPlaceToKeyToValues, independentKeyToValues) = computeDependentAndIndependentKeys(placeToKeyToValues: placeToKeyToValues, transition: transition)
+    
+    var mfddPointer = constructMFDD(placeToKeyToValues: dependentPlaceToKeyToValues, factory: factory)
+    
+    if let conditions = guards[transition] {
+      
+      var keySet: Set<KeyMFDD> = []
+      for (_, keyToValues) in dependentPlaceToKeyToValues {
+        for (key, _) in keyToValues {
+          keySet.insert(key)
+        }
+      }
+      
+      for condition in conditions.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
+        // Apply guards
+        mfddPointer = applyCondition(
+          mfddPointer: mfddPointer,
+          condition: condition,
+          keySet: keySet,
+          factory: factory
+        )
+      }
+      
+    }
+    
+    // Add independant labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
+    mfddPointer = addIndependantLabel(mfddPointer: mfddPointer, independentKeyToValues: independentKeyToValues, factory: factory)
+    
+    return MFDD(pointer: mfddPointer, factory: factory)
+
+  }
   
+  private func fromLabelToKey (
+    labelSet: Set<Label>,
+    labelWeights: [Label: Int]?,
+    placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]]
+  ) -> [PlaceType: [KeyMFDD: Multiset<Value>]] {
+
+    let totalOrder: [Pair<Label>]
+    var placeToKeyToValues: [PlaceType: [KeyMFDD: Multiset<Value>]] = [:]
+    
+    if let lw = labelWeights {
+      totalOrder = createTotalOrder(labels: labelSet.sorted(by: {(label1, label2) -> Bool in
+        lw[label1]! > lw[label2]!
+      }))
+    } else {
+      totalOrder = createTotalOrder(labels: Array(labelSet))
+    }
+    
+    for (place, labelToValues) in placeToLabelToValues {
+      placeToKeyToValues[place] = [:]
+      for (label, values) in labelToValues {
+        let key = KeyMFDD(label: label, couple: totalOrder)
+        placeToKeyToValues[place]![key] = values
+      }
+    }
+
+    return placeToKeyToValues
+  }
+  
+  /// Create a dictionnary that keeping information about dependent keys for a  specific transition. A dependent key is a label that appears in a condition or an arc that contains multiple label. For both, we add an entry to dependent keys. The information about the place is kept in the case of a dependent keym which is not the case for a independent key. It is explained by the fact that an independent key appears alone on a single arc and do not altere anything in the binding computation.
+  /// - Parameters:
+  ///   - placeToKeyToValues: Places that are bound to key which are bound to values
+  ///   - transition: The current  transition
+  /// - Returns:
+  ///   Returns a tuple of two dictionnary, where the first one is for independant keys and the second one for dependant keys.
+  func computeDependentAndIndependentKeys(
+    placeToKeyToValues: [PlaceType: [KeyMFDD: Multiset<Value>]],
+    transition: TransitionType)
+  -> ([PlaceType: [KeyMFDD: Multiset<Value>]], [KeyMFDD: Multiset<Value>]) {
+
+    var independentKeysToValues: [KeyMFDD: Multiset<Value>] = [:]
+    var placeToDependentKeysToValues: [PlaceType: [KeyMFDD: Multiset<Value>]] = [:]
+    var setKeys: Set<KeyMFDD> = []
+    var dependentKeys: Set<KeyMFDD> = []
+    
+    // Construct set of keys
+    for (_, keyToValues) in placeToKeyToValues {
+      for (key, _) in keyToValues {
+        setKeys.insert(key)
+      }
+    }
+    
+    if let conditions = guards[transition] {
+      for condition in conditions {
+        for key in setKeys {
+          if condition.l.contains(key.label) || condition.r.contains(key.label) {
+            dependentKeys.insert(key)
+          }
+        }
+      }
+    }
+    
+    for (place, keyToValues) in placeToKeyToValues {
+      if keyToValues.count >= 1 {
+        placeToDependentKeysToValues[place] = [:]
+        for (key, values) in keyToValues {
+          placeToDependentKeysToValues[place]![key] = values
+        }
+      } else {
+        for (key, values) in keyToValues {
+          if dependentKeys.contains(key) {
+            if placeToDependentKeysToValues[place] == nil {
+              placeToDependentKeysToValues[place] = [:]
+            }
+            placeToDependentKeysToValues[place]![key] = values
+          } else {
+            independentKeysToValues[key] = values
+          }
+        }
+      }
+    }
+
+    return (placeToDependentKeysToValues, independentKeysToValues)
+  }
   
   /// Find and remove guards of the form: ($x, constant). It filters values that have the same label to keep only values that are true applying the condition.
   /// It is an optimisation to reduce the number of conditions and the number of possible values that will be generated at the begining.
@@ -584,27 +726,27 @@ extension HeroNet {
   ///   - conditionsWithUniqueLabel: Conditions with a unique label inside (e.g.: ($x, 1)), wrong example: ($y,$x+1))
   /// - Returns:
   ///   Returns the possible multiset values for each label
-  func optimizationSameVariable(labelToExprs: [Label: Multiset<Value>], conditionsWithUniqueLabel: [Label: [Pair<Value>]]) -> [Label: Multiset<Value>] {
-    
-    var labelToExprsTemp = labelToExprs
-    
-    // Need to create the interpreter here for performance
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
-
-    // We manage the case with conditions that contain a unique label
-    for (labCond, condRest) in conditionsWithUniqueLabel {
-      for expr in labelToExprs[labCond]! {
-        for cond in condRest {
-          if !checkGuards(condition: cond, with: [labCond: expr], interpreter: interpreter) {
-            labelToExprsTemp[labCond]!.removeAll(expr)
-          }
-        }
-      }
-    }
-    
-    return labelToExprsTemp
-  }
+//  func optimizationSameVariable(labelToExprs: [Label: Multiset<Value>], conditionsWithUniqueLabel: [Label: [Pair<Value>]]) -> [Label: Multiset<Value>] {
+//
+//    var labelToExprsTemp = labelToExprs
+//
+//    // Need to create the interpreter here for performance
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
+//
+//    // We manage the case with conditions that contain a unique label
+//    for (labCond, condRest) in conditionsWithUniqueLabel {
+//      for expr in labelToExprs[labCond]! {
+//        for cond in condRest {
+//          if !checkGuards(condition: cond, with: [labCond: expr], interpreter: interpreter) {
+//            labelToExprsTemp[labCond]!.removeAll(expr)
+//          }
+//        }
+//      }
+//    }
+//
+//    return labelToExprsTemp
+//  }
   
   
   func createLabelSet(net: HeroNet, transition: TransitionType) -> Set<Label> {
@@ -627,27 +769,27 @@ extension HeroNet {
   ///   - arcLabels: Each label for each arc
   /// - Returns:
   ///   Returns a tuple where the first element is a dictionnary that binds place with its possible expressions (removing constant), and the second element is the new list of label for each place,  where constants are removed from it
-  func removeConstant(
-    placeToExprs: [PlaceType: Multiset<Value>],
-    transition: TransitionType
-  ) -> ([PlaceType: Multiset<Value>], [PlaceType: [Label]]) {
-    var placeToExprsConstantFiltered = placeToExprs
-    
-    if let pre = input[transition] {
-      var arcLabelsWithoutConstant = pre
-      for (place, labels) in pre {
-        for label in labels {
-          if !label.contains("$") {
-            placeToExprsConstantFiltered[place]!.remove(label)
-            arcLabelsWithoutConstant[place]!.removeAll(where: {$0 == label})
-          }
-        }
-      }
-      return (placeToExprsConstantFiltered, arcLabelsWithoutConstant)
-    }
-    
-    return (placeToExprsConstantFiltered, [:])
-  }
+//  func removeConstant(
+//    placeToExprs: [PlaceType: Multiset<Value>],
+//    transition: TransitionType
+//  ) -> ([PlaceType: Multiset<Value>], [PlaceType: [Label]]) {
+//    var placeToExprsConstantFiltered = placeToExprs
+//
+//    if let pre = input[transition] {
+//      var arcLabelsWithoutConstant = pre
+//      for (place, labels) in pre {
+//        for label in labels {
+//          if !label.contains("$") {
+//            placeToExprsConstantFiltered[place]!.remove(label)
+//            arcLabelsWithoutConstant[place]!.removeAll(where: {$0 == label})
+//          }
+//        }
+//      }
+//      return (placeToExprsConstantFiltered, arcLabelsWithoutConstant)
+//    }
+//
+//    return (placeToExprsConstantFiltered, [:])
+//  }
   
   /// Separate the dictionnary of key to expressions in two distinct dictionnaries where one contains independant keys (resp. dependant keys) bind to their expressions.
   /// - Parameters:
@@ -656,46 +798,46 @@ extension HeroNet {
   ///   - arcLabels: Each label for each arc
   /// - Returns:
   ///   Returns a tuple of two dictionnary, where the first one is for independant keys and the second one for dependant keys.
-  func computeIndependantAndDependantKeys(
-    keyToExprs: [KeyMFDD: Multiset<Value>],
-    conditions: [Pair<Value>],
-    transition: TransitionType)
-  -> (independantKeys: [KeyMFDD: Multiset<Value>], dependantKeys: [KeyMFDD: Multiset<Value>]) {
-    
-    var independantKeys: [KeyMFDD: Multiset<Value>] = [:]
-    var dependantKeys: [KeyMFDD: Multiset<Value>] = [:]
-    var independant: Bool = true
-    
-    if let pre = input[transition] {
-      for (key, exprs) in keyToExprs {
-        for (_, labels) in pre {
-          if labels.count >= 2 && labels.contains(key.label) {
-            independant = false
-            break
-          }
-        }
-        
-        if independant != false {
-          for condition in conditions {
-            if condition.l.contains(key.label) || condition.r.contains(key.label) {
-              independant = false
-              break
-            }
-          }
-        }
-        
-        if independant == true {
-          independantKeys[key] = exprs
-        } else {
-          dependantKeys[key] = exprs
-        }
-        
-        independant = true
-      }
-    }
-    
-    return (independantKeys: independantKeys, dependantKeys: dependantKeys)
-  }
+//  func computeIndependantAndDependantKeys(
+//    keyToExprs: [KeyMFDD: Multiset<Value>],
+//    conditions: [Pair<Value>],
+//    transition: TransitionType)
+//  -> (independantKeys: [KeyMFDD: Multiset<Value>], dependantKeys: [KeyMFDD: Multiset<Value>]) {
+//
+//    var independantKeys: [KeyMFDD: Multiset<Value>] = [:]
+//    var dependantKeys: [KeyMFDD: Multiset<Value>] = [:]
+//    var independant: Bool = true
+//
+//    if let pre = input[transition] {
+//      for (key, exprs) in keyToExprs {
+//        for (_, labels) in pre {
+//          if labels.count >= 2 && labels.contains(key.label) {
+//            independant = false
+//            break
+//          }
+//        }
+//
+//        if independant != false {
+//          for condition in conditions {
+//            if condition.l.contains(key.label) || condition.r.contains(key.label) {
+//              independant = false
+//              break
+//            }
+//          }
+//        }
+//
+//        if independant == true {
+//          independantKeys[key] = exprs
+//        } else {
+//          dependantKeys[key] = exprs
+//        }
+//
+//        independant = true
+//      }
+//    }
+//
+//    return (independantKeys: independantKeys, dependantKeys: dependantKeys)
+//  }
   
   /// Takes the current MFDD and adds values for independant keys. It allows to construct the first mfdd with conditions only on variables that can be affected by it, then just adding like a simple concatenation for the rest of values.
   /// Do not need to evaluate anything !
@@ -705,8 +847,8 @@ extension HeroNet {
   ///   - factory: Current factory
   /// - Returns:
   ///   Returns a new mfdd pointer where values of the independant keys have been added.
-  func addIndependantVariable(mfddPointer: HeroMFDD.Pointer, independantKeyToExprs: [KeyMFDD: Multiset<Value>], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
-    let mfddPointerForIndependantKeys = constructMFDDIndependantKeys(keyToExprs: independantKeyToExprs, factory: factory)
+  func addIndependantLabel(mfddPointer: HeroMFDD.Pointer, independentKeyToValues: [KeyMFDD: Multiset<Value>], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
+    let mfddPointerForIndependantKeys = constructMFDDIndependantKeys(keyToExprs: independentKeyToValues, factory: factory)
     return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependantKeys)
   }
   
@@ -775,50 +917,38 @@ extension HeroNet {
     
   }
   
-
-  /// Isolate conditions with the same variable to apply
-  /// - Parameters:
-  ///   - LabelSet: An array containing a list of keys binds to their possible expressions
-  ///   - conditions: List of condition for a specific transition
-  /// - Returns:
-  ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
-  func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<Value>]?) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
-
-    var condWithUniqueVariable: [Label: [Pair<Value>]] = [:]
-    var restConditions: [Pair<Value>] = []
-
-    if let conds = conditions {
-      for cond in conds {
-        if labelSet.contains(cond.l) {
-          if !cond.r.contains("$") {
-            if let _ = condWithUniqueVariable[cond.l] {
-              condWithUniqueVariable[cond.l]!.append(cond)
-            } else {
-              condWithUniqueVariable[cond.l] = [cond]
-            }
-          } else {
-            restConditions.append(cond)
-          }
-        } else if labelSet.contains(cond.r) {
-          if !cond.l.contains("$") {
-            if let _ = condWithUniqueVariable[cond.r] {
-              condWithUniqueVariable[cond.r]!.append(cond)
-            } else {
-              condWithUniqueVariable[cond.r] = [cond]
-            }
-          } else {
-            restConditions.append(cond)
-          }
-        } else {
-          restConditions.append(cond)
+  
+  private func constructMFDD(
+    placeToKeyToValues: [PlaceType: [KeyMFDD: Multiset<Value>]],
+    factory: HeroMFDDFactory) -> HeroMFDD.Pointer
+  {
+    var mfddPointer = factory.zero.pointer
+    
+    for (_, keyToValues) in placeToKeyToValues {
+      
+      var keyOccurences: [KeyMFDD: Int] = [:]
+      for key in keyToValues.keys {
+        if let _ = keyOccurences[key] {
+          keyOccurences[key]! += 1
+        } else  {
+          keyOccurences[key] = 1
         }
       }
-    }
-    return (condWithUniqueVariable, restConditions)
+      
+      var keyToValuesWithKeyOccurence: [KeyMFDD: (Multiset<Value>, Int)] = [:]
+      keyToValuesWithKeyOccurence = keyToValues.reduce(into: [:], {(res, couple) in
+        res[couple.key] = (couple.value, keyOccurences[couple.key]!)
+      })
 
+      let mfddTemp = constructMFDD(keyToValuesAndOccurences: keyToValuesWithKeyOccurence, factory: factory)
+      // Apply the homomorphism
+      mfddPointer = factory.concatAndFilterInclude(mfddPointer, mfddTemp)
+      keyOccurences = [:]
+      
+    }
+    
+    return mfddPointer
   }
-  
-  
   
   /// Creates a MFDD pointer that represents all possibilities for a transition without guards.
   /// A MFDD pointer is computed for each place before being merge with a specific homomorphism.
@@ -831,41 +961,41 @@ extension HeroNet {
   ///   - placeToLabels: The list of labels for each place
   /// - Returns:
   ///   A MFDD pointer that contains every possibilities for the given args.
-  func constructMFDD(
-    keyToExprs: [KeyMFDD: Multiset<Value>],
-    arcLabels: [PlaceType: [Label]],
-    factory: HeroMFDDFactory,
-    placeToExprs: [PlaceType: Multiset<Value>],
-    placeToLabels: [PlaceType: Multiset<Label>]
-  ) -> HeroMFDD.Pointer {
-
-    var keyToExprsForAPlace: [KeyMFDD: (Multiset<Value>, Int)] =  [:]
-    var labelToKey: [Label: KeyMFDD] = [:]
-    
-    for (key, _) in keyToExprs {
-      labelToKey[key.label] = key
-    }
-              
-    var mfddPointer = factory.zero.pointer
-    
-    for (place, labels) in arcLabels {
-      keyToExprsForAPlace = computeExprsForALabelOfAPlace(
-        place: place,
-        labels: labels,
-        labelToKey: labelToKey,
-        keyToExprs: keyToExprs,
-        placeToExprs: placeToExprs)
-
-      let mfddTemp = constructMFDD(keyToExprs: keyToExprsForAPlace, factory: factory)
-      
-      // Apply the homomorphism
-      mfddPointer = factory.concatAndFilterInclude(mfddPointer, mfddTemp)
-      keyToExprsForAPlace = [:]
-    }
-
-    return mfddPointer
-    
-  }
+//  func constructMFDD(
+//    keyToExprs: [KeyMFDD: Multiset<Value>],
+//    arcLabels: [PlaceType: [Label]],
+//    factory: HeroMFDDFactory,
+//    placeToExprs: [PlaceType: Multiset<Value>],
+//    placeToLabels: [PlaceType: Multiset<Label>]
+//  ) -> HeroMFDD.Pointer {
+//
+//    var keyToExprsForAPlace: [KeyMFDD: (Multiset<Value>, Int)] =  [:]
+//    var labelToKey: [Label: KeyMFDD] = [:]
+//
+//    for (key, _) in keyToExprs {
+//      labelToKey[key.label] = key
+//    }
+//
+//    var mfddPointer = factory.zero.pointer
+//
+//    for (place, labels) in arcLabels {
+//      keyToExprsForAPlace = computeExprsForALabelOfAPlace(
+//        place: place,
+//        labels: labels,
+//        labelToKey: labelToKey,
+//        keyToExprs: keyToExprs,
+//        placeToExprs: placeToExprs)
+//
+//      let mfddTemp = constructMFDD(keyToValuesAndOccurences: keyToExprsForAPlace, factory: factory)
+//
+//      // Apply the homomorphism
+//      mfddPointer = factory.concatAndFilterInclude(mfddPointer, mfddTemp)
+//      keyToExprsForAPlace = [:]
+//    }
+//
+//    return mfddPointer
+//
+//  }
   
   
   /// Creates a MFDD pointer that represents all possibilities for a place without guards
@@ -877,24 +1007,24 @@ extension HeroNet {
   /// - Returns:
   ///   A MFDD pointer that contains every possibilities for the given args for a place.
   func constructMFDD(
-    keyToExprs: [KeyMFDD: (Multiset<Value>, Int)],
+    keyToValuesAndOccurences: [KeyMFDD: (Multiset<Value>, Int)],
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
     
-    if keyToExprs.count == 0 {
+    if keyToValuesAndOccurences.count == 0 {
       return factory.one.pointer
     }
     
-    if let (key, (values, n)) = keyToExprs.sorted(by: {$0.key < $1.key}).first {
+    if let (key, (values, n)) = keyToValuesAndOccurences.sorted(by: {$0.key < $1.key}).first {
       var take: [Value: HeroMFDD.Pointer] = [:]
-      var keyToExprsFirstDrop = keyToExprs
+      var keyToExprsFirstDrop = keyToValuesAndOccurences
       keyToExprsFirstDrop.removeValue(forKey: key)
       
       for el in values {
         // Check we have enough element in values
         if values.occurences(of: el) >= n {
           take[el] = constructMFDD(
-            keyToExprs: keyToExprsFirstDrop.reduce(into: [:], {(res, couple) in
+            keyToValuesAndOccurences: keyToExprsFirstDrop.reduce(into: [:], {(res, couple) in
               var coupleTemp = couple
               coupleTemp.value.0.remove(el, occurences: n)
               res[couple.key] = coupleTemp.value
@@ -927,29 +1057,29 @@ extension HeroNet {
   ///   - placeToExprs: Original values available in a place
   /// - Returns:
   ///   The real number of expressions for each label of a place
-  func computeExprsForALabelOfAPlace(
-    place: PlaceType,
-    labels: [Label],
-    labelToKey: [Label: KeyMFDD],
-    keyToExprs: [KeyMFDD: Multiset<Value>],
-    placeToExprs: [PlaceType: Multiset<Value>])
-  -> [KeyMFDD: (Multiset<Value>, Int)] {
-    
-    var keyToExprsForAPlace: [KeyMFDD: (Multiset<Value>, Int)] =  [:]
-
-    for label in labels {
-      let key = labelToKey[label]!
-      if let _ = keyToExprsForAPlace[key] {
-        keyToExprsForAPlace[key]!.1 += 1
-      } else {
-        keyToExprsForAPlace[key] = (
-          keyToExprs[labelToKey[label]!]!.intersectionUpperBound(placeToExprs[place]!),
-          1
-        )
-      }
-    }
-    return keyToExprsForAPlace
-  }
+//  func computeExprsForALabelOfAPlace(
+//    place: PlaceType,
+//    labels: [Label],
+//    labelToKey: [Label: KeyMFDD],
+//    keyToExprs: [KeyMFDD: Multiset<Value>],
+//    placeToExprs: [PlaceType: Multiset<Value>])
+//  -> [KeyMFDD: (Multiset<Value>, Int)] {
+//
+//    var keyToExprsForAPlace: [KeyMFDD: (Multiset<Value>, Int)] =  [:]
+//
+//    for label in labels {
+//      let key = labelToKey[label]!
+//      if let _ = keyToExprsForAPlace[key] {
+//        keyToExprsForAPlace[key]!.1 += 1
+//      } else {
+//        keyToExprsForAPlace[key] = (
+//          keyToExprs[labelToKey[label]!]!.intersectionUpperBound(placeToExprs[place]!),
+//          1
+//        )
+//      }
+//    }
+//    return keyToExprsForAPlace
+//  }
 
   
   /// Create a label for each variable and associates the possible expressions. If the same variable appears multiple times, an intersection is made between multisets to keep only possible values. e.g.: ["1": 2, "2": 1, "4": 1] ∩ ["1": 1, "2": 1, "3": 1] = ["1": 1, "2": 1].
@@ -960,25 +1090,25 @@ extension HeroNet {
   ///   - transition: The transition for which we want to compute all bindings
   /// - Returns:
   ///   A dictionnary that associates each label to their expressions
-  func associateLabelToExprsForPlace(
-    placeToExprs: [PlaceType: Multiset<Value>],
-    transition:  TransitionType) -> [Label: Multiset<Value>]
-  {
-    var labelToExprs: [Label: Multiset<Value>] = [:]
-    if let pre = input[transition] {
-      for (place, labels) in pre {
-        for label in labels {
-          if let _ = labelToExprs[label] {
-            labelToExprs[label] = labelToExprs[label]!.intersection(placeToExprs[place]!)
-          } else {
-            labelToExprs[label] = placeToExprs[place]!
-          }
-        }
-      }
-      return labelToExprs
-    }
-    return [:]
-  }
+//  func associateLabelToExprsForPlace(
+//    placeToExprs: [PlaceType: Multiset<Value>],
+//    transition:  TransitionType) -> [Label: Multiset<Value>]
+//  {
+//    var labelToExprs: [Label: Multiset<Value>] = [:]
+//    if let pre = input[transition] {
+//      for (place, labels) in pre {
+//        for label in labels {
+//          if let _ = labelToExprs[label] {
+//            labelToExprs[label] = labelToExprs[label]!.intersection(placeToExprs[place]!)
+//          } else {
+//            labelToExprs[label] = placeToExprs[place]!
+//          }
+//        }
+//      }
+//      return labelToExprs
+//    }
+//    return [:]
+//  }
   
   /// Compute a score for each variable using the guards, and the score of priority for each conditions. The score is used to determine the order to apply conditions
   ///
@@ -1056,29 +1186,29 @@ extension HeroNet {
   ///   - labelToExprs: A dictionnary of label binds to their possible expressions
   /// - Returns:
   ///   A sorted array that binds each key to their expressions, grouped by places and sorted using label weights
-  func computeKeyToExprs(
-    labelSet: Set<Label>,
-    labelWeights: [Label: Int]?,
-    labelToExprs: [Label: Multiset<Value>]
-  ) -> [KeyMFDD: Multiset<Value>] {
-
-    let totalOrder: [Pair<Label>]
-    var keyToExprs: [KeyMFDD: Multiset<Value>] = [:]
-    
-    if let lw = labelWeights {
-      totalOrder = createTotalOrder(labels: labelSet.sorted(by: {(label1, label2) -> Bool in
-        lw[label1]! > lw[label2]!
-      }))
-    } else {
-      totalOrder = createTotalOrder(labels: Array(labelSet))
-    }
-    
-    for (label,exprs) in labelToExprs {
-      keyToExprs[KeyMFDD(label: label, couple: totalOrder)] = exprs
-    }
-
-    return keyToExprs
-  }
+//  func computeKeyToExprs(
+//    labelSet: Set<Label>,
+//    labelWeights: [Label: Int]?,
+//    labelToExprs: [Label: Multiset<Value>]
+//  ) -> [KeyMFDD: Multiset<Value>] {
+//
+//    let totalOrder: [Pair<Label>]
+//    var keyToExprs: [KeyMFDD: Multiset<Value>] = [:]
+//
+//    if let lw = labelWeights {
+//      totalOrder = createTotalOrder(labels: labelSet.sorted(by: {(label1, label2) -> Bool in
+//        lw[label1]! > lw[label2]!
+//      }))
+//    } else {
+//      totalOrder = createTotalOrder(labels: Array(labelSet))
+//    }
+//
+//    for (label,exprs) in labelToExprs {
+//      keyToExprs[KeyMFDD(label: label, couple: totalOrder)] = exprs
+//    }
+//
+//    return keyToExprs
+//  }
 
   // createOrder creates a list of pair from a list of string
   // to represent a total order relation. Pair(l,r) => l < r
