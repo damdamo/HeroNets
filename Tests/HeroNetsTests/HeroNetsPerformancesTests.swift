@@ -521,7 +521,7 @@
 //
 //    // How many values in the place
 ////    let nb_el_in_place = [200]
-//    let nb_el_in_place = [10, 20, 50, 100, 200]
+//    let nb_el_in_place = [10, 20, 50, 100]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []

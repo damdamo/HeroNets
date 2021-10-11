@@ -150,7 +150,7 @@ final class GuardTests: XCTestCase {
       guards: [.t1: conditionList],
       module: module
     )
-        
+    
     let marking = Marking<P>([.p1: ["1", "1", "2", "42"], .p2: ["1", "2", "100"], .p3: []])
     let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     let expectedRes: Set<[String:String]> = [["$y": "1", "$z": "1"], ["$y": "1", "$z": "2"], ["$y": "1", "$z": "100"]]

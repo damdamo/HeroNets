@@ -234,8 +234,6 @@ final class HeroNetsBindingsTests: XCTestCase {
       module: module
     )
     
-    print(model.computeStaticOptimizedNet(transition: .t1)!)
-
     let marking1 = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "3", "4"], .p3: ["1", "3"]])
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let expectedRes = Set([["$x": "1", "$b": "1", "$z": "2"], ["$b": "1", "$x": "2", "$z": "3"]])
