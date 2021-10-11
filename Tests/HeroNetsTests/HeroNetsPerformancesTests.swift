@@ -365,8 +365,8 @@
 //    let test_number = 5
 //
 //    // How many values in the place
-////    let nb_el_in_place = [100,500,1000,2000]
-//    let nb_el_in_place = [100]
+//    let nb_el_in_place = [200]
+////    let nb_el_in_place = [100]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
@@ -487,17 +487,89 @@
 //    print("----------------------------------")
 //    print(s.elapsed.humanFormat)
 //    print("----------------------------------")
-////
-////    s.reset()
-////
-////    let l = model.fireableBindingsNaive(for: .apply, with: marking1)
-////    print(l.count)
-////
-////    print("----------------------------------")
+//  }
+//
+//  func testPerformance5() {
+//    enum P: Place, Equatable {
+//      typealias Content = Multiset<String>
+//
+//      case p1,p2,p3
+//    }
+//
+//    enum T: Transition {
+//      case t1, t2
+//    }
+//
+//    let module: String = """
+//    func add(_ x: Int, _ y: Int) -> Int ::
+//      x + y
+//    """
+//
+//    let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
+//
+//    let model = HeroNet<P, T>(
+//      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
+//      .pre(from: .p2, to: .t1, labeled: ["$z", "$a"]),
+//      .pre(from: .p3, to: .t1, labeled: ["$b", "3"]),
+//      guards: [.t1: conditionList, .t2: nil],
+//      module: module
+//    )
+//
+//    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+//    // Number of tests
+//    let test_number = 5
+//
+//    // How many values in the place
+////    let nb_el_in_place = [200]
+//    let nb_el_in_place = [10, 20, 50, 100, 200]
+//    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
+//
+//    var seq: Multiset<String>  = []
+//
+//    var times: [Double] = []
+//    var s: Stopwatch = Stopwatch()
+//    var count = 0
+//
+//    for len in nb_el_in_place {
+//      for i in 0..<len {
+//        seq.insert(String(i))
+//      }
+//
+//      let marking1 = Marking<P>([.p1: seq, .p2: seq, .p3: seq])
+//
+//      print("Nb P1: \(len)")
+//      for i in 0 ..< test_number {
+//        print("Try nb: \(i)")
+//        s.reset()
+////        print(s.elapsed.humanFormat)
+//        let x = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+////        print(s.elapsed.humanFormat)
+//        times.append(s.elapsed.s)
+////        print(times[i])
+//        s.reset()
+//        count = x.count
+//      }
+//      let average = times.reduce(0, +) / Double(times.count)
+//      let standard_deviation: Double = times
+//        .map({(x: Double) -> Double in return (x - average)*(x - average)})
+//        .reduce(0, +)
+//        .squareRoot()
+//      res[len] = (average.truncate(places: 4), count, standard_deviation.truncate(places: 4))
+//      seq = []
+//      times = []
+//
+//    }
+//
+//    print("----------------------------------")
 ////    print(s.elapsed.humanFormat)
-////    print("----------------------------------")
+//    for (key,value) in res.sorted(by: {$0.key < $1.key}) {
+//      print("Nb P1: \(key) / Temps: \(value.avg_time) s / Nombre d'état: \(value.count) / Ecart-type: \(value.std_time)")
+//    }
+//    print("----------------------------------")
+//
 //
 //  }
+//
 //
 //  static var allTests = [
 //    ("testPerformance1", testPerformance1),

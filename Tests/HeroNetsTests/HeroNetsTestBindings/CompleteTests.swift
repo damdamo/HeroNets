@@ -53,9 +53,9 @@ final class HeroNetsBindingsTests: XCTestCase {
       guards: [.t1: conditionList, .t2: nil],
       module: module
     )
-
+    
     let marking1 = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "1", "2"], .p3: []])
-
+    
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
@@ -120,7 +120,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     let bindings = model.fireableBindings(for: .t1, with: marking1, factory: factory)
       
     let bindingSimplified = simplifyBinding(bindings: bindings)
-    let expectedRes: Set<[String:String]> = [["$x": "1", "$z": "1"], ["$z": "2", "$x": "1"]]
+    let expectedRes: Set<[String:String]> = [["$z": "1"], ["$z": "2"]]
 
     XCTAssertEqual(bindingSimplified, expectedRes)
 
@@ -186,7 +186,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     let bindings1: MFDD<KeyMFDD,ValueMFDD> = model.fireableBindings(for: .curry, with: marking1, factory: factory)
     let bindings2: MFDD<KeyMFDD,ValueMFDD> = model.fireableBindings(for: .apply, with: marking2, factory: factory)
     
-    XCTAssertEqual(simplifyBinding(bindings: bindings1), Set([["$f": "div", "$x": "1"], ["$f": "div", "$x": "2"]]))
+    XCTAssertEqual(simplifyBinding(bindings: bindings1), Set([["$x": "1"], ["$x": "2"]]))
     XCTAssertEqual(simplifyBinding(bindings: bindings2), Set([["$y": "1", "$g": "div(2)"]]))
   }
   
@@ -216,5 +216,32 @@ final class HeroNetsBindingsTests: XCTestCase {
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
   }
 
+  // Conditions + same variables + constant + independant variable + constant propagation
+  func testBinding4() {
+
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
+
+    let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
+
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
+      .pre(from: .p2, to: .t1, labeled: ["$z", "$a"]),
+      .pre(from: .p3, to: .t1, labeled: ["$b", "3"]),
+      guards: [.t1: conditionList, .t2: nil],
+      module: module
+    )
+    
+    print(model.computeStaticOptimizedNet(transition: .t1)!)
+
+    let marking1 = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "3", "4"], .p3: ["1", "3"]])
+    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let expectedRes = Set([["$x": "1", "$b": "1", "$z": "2"], ["$b": "1", "$x": "2", "$z": "3"]])
+    
+    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+    XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
+  }
 }
 

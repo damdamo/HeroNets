@@ -17,9 +17,35 @@ extension HeroNet {
     // Dynamic optimization, depends on the structure of the net and the marking
     let tupleDynamicOptimizedNetAndnewMarking = staticOptimizedNet!.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
     
-    if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
-      return dynamicOptimizedNet.computeBindings(for: transition, with: newMarking, factory: factory)
+    if let (dynamicOptimizedNet, placeToLabelToValues) = tupleDynamicOptimizedNetAndnewMarking {
+      return dynamicOptimizedNet.fireableBindings(for: transition, placeToLabelToValues: placeToLabelToValues, factory: factory)
     }
+    
+    return factory.zero
+  }
+  
+  func fireableBindings(for transition: TransitionType, placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]], factory: HeroMFDDFactory) -> HeroMFDD {
+    
+    let labelSet = createLabelSet(net: self, transition: transition)
+    
+    // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
+    let (labelWeights, conditionWeights) = computeScoreOrder(
+      labelSet: labelSet,
+      conditions: guards[transition]
+    )
+    
+    // Return the sorted key to expressions list
+//    let keyToExprs = computeKeyToExprs(
+//      labelSet: labelSet,
+//      labelWeights: labelWeights,
+//      labelToExprs: labelToExprs
+//    )
+//    
+//    let (independantKeysToExprs, dependantKeysToExprs) = computeIndependantAndDependantKeys(
+//      keyToExprs: keyToExprs,
+//      conditions: condRest,
+//      transition: transition
+//    )
     
     return factory.zero
   }
@@ -81,7 +107,7 @@ extension HeroNet {
 
     // Check for condition with a unique label and simplify the range of possibility for the corresponding label
     // E.g.: Suppose the guard: (x,1), x can be only 1.
-    labelToExprs = constantPropagation(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
+    labelToExprs = optimizationSameVariable(labelToExprs: labelToExprs, conditionsWithUniqueLabel: condWithUniqueLab)
         
     // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
     let (labelWeights, conditionWeights) = computeScoreOrder(
@@ -300,20 +326,6 @@ extension HeroNet {
     return replaceLabelsForATransition(labelToValue: equivalentVariables, transition: transition, net: self)
   }
   
-  func createLabelSet(net: HeroNet, transition: TransitionType) -> Set<Label> {
-    var labelSet: Set<Label> = []
-    
-    // Construct labelList by looking at on arcs
-    if let pre = net.input[transition] {
-      for (_, labels) in pre {
-        for label in labels {
-          labelSet.insert(label)
-        }
-      }
-    }
-    return labelSet
-  }
-  
   /// Creates a dictionnary from the equivalent label that binds a label to its new name. It means that if we have a condition of the form " x = y", a new entry will be added in the dictionnary (e.g.: [x:y]). At the end this dictionnary will  be used to know which labels has to be replaced.
   /// - Parameters:
   ///   - transition: The transition that is looking at
@@ -368,9 +380,26 @@ extension HeroNet {
   
   private func computeDynamicOptimizedNet(
     transition: TransitionType,
-    marking: Marking<PlaceType>) -> (HeroNet, Marking<PlaceType>)?
+    marking: Marking<PlaceType>) -> (HeroNet, [PlaceType: [Label: Multiset<Value>]])?
   {
-    return removeConstantOnArcs(transition: transition, marking: marking)
+    
+    // Dynamic optimizations that modify the structure and the marking
+    
+    // Optimizations on constant on arcs, removing it from the net and from the marking in  the place
+    if let (netWithoutConstant, markingWithoutConstant) = removeConstantOnArcs(transition: transition, marking: marking) {
+      // Transform the marking into a more complete structure that says how many values are available for each label of each place
+      let placeToLabelToValues = netWithoutConstant.computeValuesForLabel(transition: transition, marking: markingWithoutConstant)
+      // Filter condition with the same variable that are more complex than just x = constant (e.g.:  x%2 = 0).
+      // Remove the conditions and keep values that satisfie these kind of conditions.
+      let (optimizedNetWithSameVariable, placeToLabelToValuesWithSameVariable) = optimizedGuardWithSameLabel(transition: transition, placeToLabelToValues: placeToLabelToValues)
+      // If the same label appears on different arcs, it's kept only values that are valid for both places.
+      // However, it does not modify the number of values that belong to the label.
+      let placeToLabelToValuesWithSameLabelOnArcs = optimizedSameLabelOnArcs(placeToLabelToValues: placeToLabelToValuesWithSameVariable)
+      
+      return (optimizedNetWithSameVariable, placeToLabelToValuesWithSameLabelOnArcs)
+    }
+    
+    return nil
   }
   
   private func removeConstantOnArcs(
@@ -406,6 +435,192 @@ extension HeroNet {
     
   }
   
+  private func optimizedSameLabelOnArcs(placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]]) -> [PlaceType: [Label: Multiset<Value>]] {
+    
+    var uniqueValuesForLabel: [Label: Multiset<Value>] = [:]
+    
+    // Just keep unique values for each label
+    for (_, labelToValues) in placeToLabelToValues {
+      for (label, values) in labelToValues {
+        if let _ = uniqueValuesForLabel[label] {
+          uniqueValuesForLabel[label]! = uniqueValuesForLabel[label]!.intersection(values)
+        } else {
+          uniqueValuesForLabel[label] = values
+        }
+      }
+    }
+    
+    var newPlaceToLabelToValues = placeToLabelToValues
+    // Looking at labels and applying intersection upperbound to keep only values that appeared in uniqueValuesForLabel with their maximum value
+    for (place, labelToValues) in newPlaceToLabelToValues {
+      for (label, values) in labelToValues {
+        if !(values == uniqueValuesForLabel[label]!) {
+          newPlaceToLabelToValues[place]![label]! = newPlaceToLabelToValues[place]![label]!.intersectionUpperBound(uniqueValuesForLabel[label]!)
+        }
+      }
+    }
+    
+    return newPlaceToLabelToValues
+  }
+  
+  
+  private func optimizedGuardWithSameLabel(transition: TransitionType, placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]])
+  -> (HeroNet, [PlaceType: [Label: Multiset<Value>]])
+  {
+    guard let _ = guards[transition] else {
+      return (self, placeToLabelToValues)
+    }
+    
+    let labelSet = createLabelSet(net: self, transition: transition)
+    let (conditionWithSameLabel, conditionRest) = isolateCondWithSameLabel(labelSet: labelSet, transition: transition)
+    let newPlaceToLabelToValue = optimizedCondWithSameLabel(placeToLabelToValue: placeToLabelToValues, conditionsWithSameLabel: conditionWithSameLabel)
+    
+    var newGuard = guards
+    newGuard[transition]! = conditionRest
+    
+    return (
+      HeroNet(input: self.input, output: self.output, guards: newGuard, module: self.module),
+      newPlaceToLabelToValue
+    )
+  }
+  
+  func optimizedCondWithSameLabel(placeToLabelToValue: [PlaceType: [Label: Multiset<Value>]], conditionsWithSameLabel: [Label: [Pair<Value>]]) -> [PlaceType: [Label: Multiset<Value>]]
+  {
+
+    var newPlaceToLabelToValue = placeToLabelToValue
+    
+    // Need to create the interpreter here for performance
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
+    for (place, labelToValues) in newPlaceToLabelToValue {
+      for (label, values) in labelToValues {
+        if let conditions = conditionsWithSameLabel[label] {
+          for condition in conditions {
+            for value in Set(values) {
+              if !checkGuards(condition: condition, with: [label: value], interpreter: interpreter) {
+                newPlaceToLabelToValue[place]![label]!.removeAll(value)
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return newPlaceToLabelToValue
+    
+  }
+  
+  private func computeValuesForLabel(transition: TransitionType, marking:Marking<PlaceType>)
+  -> [PlaceType: [Label: Multiset<Value>]]
+  {
+    var placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]] = [:]
+    
+    if let pre = input[transition] {
+      for (place, labels) in pre {
+        placeToLabelToValues[place] = [:]
+        for label in labels {
+          placeToLabelToValues[place]![label] = marking[place]
+        }
+      }
+    }
+    
+    return placeToLabelToValues
+  }
+  
+  
+  /// Isolate conditions with the same variable to apply
+  /// - Parameters:
+  ///   - LabelSet: An array containing a list of keys binds to their possible expressions
+  ///   - conditions: List of condition for a specific transition
+  /// - Returns:
+  ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
+  private func isolateCondWithSameLabel(labelSet: Set<Label>, transition: TransitionType) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
+
+    var labelSetTemp: Set<Label> = []
+    var condWithUniqueVariable: [Label: [Pair<Value>]] = [:]
+    var restConditions: [Pair<Value>] = []
+
+    if let conditions = guards[transition] {
+      for condition in conditions {
+        for label in labelSet {
+          if condition.l.contains(label) || condition.r.contains(label) {
+            labelSetTemp.insert(label)
+          }
+        }
+        // Check that we have the same variable, and one of both side contains just this variable
+        if labelSetTemp.count == 1 {
+          if let _ = condWithUniqueVariable[labelSetTemp.first!] {
+            condWithUniqueVariable[labelSetTemp.first!]!.append(condition)
+          } else {
+            condWithUniqueVariable[labelSetTemp.first!] = [condition]
+          }
+        } else {
+          restConditions.append(condition)
+        }
+        labelSetTemp = []
+      }
+    }
+    return (condWithUniqueVariable, restConditions)
+
+  }
+  
+  
+  // --------------------------------------------------------------------------------- //
+  // ------------------- End of functions for dynamic optimization ------------------- //
+  // --------------------------------------------------------------------------------- //
+  
+  // --------------------------------------------------------------------------------- //
+  // ----------------------------- Functions for MFDD -------------------------------- //
+  // --------------------------------------------------------------------------------- //
+  
+
+  
+  
+  /// Find and remove guards of the form: ($x, constant). It filters values that have the same label to keep only values that are true applying the condition.
+  /// It is an optimisation to reduce the number of conditions and the number of possible values that will be generated at the begining.
+  /// - Parameters:
+  ///   - labelToExprs: Label with their corresponding expressions
+  ///   - conditionsWithUniqueLabel: Conditions with a unique label inside (e.g.: ($x, 1)), wrong example: ($y,$x+1))
+  /// - Returns:
+  ///   Returns the possible multiset values for each label
+  func optimizationSameVariable(labelToExprs: [Label: Multiset<Value>], conditionsWithUniqueLabel: [Label: [Pair<Value>]]) -> [Label: Multiset<Value>] {
+    
+    var labelToExprsTemp = labelToExprs
+    
+    // Need to create the interpreter here for performance
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
+    // We manage the case with conditions that contain a unique label
+    for (labCond, condRest) in conditionsWithUniqueLabel {
+      for expr in labelToExprs[labCond]! {
+        for cond in condRest {
+          if !checkGuards(condition: cond, with: [labCond: expr], interpreter: interpreter) {
+            labelToExprsTemp[labCond]!.removeAll(expr)
+          }
+        }
+      }
+    }
+    
+    return labelToExprsTemp
+  }
+  
+  
+  func createLabelSet(net: HeroNet, transition: TransitionType) -> Set<Label> {
+    var labelSet: Set<Label> = []
+    
+    // Construct labelList by looking at on arcs
+    if let pre = net.input[transition] {
+      for (_, labels) in pre {
+        for label in labels {
+          labelSet.insert(label)
+        }
+      }
+    }
+    return labelSet
+  }
+  
   /// Remove constants on arcs and filter the values inside the place. A constant as a label can be just removed if we remove a value in the corresponding place.
   /// - Parameters:
   ///   - placeToExprs: Each place is bound to a multiset of expressions
@@ -433,11 +648,6 @@ extension HeroNet {
     
     return (placeToExprsConstantFiltered, [:])
   }
-  
-  
-  // --------------------------------------------------------------------------------- //
-  // ------------------- End of functions for dynamic optimization ------------------- //
-  // --------------------------------------------------------------------------------- //
   
   /// Separate the dictionnary of key to expressions in two distinct dictionnaries where one contains independant keys (resp. dependant keys) bind to their expressions.
   /// - Parameters:
@@ -532,104 +742,6 @@ extension HeroNet {
     return factory.zero.pointer
   }
   
-  /// Find and remove guards of the form: ($x, $y). It unifies label to have a unique label if there are the same. Therefore, every label in arcs and transitions are renamed with a unique label. For instance, if we have: ($x, $y), ($y, $z), we will have an only label at the end, $z for instance and all occurences of $x and $y will be replaced by $z.
-  /// - Parameters:
-  ///   - transition: The transition to compute bindings
-  /// - Returns:
-  ///   Returns a tuple where the first element is a dictionnary that binds place with its renamed labels (if there are, otherwise nothing change), the second element is the list of conditions where we removed the conditions that have been applied.
-//  func optimizationEqualityGuard(transition: TransitionType) -> ([PlaceType: [Label]], [Pair<Value>]) {
-//
-//    guard let _ = guards[transition] else { return (input[transition]!, [])}
-//
-//    var labelList: Set<Label> = []
-//    var newInput = input[transition]!
-//
-//    if let pre = input[transition] {
-//      for (_, labels) in pre {
-//        for label in labels {
-//          labelList.insert(label)
-//        }
-//      }
-//    }
-//
-//    var eqLabelList: [Pair<Label>] = []
-//    var conditionList: [Pair<Value>] = []
-//
-//    if let conditions = guards[transition] {
-//      for condition in conditions {
-//        if labelList.contains(condition.l) && labelList.contains(condition.r) {
-//          eqLabelList.append(Pair(condition.l, condition.r))
-//        } else {
-//          conditionList.append(condition)
-//        }
-//      }
-//    }
-//
-//    while eqLabelList != [] {
-//      let pair = eqLabelList.first!
-//      eqLabelList.removeFirst()
-//
-//      for i in 0 ..< conditionList.count {
-//        if conditionList[i].l.contains(pair.l) {
-//          conditionList[i].l = conditionList[i].l.replacingOccurrences(of: pair.l, with: pair.r)
-//        }
-//        if conditionList[i].r.contains(pair.l) {
-//          conditionList[i].r = conditionList[i].r.replacingOccurrences(of: pair.l, with: pair.r)
-//        }
-//      }
-//
-//      for i in 0 ..< eqLabelList.count {
-//        if eqLabelList[i].l == pair.l {
-//          eqLabelList[i].l = pair.r
-//        }
-//        if eqLabelList[i].r == pair.l {
-//          eqLabelList[i].r = pair.r
-//        }
-//      }
-//
-//      for (place, labels) in newInput {
-//
-//        newInput[place] = labels.map({(lab) in
-//          if lab == pair.l {
-//            return pair.r
-//          }
-//          return lab
-//        })
-//      }
-//
-//    }
-//
-//    return (newInput, conditionList)
-//  }
-  
-  /// Find and remove guards of the form: ($x, constant). It filters values that have the same label to keep only values that are true applying the condition.
-  /// It is an optimisation to reduce the number of conditions and the number of possible values that will be generated at the begining.
-  /// - Parameters:
-  ///   - labelToExprs: Label with their corresponding expressions
-  ///   - conditionsWithUniqueLabel: Conditions with a unique label inside (e.g.: ($x, 1)), wrong example: ($y,$x+1))
-  /// - Returns:
-  ///   Returns the possible multiset values for each label
-  func constantPropagation(labelToExprs: [Label: Multiset<Value>], conditionsWithUniqueLabel: [Label: [Pair<Value>]]) -> [Label: Multiset<Value>] {
-    
-    var labelToExprsTemp = labelToExprs
-    
-    // Need to create the interpreter here for performance
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
-
-    // We manage the case with conditions that contain a unique label
-    for (labCond, condRest) in conditionsWithUniqueLabel {
-      for expr in labelToExprs[labCond]! {
-        for cond in condRest {
-          if !checkGuards(condition: cond, with: [labCond: expr], interpreter: interpreter) {
-            labelToExprsTemp[labCond]!.removeAll(expr)
-          }
-        }
-      }
-    }
-    
-    return labelToExprsTemp
-  }
   
   /// Create a new mfdd pointer from the current mfdd where we filter values which does not satisfy the condition
   /// - Parameters:
@@ -706,41 +818,7 @@ extension HeroNet {
 
   }
   
-  /// Isolate conditions with the same variable to apply
-  /// - Parameters:
-  ///   - LabelSet: An array containing a list of keys binds to their possible expressions
-  ///   - conditions: List of condition for a specific transition
-  /// - Returns:
-  ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
-  func isolateCondWithSameLabel(labelSet: Set<Label>, transition: TransitionType/*, conditions: [Pair<Value>]?*/) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
-
-    var labelSetTemp: Set<Label> = []
-    var condWithUniqueVariable: [Label: [Pair<Value>]] = [:]
-    var restConditions: [Pair<Value>] = []
-
-    if let conditions = guards[transition] {
-      for condition in conditions {
-        for label in labelSet {
-          if condition.l.contains(label) || condition.r.contains(label) {
-            labelSetTemp.insert(label)
-          }
-        }
-        // Check that we have the same variable, and one of both side contains just this variable
-        if labelSetTemp.count == 1 {
-          if let _ = condWithUniqueVariable[labelSetTemp.first!] {
-            condWithUniqueVariable[labelSetTemp.first!]!.append(condition)
-          } else {
-            condWithUniqueVariable[labelSetTemp.first!] = [condition]
-          }
-        } else {
-          restConditions.append(condition)
-        }
-        labelSetTemp = []
-      }
-    }
-    return (condWithUniqueVariable, restConditions)
-
-  }
+  
   
   /// Creates a MFDD pointer that represents all possibilities for a transition without guards.
   /// A MFDD pointer is computed for each place before being merge with a specific homomorphism.

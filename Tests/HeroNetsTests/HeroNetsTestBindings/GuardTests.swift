@@ -108,14 +108,14 @@ final class GuardTests: XCTestCase {
     
     var marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["2", "3"], .p3: []])
     var mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
-    var expectedRes: Set<[String:String]> = [["$x": "2", "$y": "1", "$z": "2"], ["$x": "3", "$y": "1", "$z": "2"]]
+    var expectedRes: Set<[String:String]> = [["$x": "2"], ["$x": "3"]]
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
     
     print("------------------------------")
     
     marking = Marking<P>([.p1: ["1", "1", "2", "3"], .p2: ["2", "3"], .p3: []])
     mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
-    expectedRes = [["$x": "1", "$y": "1", "$z": "2"], ["$x": "2", "$y": "1", "$z": "2"], ["$x": "3", "$y": "1", "$z": "2"]]
+    expectedRes = [["$x": "1"], ["$x": "2"], ["$x": "3"]]
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
   }
   
@@ -150,7 +150,7 @@ final class GuardTests: XCTestCase {
       guards: [.t1: conditionList],
       module: module
     )
-    
+        
     let marking = Marking<P>([.p1: ["1", "1", "2", "42"], .p2: ["1", "2", "100"], .p3: []])
     let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     let expectedRes: Set<[String:String]> = [["$y": "1", "$z": "1"], ["$y": "1", "$z": "2"], ["$y": "1", "$z": "100"]]
@@ -165,14 +165,33 @@ final class GuardTests: XCTestCase {
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
-      .post(from: .t1, to: .p3, labeled: ["$z"]),
+      .post(from: .t1, to: .p3, labeled: ["$y"]),
       guards: [.t1: conditionList],
       module: module
     )
-    
+        
     let marking = Marking<P>([.p1: ["1", "1", "2", "42"], .p2: ["1", "2", "3", "100"], .p3: []])
     let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     let expectedRes: Set<[String:String]> = [["$z": "1"]]
+    XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
+  }
+  
+  // Test for guards with conditions that have the same variable
+  func testOptimisationGuard3() {
+    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let module = ""
+    let conditionList: [Pair<String>]? = [Pair("$x%2","0"), Pair("$z%2","1")]
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
+      .pre(from: .p2, to: .t1, labeled: ["$z"]),
+      .post(from: .t1, to: .p3, labeled: ["$y"]),
+      guards: [.t1: conditionList],
+      module: module
+    )
+        
+    let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["4", "5", "6"], .p3: []])
+    let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
+    let expectedRes: Set<[String:String]> = [["$x": "2", "$z": "5", "$y": "1"], ["$x": "2", "$z": "5", "$y": "3"]]
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
   }
   

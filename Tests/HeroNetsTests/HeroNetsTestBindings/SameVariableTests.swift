@@ -54,7 +54,7 @@ final class SameVariableTests: XCTestCase {
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
   }
   
-  func testWithSameVariableDifferentArcs() {
+  func testWithSameVariableDifferentArcs0() {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
     let conditionList: [Pair<String>]? = nil
@@ -69,6 +69,24 @@ final class SameVariableTests: XCTestCase {
     let marking = Marking<P>([.p1: ["1", "2", "5", "42"], .p2: ["1", "2", "100"], .p3: []])
     let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     let expectedRes: Set<[String:String]> = [["$x": "2", "$z": "5"], ["$x": "1", "$z": "42"], ["$z": "5", "$x": "1"], ["$z": "1", "$x": "2"], ["$x": "2", "$z": "42"], ["$x": "1", "$z": "2"]]
+    XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
+  }
+  
+  func testWithSameVariableDifferentArcs1() {
+    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let module = ""
+    let conditionList: [Pair<String>]? = nil
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x", "$z"]),
+      .pre(from: .p2, to: .t1, labeled: ["$x"]),
+      .post(from: .t1, to: .p3, labeled: ["$z"]),
+      guards: [.t1: conditionList],
+      module: module
+    )
+    
+    let marking = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "3"], .p3: []])
+    let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
+    let expectedRes: Set<[String:String]> = [["$x": "1", "$z": "1"], ["$x": "1", "$z": "2"]]
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
   }
   
