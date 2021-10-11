@@ -290,7 +290,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards of a transition
-  public func checkGuards(transition: TransitionType, with binding: [Label: Value]) -> Bool {
+  private func checkGuards(transition: TransitionType, with binding: [Label: Value]) -> Bool {
     if let conditions = guards[transition] {
       return checkGuards(conditions: conditions, with: binding)
     }
@@ -298,7 +298,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards for a list of conditions
-  public func checkGuards(conditions: [Pair<Value>], with binding: [Label: Value]) -> Bool {
+  private func checkGuards(conditions: [Pair<Value>], with binding: [Label: Value]) -> Bool {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     for condition in conditions {
@@ -310,7 +310,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards for a condition
-  public func checkGuards(condition: Pair<Value>, with binding: [Label: Value], interpreter: Interpreter) -> Bool {
+  func checkGuards(condition: Pair<Value>, with binding: [Label: Value], interpreter: Interpreter) -> Bool {
     let lhs = bindingSubstitution(expr: condition.l, binding: binding)
     let rhs = bindingSubstitution(expr: condition.r, binding: binding)
     // Check if both term are equals, thanks to the syntactic equivalence !
@@ -330,7 +330,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   
   /// Substitute variables inside a string by corresponding binding
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-  public func bindingSubstitution(expr: Value, binding: [Label: Value]) -> String {
+  private func bindingSubstitution(expr: Value, binding: [Label: Value]) -> String {
     var res: String = "\(expr)"
     for el in binding {
       res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")
