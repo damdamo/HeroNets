@@ -46,8 +46,8 @@
 //    """
 //
 //
-////    var interpreter = Interpreter()
-////    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 //
 //    let conditionList: [Pair<String>]? = nil
 //
@@ -56,14 +56,14 @@
 //      .pre(from: .p2, to: .apply, labeled: ["$f"]),
 //      .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
 //      guards: [.apply: conditionList],
-//      module: module
+//      interpreter: interpreter
 //    )
 //
 //    // Number of tests
 //    let test_number = 5
 //
 //    // How many values in the place
-//    //    let nb_el_in_place = [100,500,1000,2000,4000,6000]
+////    let nb_el_in_place = [100,500,1000,2000,4000,6000]
 //    let nb_el_in_place = [100]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
@@ -146,8 +146,8 @@
 //    """
 //
 //
-////    var interpreter = Interpreter()
-////    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 //
 //    let conditionList: [Pair<String>]? = nil
 //
@@ -156,7 +156,7 @@
 //      .pre(from: .p2, to: .apply, labeled: ["$x"]),
 //      .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
 //      guards: [.apply: conditionList],
-//      module: module
+//      interpreter: interpreter
 //    )
 //
 //    // Number of tests
@@ -245,8 +245,8 @@
 //    """
 //
 //
-////    var interpreter = Interpreter()
-////    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 //
 //    let conditionList: [Pair<String>]? = [Pair("$x","2")]
 //
@@ -255,7 +255,7 @@
 //      .pre(from: .p2, to: .apply, labeled: ["$f"]),
 //      .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
 //      guards: [.apply: conditionList],
-//      module: module
+//      interpreter: interpreter
 //    )
 //
 //    // Number of tests
@@ -346,8 +346,8 @@
 //    """
 //
 //
-////    var interpreter = Interpreter()
-////    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 //
 //    let conditionList: [Pair<String>]? = [Pair("$x","$y+1")]
 //
@@ -356,7 +356,7 @@
 //      .pre(from: .p2, to: .apply, labeled: ["$f"]),
 //      .post(from: .apply, to: .res, labeled: ["$f($x,$y)"]),
 //      guards: [.apply: conditionList],
-//      module: module
+//      interpreter: interpreter
 //    )
 //
 //    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
@@ -451,8 +451,8 @@
 //        else false
 //    """
 //
-////    var interpreter = Interpreter()
-////    try! interpreter.loadModule(fromString: module)
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
 //    // print(try! interpreter.eval(string: "eq(mod(25,5),0)"))
 //
 ////    let conditionList: [Pair<String>]? = [Pair("eq(mod($a,2),0)","true")]
@@ -464,7 +464,7 @@
 //      .post(from: .apply, to: .res, labeled: ["$f($a,$b)"]),
 //      .post(from: .apply, to: .op, labeled: ["$f", "$g"]),
 //      guards: [.apply: conditionList],
-//      module: module
+//      interpreter: interpreter
 //    )
 //
 //    let len = 20
@@ -505,6 +505,9 @@
 //      x + y
 //    """
 //
+//    var interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: module)
+//    
 //    let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
 //
 //    let model = HeroNet<P, T>(
@@ -512,7 +515,7 @@
 //      .pre(from: .p2, to: .t1, labeled: ["$z", "$a"]),
 //      .pre(from: .p3, to: .t1, labeled: ["$b", "3"]),
 //      guards: [.t1: conditionList, .t2: nil],
-//      module: module
+//      interpreter: interpreter
 //    )
 //
 //    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
@@ -520,7 +523,7 @@
 //    let test_number = 5
 //
 //    // How many values in the place
-////    let nb_el_in_place = [200]
+////    let nb_el_in_place = [2000]
 //    let nb_el_in_place = [10, 20, 50, 100]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
@@ -571,8 +574,8 @@
 //  }
 //
 //
-//  static var allTests = [
-//    ("testPerformance1", testPerformance1),
-//  ]
+////  static var allTests = [
+////    ("testPerformance1", testPerformance1),
+////  ]
 //}
 //

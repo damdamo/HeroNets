@@ -42,6 +42,9 @@ final class HeroNetsBindingsTests: XCTestCase {
     func add(_ x: Int, _ y: Int) -> Int ::
       x + y
     """
+    
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
 
     let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$z")]
 
@@ -51,7 +54,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .pre(from: .p2, to: .t1, labeled: ["$x", "$z"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
       guards: [.t1: conditionList, .t2: nil],
-      module: module
+      interpreter: interpreter
     )
     
     let marking1 = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "1", "2"], .p3: []])
@@ -72,6 +75,8 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
 
 //    let conditionList: [Pair<String>] = [Pair("$y","1"), Pair("$x", "$z")]
     let conditionList: [Pair<String>] = [Pair("$x","1")]
@@ -82,7 +87,7 @@ final class HeroNetsBindingsTests: XCTestCase {
 //      .pre(from: .p2, to: .t1, labeled: ["$x"]),
       .post(from: .t1, to: .p3, labeled: ["$x"]),
       guards: [.t1: conditionList, .t2: nil],
-      module: module
+      interpreter: interpreter
     )
 
     let marking1 = Marking<P>([.p1: ["1", "1", "2", "4"], .p2: ["1", "2", "3"], .p3: []])
@@ -104,6 +109,9 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$y", "$z")]
 
     let model = HeroNet<P, T>(
@@ -111,7 +119,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .pre(from: .p2, to: .t1, labeled: ["$z","3"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
       guards: [.t1: conditionList, .t2: nil],
-      module: module
+      interpreter: interpreter
     )
 
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
@@ -176,7 +184,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .post(from: .curry, to: .p2, labeled: ["$f($x)"]),
       .post(from: .apply, to: .res, labeled: ["$g($y)"]),
       guards: [.curry: conditionListCurry, .apply: conditionListApply],
-      module: module
+      interpreter: interpreter
     )
 
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
@@ -198,6 +206,9 @@ final class HeroNetsBindingsTests: XCTestCase {
       x + y
     """
 
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z")]
 
     let model = HeroNet<P, T>(
@@ -205,7 +216,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .pre(from: .p2, to: .t1, labeled: ["$y"]),
       .pre(from: .p3, to: .t1, labeled: ["$z", "3"]),
       guards: [.t1: conditionList, .t2: nil],
-      module: module
+      interpreter: interpreter
     )
 
     let marking1 = Marking<P>([.p1: ["1", "1", "2", "2", "3", "3"], .p2: ["1", "2", "3"], .p3: ["1", "2", "3"]])
@@ -223,6 +234,9 @@ final class HeroNetsBindingsTests: XCTestCase {
     func add(_ x: Int, _ y: Int) -> Int ::
       x + y
     """
+    
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
 
     let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
 
@@ -231,7 +245,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       .pre(from: .p2, to: .t1, labeled: ["$z", "$a"]),
       .pre(from: .p3, to: .t1, labeled: ["$b", "3"]),
       guards: [.t1: conditionList, .t2: nil],
-      module: module
+      interpreter: interpreter
     )
     
     let marking1 = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "3", "4"], .p3: ["1", "3"]])

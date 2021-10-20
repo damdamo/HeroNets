@@ -39,13 +39,16 @@ final class SameVariableTests: XCTestCase {
   func testWithSameVariableSameArc() {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$x"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$z"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["3", "3", "5", "42"], .p2: ["1", "2", "100"], .p3: []])
@@ -57,13 +60,16 @@ final class SameVariableTests: XCTestCase {
   func testWithSameVariableDifferentArcs0() {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$z"]),
       .pre(from: .p2, to: .t1, labeled: ["$x"]),
       .post(from: .t1, to: .p3, labeled: ["$z"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["1", "2", "5", "42"], .p2: ["1", "2", "100"], .p3: []])
@@ -75,13 +81,16 @@ final class SameVariableTests: XCTestCase {
   func testWithSameVariableDifferentArcs1() {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$z"]),
       .pre(from: .p2, to: .t1, labeled: ["$x"]),
       .post(from: .t1, to: .p3, labeled: ["$z"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "3"], .p3: []])
@@ -93,13 +102,16 @@ final class SameVariableTests: XCTestCase {
   func testWithSameVariableInAllArcs() {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$x"]),
       .pre(from: .p3, to: .t1, labeled: ["$x"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "4", "5"], .p3: ["1", "2", "4"]])

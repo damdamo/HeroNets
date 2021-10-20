@@ -37,14 +37,19 @@ final class GuardTests: XCTestCase {
   }
   
   func testWithoutGuard() {
+    
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
     let conditionList: [Pair<String>]? = nil
+    
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$z"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["1", "2"], .p2: ["4", "5"], .p3: []])
@@ -56,14 +61,18 @@ final class GuardTests: XCTestCase {
   }
   
   func testWithGuardSimple0() {
+    
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = [Pair("$x","$z+1"), Pair("$y","$z-1")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$z"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["2", "3"], .p3: []])
@@ -75,14 +84,18 @@ final class GuardTests: XCTestCase {
   }
   
   func testWithGuardSimple1() {
+    
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = [Pair("$x","$a+1"), Pair("$a+1","$y"), Pair("$b", "$y+1")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$a"]),
       .pre(from: .p3, to: .t1, labeled: ["$b"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["1", "2", "2", "3", "4"], .p2: ["1", "2", "3", "4"], .p3: ["1", "2", "3", "4"]])
@@ -94,14 +107,18 @@ final class GuardTests: XCTestCase {
   }
   
   func testConstantPropagation() {
+    
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = [Pair("$z","2"), Pair("$y","1")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$z"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
@@ -121,15 +138,19 @@ final class GuardTests: XCTestCase {
   
   // Test for guards of the form (x,y) where x and y are not on the same arc
   func testOptimisationGuard0() {
+    
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = [Pair("$x","$z")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$z"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["1", "1", "2", "42"], .p2: ["1", "2", "3"], .p3: []])
@@ -140,15 +161,19 @@ final class GuardTests: XCTestCase {
   
   // Test for guards of the form (x,y), where x and y are on the same arc
   func testOptimisationGuard1() {
+    
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = [Pair("$x","$y")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$z"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
     
     let marking = Marking<P>([.p1: ["1", "1", "2", "42"], .p2: ["1", "2", "100"], .p3: []])
@@ -161,13 +186,16 @@ final class GuardTests: XCTestCase {
   func testOptimisationGuard2() {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = [Pair("$x","$y"), Pair("$x","$z"), Pair("$y","$z")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$y"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
         
     let marking = Marking<P>([.p1: ["1", "1", "2", "42"], .p2: ["1", "2", "3", "100"], .p3: []])
@@ -180,13 +208,16 @@ final class GuardTests: XCTestCase {
   func testOptimisationGuard3() {
     let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
     let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
     let conditionList: [Pair<String>]? = [Pair("$x%2","0"), Pair("$z%2","1")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
       .post(from: .t1, to: .p3, labeled: ["$y"]),
       guards: [.t1: conditionList],
-      module: module
+      interpreter: interpreter
     )
         
     let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["4", "5", "6"], .p3: []])

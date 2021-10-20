@@ -72,7 +72,7 @@ extension HeroNet {
         // We do not keep condition with a unique label in the future net !
         var guardsTemp = net.guards
         guardsTemp[transition] = condRest
-        let netTemp = HeroNet(input: net.input, output: net.output, guards: guardsTemp, module: net.module)
+        let netTemp = HeroNet(input: net.input, output: net.output, guards: guardsTemp, interpreter: interpreter)
         return replaceLabelsForATransition(labelToValue: labelToConstant, transition: transition, net: netTemp)
       }
       return nil
@@ -131,7 +131,7 @@ extension HeroNet {
       })
     }
         
-    return HeroNet(input: newInput, output: newOutput, guards: newGuards, module: self.module)
+    return HeroNet(input: newInput, output: newOutput, guards: newGuards, interpreter: interpreter)
   }
   
   /// Takes a dictionnary of label binds to condition with a unique variable, then evaluates each condition to have a value for each expression.
@@ -141,10 +141,6 @@ extension HeroNet {
   /// - Returns:
   ///  Returns a new dictionnary of label to values, where each previous expressions has been evaluated
   private func createDicOfConstantLabel(dicUniqueLabelToCondition: [Label: [Pair<Value>]]) -> [Label: Value]? {
-    
-    // Need to create the interpreter here for performance
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
     
     var constantCondition: [Label: Value] = [:]
     
@@ -344,7 +340,7 @@ extension HeroNet {
     }
     
     return (
-      HeroNet(input: newInput, output: output, guards: guards, module: module),
+      HeroNet(input: newInput, output: output, guards: guards, interpreter: interpreter),
       newMarking
     )
     
@@ -394,7 +390,7 @@ extension HeroNet {
     newGuard[transition]! = conditionRest
     
     return (
-      HeroNet(input: self.input, output: self.output, guards: newGuard, module: self.module),
+      HeroNet(input: self.input, output: self.output, guards: newGuard, interpreter: interpreter),
       newPlaceToLabelToValue
     )
   }
@@ -403,17 +399,13 @@ extension HeroNet {
   {
 
     var newPlaceToLabelToValue = placeToLabelToValue
-    
-    // Need to create the interpreter here for performance
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
 
     for (place, labelToValues) in newPlaceToLabelToValue {
       for (label, values) in labelToValues {
         if let conditions = conditionsWithSameLabel[label] {
           for condition in conditions {
             for value in Set(values) {
-              if !checkGuards(condition: condition, with: [label: value], interpreter: interpreter) {
+              if !checkGuards(condition: condition, with: [label: value]) {
                 newPlaceToLabelToValue[place]![label]!.removeAll(value)
               }
             }
@@ -698,9 +690,6 @@ extension HeroNet {
       }
       return false
     })
-        
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
     
     let morphism = guardFilter(condition: condition, keyCond: Array(keyCond), factory: factory, heroNet: self, interpreter: interpreter)
     
