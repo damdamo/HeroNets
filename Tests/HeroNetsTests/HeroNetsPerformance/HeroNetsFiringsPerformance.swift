@@ -70,9 +70,6 @@
 //
 //    var seq: Multiset<String>  = []
 //
-//
-//    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
-//
 //    var times: [Double] = []
 //    var s: Stopwatch = Stopwatch()
 //    var count = 0
@@ -110,7 +107,7 @@
 //    print("----------------------------------")
 //  }
 //
-//  
+//
 //
 ////  static var allTests = [
 ////    ("testPerformance1", testPerformance1),
