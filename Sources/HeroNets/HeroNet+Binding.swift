@@ -48,7 +48,7 @@ extension HeroNet {
   ///   - transition: The transition to optimize
   /// - Returns:
   ///   Returns an optimized net
-  private func computeStaticOptimizedNet(transition: TransitionType) -> HeroNet? {
+  public func computeStaticOptimizedNet(transition: TransitionType) -> HeroNet? {
     let netEqualityInGuardOptimization = optimizeEqualityInGuard(transition: transition)
     let netConstantPropagationOptimization = optimizationConstantPropagation(net: netEqualityInGuardOptimization, transition: transition)
     return netConstantPropagationOptimization

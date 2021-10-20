@@ -12,7 +12,7 @@
 /// such as: `m1 + m2`, `m1 - m2`, `m1 < m2`, `m1 <= m2`, `m1 > m2`, `m1 >= m2`
 ///
 /// In addition, Multisets are a `Collection` and can be easily browsed.
-public struct Multiset<Element> where Element: Hashable {
+public struct Multiset<Element>: Hashable where Element: Hashable {
 
   public init() {
     self.storage = [:]

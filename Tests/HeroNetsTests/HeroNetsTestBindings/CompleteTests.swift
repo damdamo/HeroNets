@@ -63,9 +63,6 @@ final class HeroNetsBindingsTests: XCTestCase {
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
 
-    // Cas bug: [$y, $z, $x]
-//    print(mfdd)
-//    print(mfdd.count)
    }
 
   func testBinding01() {

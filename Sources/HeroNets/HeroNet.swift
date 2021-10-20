@@ -205,8 +205,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       for place in PlaceType.allCases {
         inputMarking[place] = [:]
       }
-      // In the case of pre, expressions is just a list of variables
-      for (place,expressions) in pre {
+      // In the case of pre, expressions is just a list of labels
+      for (place, expressions) in pre {
         for var_ in expressions {
           multiset.insert(binding[var_]!)
         }
@@ -225,8 +225,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       for place in PlaceType.allCases {
         outputMarking[place] = [:]
       }
-      // In the case of post, expressions is a list of strings containing variables
-      for (place,expressions) in post {
+      // In the case of post, expressions is a list of strings containing labels
+      for (place, expressions) in post {
         for expr in expressions {
           exprSubs = bindingSubstitution(expr: expr, binding: binding)
           valOutput = "\(try! interpreter.eval(string: exprSubs))"
