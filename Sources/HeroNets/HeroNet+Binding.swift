@@ -147,6 +147,7 @@ extension HeroNet {
     for (label, conditionList) in dicUniqueLabelToCondition {
       for condition in conditionList {
         var value: Value = ""
+        let context = interpreter.saveContext()
         if condition.l == label {
           value = try! "\(interpreter.eval(string: condition.r))"
           if value.contains("func") {
@@ -158,7 +159,7 @@ extension HeroNet {
             value = condition.l
           }
         }
-        
+        interpreter.reloadContext(context: context)
         if let val = constantCondition[label] {
           // Two conditions with different constant value
           if val != value {

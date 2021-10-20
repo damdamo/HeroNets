@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
-        .package(url: "https://github.com/damdamo/AlpineLang.git", .branch("master")),
+        .package(url: "https://github.com/kyouko-taiga/AlpineLang.git", .branch("master")),
         .package(url: "https://github.com/kyouko-taiga/DDKit.git", .branch("master")),
         //.product(name: "AlpineLib", package: "AlpineLang"),
     ],
