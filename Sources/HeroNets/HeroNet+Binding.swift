@@ -49,9 +49,9 @@ extension HeroNet {
   /// - Returns:
   ///   Returns an optimized net
   public func computeStaticOptimizedNet(transition: TransitionType) -> HeroNet? {
-    let netEqualityInGuardOptimization = optimizeEqualityInGuard(transition: transition)
-    let netConstantPropagationOptimization = optimizationConstantPropagation(net: netEqualityInGuardOptimization, transition: transition)
-    return netConstantPropagationOptimization
+    let netConstantPropagationVariable = constantPropagationVariable(transition: transition)
+    let netConstantPropagation = constantPropagation(net: netConstantPropagationVariable, transition: transition)
+    return netConstantPropagation
   }
   
   /// The constant propagation optimization uses guard of the form "x = constant expression" to replace all occurences of x by the constant expression in every possible expressions (e.g.: arcs, guards)
@@ -60,7 +60,7 @@ extension HeroNet {
   ///   - transition: The current transition
   /// - Returns:
   ///  Returns a new net where constant propagation is applied
-  private func optimizationConstantPropagation(net: HeroNet, transition: TransitionType) -> HeroNet? {
+  private func constantPropagation(net: HeroNet, transition: TransitionType) -> HeroNet? {
     
     let labelSet = createLabelSet(net: net, transition: transition)
     
@@ -179,7 +179,7 @@ extension HeroNet {
   ///   - transition: The transition that is looking at
   /// - Returns:
   ///  Returns a new net where the equality in guard optimization is applied
-  private func optimizeEqualityInGuard(transition: TransitionType) -> HeroNet {
+  private func constantPropagationVariable(transition: TransitionType) -> HeroNet {
     // Equality guards
     let equivalentVariables  = createDicOfEquivalentLabel(transition: transition)
     
