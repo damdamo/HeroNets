@@ -155,6 +155,16 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     self.input = pre
     self.output = post
     self.guards = TotalMap(guards)
+    
+    // A trick is needed with the Alpine interpreter, cause the first time a module is called it loads built-in operations. Thus, we want to keep them for the rest of operations.
+    // Otherwise, built-in operations are created the first time the interpreter is called for an operation. It works the first time, however, each time we call the interpreter, we save and reload the context
+    // So, the interpreter is reset at a time where it does not know built-it operations. Moreover, it does not reload built-in operations. It leads to an error in specific cases where the user does not create its own module.
+    var interpreter = interpreter
+    let module = """
+      func id(_ x: Int) -> Int ::
+        x
+    """
+    try! interpreter.loadModule(fromString: module)
     self.interpreter = interpreter
   }
 
