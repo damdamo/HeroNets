@@ -303,12 +303,8 @@ extension HeroNet {
       let placeToLabelToValues = netWithoutConstant.computeValuesForLabel(transition: transition, marking: markingWithoutConstant)
       // Filter condition with the same variable that are more complex than just x = constant (e.g.:  x%2 = 0).
       // Remove the conditions and keep values that satisfie these kind of conditions.
-      let (optimizedNetWithSameVariable, placeToLabelToValuesWithSameVariable) = optimizedGuardWithSameLabel(transition: transition, placeToLabelToValues: placeToLabelToValues)
-      // If the same label appears on different arcs, it's kept only values that are valid for both places.
-      // However, it does not modify the number of values that belong to the label.
-      let placeToLabelToValuesWithSameLabelOnArcs = optimizedSameLabelOnArcs(placeToLabelToValues: placeToLabelToValuesWithSameVariable)
-      
-      return (optimizedNetWithSameVariable, placeToLabelToValuesWithSameLabelOnArcs)
+     return optimizedGuardWithSameLabel(transition: transition, placeToLabelToValues: placeToLabelToValues)
+
     }
     
     return nil
@@ -345,34 +341,6 @@ extension HeroNet {
       newMarking
     )
     
-  }
-  
-  private func optimizedSameLabelOnArcs(placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]]) -> [PlaceType: [Label: Multiset<Value>]] {
-    
-    var uniqueValuesForLabel: [Label: Multiset<Value>] = [:]
-    
-    // Just keep unique values for each label
-    for (_, labelToValues) in placeToLabelToValues {
-      for (label, values) in labelToValues {
-        if let _ = uniqueValuesForLabel[label] {
-          uniqueValuesForLabel[label]! = uniqueValuesForLabel[label]!.intersection(values)
-        } else {
-          uniqueValuesForLabel[label] = values
-        }
-      }
-    }
-    
-    var newPlaceToLabelToValues = placeToLabelToValues
-    // Looking at labels and applying intersection upperbound to keep only values that appeared in uniqueValuesForLabel with their maximum value
-    for (place, labelToValues) in newPlaceToLabelToValues {
-      for (label, values) in labelToValues {
-        if !(values == uniqueValuesForLabel[label]!) {
-          newPlaceToLabelToValues[place]![label]! = newPlaceToLabelToValues[place]![label]!.intersectionUpperBound(uniqueValuesForLabel[label]!)
-        }
-      }
-    }
-    
-    return newPlaceToLabelToValues
   }
   
   
