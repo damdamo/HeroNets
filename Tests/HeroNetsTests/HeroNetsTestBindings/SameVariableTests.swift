@@ -42,7 +42,7 @@ final class SameVariableTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = nil
+    let conditionList: [Pair<String, String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$x"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
@@ -63,7 +63,7 @@ final class SameVariableTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = nil
+    let conditionList: [Pair<String, String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$z"]),
       .pre(from: .p2, to: .t1, labeled: ["$x"]),
@@ -84,7 +84,7 @@ final class SameVariableTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = nil
+    let conditionList: [Pair<String, String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$z"]),
       .pre(from: .p2, to: .t1, labeled: ["$x"]),
@@ -105,7 +105,7 @@ final class SameVariableTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = nil
+    let conditionList: [Pair<String, String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$x"]),

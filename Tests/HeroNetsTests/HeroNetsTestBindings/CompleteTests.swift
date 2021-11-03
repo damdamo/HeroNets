@@ -46,7 +46,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$x", "$z")]
+    let conditionList = [Pair("$x","1"), Pair("$x", "$z")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
@@ -75,8 +75,8 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-//    let conditionList: [Pair<String>] = [Pair("$y","1"), Pair("$x", "$z")]
-    let conditionList: [Pair<String>] = [Pair("$x","1")]
+//    let conditionList = [Pair("$y","1"), Pair("$x", "$z")]
+    let conditionList = [Pair("$x","1")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$x"]),
@@ -109,7 +109,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>] = [Pair("$x","1"), Pair("$y", "$z")]
+    let conditionList = [Pair("$x","1"), Pair("$y", "$z")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
@@ -170,8 +170,8 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    let conditionListCurry: [Pair<String>] = [Pair("$f","div")]
-    let conditionListApply: [Pair<String>] = [Pair("eq($y,0)","false")]
+    let conditionListCurry = [Pair("$f","div")]
+    let conditionListApply = [Pair("eq($y,0)","false")]
 
     let model = HeroNet<P2, T2>(
       .pre(from: .op, to: .curry, labeled: ["$f"]),
@@ -206,7 +206,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z")]
+    let conditionList = [Pair("$x","$y-1"), Pair("$y", "$z")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$x"]),
@@ -235,7 +235,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
+    let conditionList = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
 
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),

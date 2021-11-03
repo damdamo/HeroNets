@@ -9,9 +9,9 @@
 /// Pair(l,r) => l < r
 public struct Key<T: Equatable & Hashable> {
   let label: T
-  let couple: [Pair<T>]
+  let couple: [Pair<T,T>]
   
-  public init (label: T, couple: [Pair<T>]) {
+  public init (label: T, couple: [Pair<T,T>]) {
     self.label = label
     self.couple = couple
   }

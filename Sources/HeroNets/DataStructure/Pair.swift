@@ -1,16 +1,16 @@
-public struct Pair<T>: Hashable where T: Hashable {
+public struct Pair<T,U>: Hashable where T: Hashable, U: Hashable {
   
   var l:  T
-  var r: T
+  var r: U
   
-  public init (_ l: T, _ r: T) {
+  public init (_ l: T, _ r: U) {
     self.l = l
     self.r = r
   }
   
-  public static func == (lhs: Pair<T>, rhs: Pair<T>) -> Bool {
-    return lhs.l == rhs.l && lhs.r == rhs.r
-  }
+//  public static func == (lhs: Pair<T,U>, rhs: Pair<T,U>) -> Bool {
+//    return lhs.l == rhs.l && lhs.r == rhs.r
+//  }
 }
 
 extension Pair: CustomStringConvertible {

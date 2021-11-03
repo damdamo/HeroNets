@@ -453,7 +453,6 @@
 //
 //    var interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: module)
-//    // print(try! interpreter.eval(string: "eq(mod(25,5),0)"))
 //
 ////    let conditionList: [Pair<String>]? = [Pair("eq(mod($a,2),0)","true")]
 //    let conditionList: [Pair<String>]? = [Pair("add($a,5)","6"), Pair("eq($c,0)", "false"),Pair("mod($g($b,$c),2)", "0")]
@@ -507,8 +506,9 @@
 //
 //    var interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: module)
-//    
+//
 //    let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
+////    let conditionList: [Pair<String>]? = nil
 //
 //    let model = HeroNet<P, T>(
 //      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
@@ -524,7 +524,7 @@
 //
 //    // How many values in the place
 ////    let nb_el_in_place = [2000]
-//    let nb_el_in_place = [10, 20, 50, 100]
+//    let nb_el_in_place = [100]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
@@ -537,6 +537,12 @@
 //      for i in 0..<len {
 //        seq.insert(String(i))
 //      }
+////      var seq2 = seq
+////
+////      for i in 0..<10 {
+////        seq2.insert(String(3))
+////      }
+////
 //
 //      let marking1 = Marking<P>([.p1: seq, .p2: seq, .p3: seq])
 //
@@ -551,6 +557,7 @@
 ////        print(times[i])
 //        s.reset()
 //        count = x.count
+//        print(x)
 //      }
 //      let average = times.reduce(0, +) / Double(times.count)
 //      let standard_deviation: Double = times
@@ -569,7 +576,6 @@
 //      print("Nb P1: \(key) / Temps: \(value.avg_time) s / Nombre d'état: \(value.count) / Ecart-type: \(value.std_time)")
 //    }
 //    print("----------------------------------")
-//
 //
 //  }
 //

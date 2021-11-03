@@ -125,7 +125,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public let output: [TransitionType: [PlaceType: ArcLabel]]
   
   /// Guards for transitions.
-  public let guards: TotalMap<TransitionType, [Pair<Value>]?>
+  public let guards: TotalMap<TransitionType, [Pair<Value, Value>]?>
   
   /// Interpreter needed to evaluate Hero terms.
   public var interpreter: Interpreter
@@ -140,7 +140,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///   - arcs: A sequence containing the descriptions of the Petri net's arcs.
   ///   - guards: Conditions to fire a transition
   ///   - interpreter: Interpreter needed to evaluate terms
-  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Pair<Value>]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
+  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Pair<Value, Value>]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
     var pre: [TransitionType: [PlaceType: ArcLabel]] = [:]
     var post: [TransitionType: [PlaceType: ArcLabel]] = [:]
 
@@ -172,7 +172,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///
   /// - Parameters:
   ///   - arcs: A variadic argument representing the descriptions of the Petri net's arcs.
-  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<Value>]?], interpreter: Interpreter) {
+  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<Value, Value>]?], interpreter: Interpreter) {
     self.init(arcs, guards: guards, interpreter: interpreter)
   }
     
@@ -180,7 +180,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   init(
     input: [TransitionType: [PlaceType: ArcLabel]],
     output: [TransitionType: [PlaceType: ArcLabel]],
-    guards: TotalMap<TransitionType, [Pair<Value>]?>,
+    guards: TotalMap<TransitionType, [Pair<Value, Value>]?>,
     interpreter: Interpreter
   ) {
     self.input = input
@@ -294,7 +294,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards for a list of conditions
-  private func checkGuards(conditions: [Pair<Value>], with binding: [Label: Value]) -> Bool {
+  private func checkGuards(conditions: [Pair<Value, Value>], with binding: [Label: Value]) -> Bool {
     for condition in conditions {
       if !checkGuards(condition: condition, with: binding) {
         return false
@@ -304,7 +304,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards for a condition
-  func checkGuards(condition: Pair<Value>, with binding: [Label: Value]) -> Bool {
+  func checkGuards(condition: Pair<Value, Value>, with binding: [Label: Value]) -> Bool {
     let lhs = bindingSubstitution(expr: condition.l, binding: binding)
     let rhs = bindingSubstitution(expr: condition.r, binding: binding)
     // Check if both term are equals, thanks to the syntactic equivalence !

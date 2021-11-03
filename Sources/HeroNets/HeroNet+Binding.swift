@@ -140,7 +140,7 @@ extension HeroNet {
   ///   - dicUniqueLabelToCondition: The dictionnary that binds label to a list of conditions which are already in the good format (i.e.: var == a constant expression)
   /// - Returns:
   ///  Returns a new dictionnary of label to values, where each previous expressions has been evaluated
-  private func createDicOfConstantLabel(dicUniqueLabelToCondition: [Label: [Pair<Value>]]) -> [Label: Value]? {
+  private func createDicOfConstantLabel(dicUniqueLabelToCondition: [Label: [Pair<Value, Value>]]) -> [Label: Value]? {
     
     var constantCondition: [Label: Value] = [:]
     
@@ -197,7 +197,7 @@ extension HeroNet {
     
     let labelSet = createLabelSet(net: self, transition: transition)
     
-    var eqLabelList: [Pair<Label>] = []
+    var eqLabelList: [Pair<Label, Label>] = []
     
     // Construct a list of equal label coming from the conditions
     if let conditions = guards[transition] {
@@ -236,10 +236,10 @@ extension HeroNet {
   ///   - conditions: List of condition for a specific transition
   /// - Returns:
   ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
-  private func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<Value>]?) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
+  private func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<Value, Value>]?) -> ([Label: [Pair<Value, Value>]], [Pair<Value,Value>]) {
 
-    var condWithUniqueVariable: [Label: [Pair<Value>]] = [:]
-    var restConditions: [Pair<Value>] = []
+    var condWithUniqueVariable: [Label: [Pair<Value, Value>]] = [:]
+    var restConditions: [Pair<Value, Value>] = []
 
     if let conds = conditions {
       for cond in conds {
@@ -364,7 +364,7 @@ extension HeroNet {
     )
   }
   
-  private func optimizedCondWithSameLabel(placeToLabelToValue: [PlaceType: [Label: Multiset<Value>]], conditionsWithSameLabel: [Label: [Pair<Value>]]) -> [PlaceType: [Label: Multiset<Value>]]
+  private func optimizedCondWithSameLabel(placeToLabelToValue: [PlaceType: [Label: Multiset<Value>]], conditionsWithSameLabel: [Label: [Pair<Value, Value>]]) -> [PlaceType: [Label: Multiset<Value>]]
   {
 
     var newPlaceToLabelToValue = placeToLabelToValue
@@ -417,11 +417,11 @@ extension HeroNet {
   ///   - transition: The current transition
   /// - Returns:
   ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
-  private func isolateCondWithSameLabel(labelSet: Set<Label>, transition: TransitionType) -> ([Label: [Pair<Value>]], [Pair<Value>]) {
+  private func isolateCondWithSameLabel(labelSet: Set<Label>, transition: TransitionType) -> ([Label: [Pair<Value, Value>]], [Pair<Value, Value>]) {
 
     var labelSetTemp: Set<Label> = []
-    var condWithUniqueVariable: [Label: [Pair<Value>]] = [:]
-    var restConditions: [Pair<Value>] = []
+    var condWithUniqueVariable: [Label: [Pair<Value, Value>]] = [:]
+    var restConditions: [Pair<Value, Value>] = []
 
     if let conditions = guards[transition] {
       for condition in conditions {
@@ -512,7 +512,7 @@ extension HeroNet {
     placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]]
   ) -> [PlaceType: [KeyMFDD: Multiset<Value>]] {
 
-    let totalOrder: [Pair<Label>]
+    let totalOrder: [Pair<Label, Label>]
     var placeToKeyToValues: [PlaceType: [KeyMFDD: Multiset<Value>]] = [:]
     
     if let lw = labelWeights {
@@ -647,7 +647,7 @@ extension HeroNet {
   ///   Returns the new mfdd that have applied the condition.
   private func applyCondition(
     mfddPointer: HeroMFDD.Pointer,
-    condition: Pair<Value>,
+    condition: Pair<Value, Value>,
     keySet: Set<KeyMFDD>,
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
@@ -771,15 +771,15 @@ extension HeroNet {
   ///   Return a tuple with its first element a dictionnary that binds a label to its weight and second element a dictionnary that binds condition to a score !
   private func computeScoreOrder(
     labelSet: Set<Label>,
-    conditions: [Pair<Value>]?)
-  -> ([Label: Int]?, [Pair<Value>: Int]?) {
+    conditions: [Pair<Value, Value>]?)
+  -> ([Label: Int]?, [Pair<Value, Value>: Int]?) {
     
     // If there is no conditions
     guard let _ = conditions else {
       return (nil, nil)
     }
     var labelWeights: [Label: Int] = [:]
-    var conditionWeights: [Pair<Value>: Int] = [:]
+    var conditionWeights: [Pair<Value, Value>: Int] = [:]
     var labelForCond: [Set<Label>] = []
     var labelInACond: Set<Label> = []
     
@@ -832,8 +832,8 @@ extension HeroNet {
   
   // createOrder creates a list of pair from a list of string
   // to represent a total order relation. Pair(l,r) => l < r
-  func createTotalOrder(labels: [Label]) -> [Pair<Label>] {
-      var r: [Pair<Label>] = []
+  func createTotalOrder(labels: [Label]) -> [Pair<Label, Label>] {
+      var r: [Pair<Label, Label>] = []
       for i in 0 ..< labels.count {
         for j in i+1 ..< labels.count {
           r.append(Pair(labels[i],labels[j]))

@@ -42,7 +42,7 @@ final class GuardTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
-    let conditionList: [Pair<String>]? = nil
+    let conditionList: [Pair<String,String>]? = nil
     
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
@@ -66,7 +66,7 @@ final class GuardTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = [Pair("$x","$z+1"), Pair("$y","$z-1")]
+    let conditionList = [Pair("$x","$z+1"), Pair("$y","$z-1")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
@@ -89,7 +89,7 @@ final class GuardTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = [Pair("$x","$a+1"), Pair("$a+1","$y"), Pair("$b", "$y+1")]
+    let conditionList = [Pair("$x","$a+1"), Pair("$a+1","$y"), Pair("$b", "$y+1")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$a"]),
@@ -112,7 +112,7 @@ final class GuardTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = [Pair("$z","2"), Pair("$y","1")]
+    let conditionList = [Pair("$z","2"), Pair("$y","1")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
@@ -144,7 +144,7 @@ final class GuardTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = [Pair("$x","$z")]
+    let conditionList = [Pair("$x","$z")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
@@ -167,7 +167,7 @@ final class GuardTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = [Pair("$x","$y")]
+    let conditionList = [Pair("$x","$y")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
@@ -189,7 +189,7 @@ final class GuardTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = [Pair("$x","$y"), Pair("$x","$z"), Pair("$y","$z")]
+    let conditionList = [Pair("$x","$y"), Pair("$x","$z"), Pair("$y","$z")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),
@@ -211,7 +211,7 @@ final class GuardTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let conditionList: [Pair<String>]? = [Pair("$x%2","0"), Pair("$z%2","1")]
+    let conditionList = [Pair("$x%2","0"), Pair("$z%2","1")]
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$z"]),

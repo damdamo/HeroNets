@@ -7,7 +7,7 @@ extension HeroNet {
     public typealias DD = HeroMFDD
     
     /// The guard to evaluate
-    public let condition: Pair<Value>
+    public let condition: Pair<Value, Value>
     
     /// Key of the condition
     public let keyCond: [KeyMFDD]
@@ -21,7 +21,7 @@ extension HeroNet {
     /// The morphism's cache.
     private var cache: [HeroMFDD.Pointer: HeroMFDD.Pointer] = [:]
 
-    init(condition: Pair<Value>, keyCond: [KeyMFDD], factory: HeroMFDDFactory, heroNet: HeroNet) {
+    init(condition: Pair<Value, Value>, keyCond: [KeyMFDD], factory: HeroMFDDFactory, heroNet: HeroNet) {
       self.condition = condition
       self.keyCond = keyCond
       self.factory = factory
@@ -94,7 +94,7 @@ extension HeroNet {
   }
   
   public func guardFilter(
-    condition: Pair<Value>,
+    condition: Pair<Value, Value>,
     keyCond: [KeyMFDD],
     factory: MFDDFactory<KeyMFDD,Value>,
     heroNet: HeroNet
