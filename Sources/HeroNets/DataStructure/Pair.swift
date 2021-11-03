@@ -8,9 +8,6 @@ public struct Pair<T,U>: Hashable where T: Hashable, U: Hashable {
     self.r = r
   }
   
-//  public static func == (lhs: Pair<T,U>, rhs: Pair<T,U>) -> Bool {
-//    return lhs.l == rhs.l && lhs.r == rhs.r
-//  }
 }
 
 extension Pair: CustomStringConvertible {
