@@ -6,7 +6,7 @@ import XCTest
 final class GuardTests: XCTestCase {
   
   typealias Label = String
-  typealias KeyMFDD = Key<String>
+  typealias KeyMFDDLabel = KeyMFDD<String>
   typealias ValueMFDD = String
   
   enum P: Place, Equatable {
@@ -20,7 +20,7 @@ final class GuardTests: XCTestCase {
   }
   
   // Transform mfdd into a set of dictionnaries with all possibilities
-  func simplifyBinding(bindings: MFDD<KeyMFDD,ValueMFDD>) -> Set<[String:String]> {
+  func simplifyBinding(bindings: MFDD<KeyMFDDLabel,ValueMFDD>) -> Set<[String:String]> {
     
     var bindingSimplify: Set<[String: String]> = []
     var dicTemp: [String: String] = [:]
@@ -53,7 +53,7 @@ final class GuardTests: XCTestCase {
     )
     
     let marking = Marking<P>([.p1: ["1", "2"], .p2: ["4", "5"], .p3: []])
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     
     let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     let expectedRes: Set<[String:String]> = [["$x": "1", "$y": "2", "$z": "4"], ["$x": "2", "$y": "1", "$z": "4"], ["$x": "1", "$y": "2", "$z": "5"], ["$x": "2", "$y": "1", "$z": "5"]]
@@ -76,7 +76,7 @@ final class GuardTests: XCTestCase {
     )
     
     let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["2", "3"], .p3: []])
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     
     let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     let expectedRes: Set<[String:String]> = [["$x": "3", "$y": "1", "$z": "2"]]
@@ -99,7 +99,7 @@ final class GuardTests: XCTestCase {
     )
     
     let marking = Marking<P>([.p1: ["1", "2", "2", "3", "4"], .p2: ["1", "2", "3", "4"], .p3: ["1", "2", "3", "4"]])
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     
     let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     let expectedRes: Set<[String:String]> = [["$x": "2", "$y": "2", "$a": "1", "$b": "3"]]
@@ -121,7 +121,7 @@ final class GuardTests: XCTestCase {
       interpreter: interpreter
     )
     
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     
     var marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["2", "3"], .p3: []])
     var mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
@@ -139,7 +139,7 @@ final class GuardTests: XCTestCase {
   // Test for guards of the form (x,y) where x and y are not on the same arc
   func testOptimisationGuard0() {
     
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
@@ -162,7 +162,7 @@ final class GuardTests: XCTestCase {
   // Test for guards of the form (x,y), where x and y are on the same arc
   func testOptimisationGuard1() {
     
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
@@ -184,7 +184,7 @@ final class GuardTests: XCTestCase {
   
   // Test for guards with many variables that are just the same
   func testOptimisationGuard2() {
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
@@ -206,7 +206,7 @@ final class GuardTests: XCTestCase {
   
   // Test for guards with conditions that have the same variable
   func testOptimisationGuard3() {
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)

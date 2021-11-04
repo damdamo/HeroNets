@@ -6,7 +6,7 @@ import XCTest
 final class SameVariableTests: XCTestCase {
   
   typealias Label = String
-  typealias KeyMFDD = Key<String>
+  typealias KeyMFDDLabel = KeyMFDD<String>
   typealias ValueMFDD = String
   
   enum P: Place, Equatable {
@@ -20,7 +20,7 @@ final class SameVariableTests: XCTestCase {
   }
   
   // Transform mfdd into a set of dictionnaries with all possibilities
-  func simplifyBinding(bindings: MFDD<KeyMFDD,ValueMFDD>) -> Set<[String:String]> {
+  func simplifyBinding(bindings: MFDD<KeyMFDDLabel,ValueMFDD>) -> Set<[String:String]> {
     
     var bindingSimplify: Set<[String: String]> = []
     var dicTemp: [String: String] = [:]
@@ -37,7 +37,7 @@ final class SameVariableTests: XCTestCase {
   }
   
   func testWithSameVariableSameArc() {
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
@@ -58,7 +58,7 @@ final class SameVariableTests: XCTestCase {
   }
   
   func testWithSameVariableDifferentArcs0() {
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
@@ -79,7 +79,7 @@ final class SameVariableTests: XCTestCase {
   }
   
   func testWithSameVariableDifferentArcs1() {
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
@@ -100,7 +100,7 @@ final class SameVariableTests: XCTestCase {
   }
   
   func testWithSameVariableInAllArcs() {
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)

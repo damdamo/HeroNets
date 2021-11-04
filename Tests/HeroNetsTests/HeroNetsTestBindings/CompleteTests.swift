@@ -6,7 +6,7 @@ import XCTest
 final class HeroNetsBindingsTests: XCTestCase {
   
   typealias Label = String
-  typealias KeyMFDD = Key<String>
+  typealias KeyMFDDLabel = KeyMFDD<String>
   typealias ValueMFDD = String
   
   enum P: Place, Equatable {
@@ -20,7 +20,7 @@ final class HeroNetsBindingsTests: XCTestCase {
   }
   
   // Transform mfdd into a set of dictionnaries with all possibilities
-  func simplifyBinding(bindings: MFDD<KeyMFDD,ValueMFDD>) -> Set<[String:String]> {
+  func simplifyBinding(bindings: MFDD<KeyMFDDLabel,ValueMFDD>) -> Set<[String:String]> {
     
     var bindingSimplify: Set<[String: String]> = []
     var dicTemp: [String: String] = [:]
@@ -59,7 +59,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     
     let marking1 = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "1", "2"], .p3: []])
     
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
 
@@ -91,7 +91,7 @@ final class HeroNetsBindingsTests: XCTestCase {
 
     print("----------------------------")
 
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
 
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
     
@@ -119,7 +119,7 @@ final class HeroNetsBindingsTests: XCTestCase {
       interpreter: interpreter
     )
 
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let marking1 = Marking<P>([.p1: ["1","1","2","3"], .p2: ["1", "2", "3"], .p3: []])
 
     let bindings = model.fireableBindings(for: .t1, with: marking1, factory: factory)
@@ -184,12 +184,12 @@ final class HeroNetsBindingsTests: XCTestCase {
       interpreter: interpreter
     )
 
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let marking1 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["1", "1", "2"], .p2: [], .res: []])
     let marking2 = Marking<P2>([.op: ["add","sub","mul","div"], .p1: ["0", "1"], .p2: ["div(2)"], .res: []])
 
-    let bindings1: MFDD<KeyMFDD,ValueMFDD> = model.fireableBindings(for: .curry, with: marking1, factory: factory)
-    let bindings2: MFDD<KeyMFDD,ValueMFDD> = model.fireableBindings(for: .apply, with: marking2, factory: factory)
+    let bindings1: MFDD<KeyMFDDLabel,ValueMFDD> = model.fireableBindings(for: .curry, with: marking1, factory: factory)
+    let bindings2: MFDD<KeyMFDDLabel,ValueMFDD> = model.fireableBindings(for: .apply, with: marking2, factory: factory)
     
     XCTAssertEqual(simplifyBinding(bindings: bindings1), Set([["$x": "1"], ["$x": "2"]]))
     XCTAssertEqual(simplifyBinding(bindings: bindings2), Set([["$y": "1", "$g": "div(2)"]]))
@@ -217,7 +217,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     )
 
     let marking1 = Marking<P>([.p1: ["1", "1", "2", "2", "3", "3"], .p2: ["1", "2", "3"], .p3: ["1", "2", "3"]])
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let expectedRes = Set([["$z": "2", "$x": "1"]])
     
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
@@ -246,7 +246,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     )
     
     let marking1 = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "3", "4"], .p3: ["1", "3"]])
-    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
     let expectedRes = Set([["$x": "1", "$b": "1", "$z": "2"], ["$b": "1", "$x": "2", "$z": "3"]])
     
     let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)

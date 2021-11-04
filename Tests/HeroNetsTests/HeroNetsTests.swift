@@ -211,6 +211,33 @@ final class HeroNetsTests: XCTestCase {
     XCTAssertEqual(marking9, expectedRes)
 
   }
+  
+  func testLol() {
+    enum P: Place, Equatable {
+      typealias Content = Multiset<String>
+      
+      case p1,p2,p3
+    }
+    
+    enum T: Transition {
+      case t1, t2
+    }
+    
+    var interpreter = Interpreter()
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x"]),
+      .pre(from: .p2, to: .t1, labeled: ["$y"]),
+      .post(from: .t1, to: .p3, labeled: ["$x"]),
+      guards: [.t1: nil, .t2: nil],
+      interpreter: interpreter
+    )
+    
+    let marking1 = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "1", "2"], .p3: []])
+    
+    
+    
+  }
 
   static var allTests = [
     ("testIsFireable", testIsFireable),

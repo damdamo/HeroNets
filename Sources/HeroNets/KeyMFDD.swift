@@ -7,7 +7,7 @@
 /// and a list of pairs where each tuple represents a relation of comparison
 /// between both values.
 /// Pair(l,r) => l < r
-public struct Key<T: Equatable & Hashable> {
+public struct KeyMFDD<T: Equatable & Hashable> {
   let label: T
   let couple: [Pair<T,T>]
   
@@ -18,12 +18,12 @@ public struct Key<T: Equatable & Hashable> {
 }
 
 
-extension Key: Comparable & Hashable{
-  public static func == (lhs: Key<T>, rhs: Key<T>) -> Bool {
+extension KeyMFDD: Comparable & Hashable{
+  public static func == (lhs: KeyMFDD<T>, rhs: KeyMFDD<T>) -> Bool {
     return lhs.label == rhs.label
   }
   
-  public static func < (lhs: Key, rhs: Key) -> Bool {
+  public static func < (lhs: KeyMFDD, rhs: KeyMFDD) -> Bool {
     return lhs.couple.contains (where: { pair in
       return (pair.l == lhs.label && pair.r == rhs.label)
     })
@@ -31,7 +31,7 @@ extension Key: Comparable & Hashable{
 }
 
 
-extension Key: CustomStringConvertible {
+extension KeyMFDD: CustomStringConvertible {
   public var description: String {
     return "\(self.label)"
   }

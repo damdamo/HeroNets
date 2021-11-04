@@ -4,12 +4,12 @@ import Interpreter
 /// A Hero net binding computes all the possibles marking for a given  transition
 extension HeroNet {
     
-  public typealias KeyMFDD = Key<Label>
-  public typealias HeroMFDD = MFDD<KeyMFDD,Value>
-  public typealias HeroMFDDFactory = MFDDFactory<KeyMFDD,Value>
+  public typealias KeyMFDDLabel = KeyMFDD<Label>
+  public typealias HeroMFDD = MFDD<KeyMFDDLabel,Value>
+  public typealias HeroMFDDFactory = MFDDFactory<KeyMFDDLabel,Value>
     
   /// Compute the whole binding for a transition and a marking. The binding represents all possibilities of values for each variable that satisfied the conditions of the net (i.e.: Guards, same label name multiple times). It creates a MFDD (Map family decision diagram) which is a compact implicit representation based on the theory on DD (Decision diagrams).
-  /// A factory has to be created outside the scope that allows to manage the DD efficiently. (e.g.: `let factory = MFDDFactory<KeyMFDD,ValueMFDD>()`
+  /// A factory has to be created outside the scope that allows to manage the DD efficiently. (e.g.: `let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()`
   /// To reduce the complexity of the net, multiple steps are processed before the creation of the MFDD.
   /// There are two main steps of optimizations.
   /// - Static optimization: Based on the structure of the net, it does not depend on the marking. It will compute a new net based on it.
@@ -475,7 +475,7 @@ extension HeroNet {
     
     // If there are conditions, we have to apply them on the MFDD
     if let conditions = guards[transition] {
-      var keySet: Set<KeyMFDD> = []
+      var keySet: Set<KeyMFDDLabel> = []
       for (_, keyToValues) in dependentPlaceToKeyToValues {
         for (key, _) in keyToValues {
           keySet.insert(key)
@@ -510,10 +510,10 @@ extension HeroNet {
     labelSet: Set<Label>,
     labelWeights: [Label: Int]?,
     placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]]
-  ) -> [PlaceType: [KeyMFDD: Multiset<Value>]] {
+  ) -> [PlaceType: [KeyMFDDLabel: Multiset<Value>]] {
 
     let totalOrder: [Pair<Label, Label>]
-    var placeToKeyToValues: [PlaceType: [KeyMFDD: Multiset<Value>]] = [:]
+    var placeToKeyToValues: [PlaceType: [KeyMFDDLabel: Multiset<Value>]] = [:]
     
     if let lw = labelWeights {
       totalOrder = createTotalOrder(labels: labelSet.sorted(by: {(label1, label2) -> Bool in
@@ -526,7 +526,7 @@ extension HeroNet {
     for (place, labelToValues) in placeToLabelToValues {
       placeToKeyToValues[place] = [:]
       for (label, values) in labelToValues {
-        let key = KeyMFDD(label: label, couple: totalOrder)
+        let key = KeyMFDDLabel(label: label, couple: totalOrder)
         placeToKeyToValues[place]![key] = values
       }
     }
@@ -541,14 +541,14 @@ extension HeroNet {
   /// - Returns:
   ///   Returns a tuple of two dictionnary, where the first one is for independent keys and the second one for dependent keys.
   private func computeDependentAndIndependentKeys(
-    placeToKeyToValues: [PlaceType: [KeyMFDD: Multiset<Value>]],
+    placeToKeyToValues: [PlaceType: [KeyMFDDLabel: Multiset<Value>]],
     transition: TransitionType)
-  -> ([PlaceType: [KeyMFDD: Multiset<Value>]], [KeyMFDD: Multiset<Value>]) {
+  -> ([PlaceType: [KeyMFDDLabel: Multiset<Value>]], [KeyMFDDLabel: Multiset<Value>]) {
 
-    var independentKeysToValues: [KeyMFDD: Multiset<Value>] = [:]
-    var placeToDependentKeysToValues: [PlaceType: [KeyMFDD: Multiset<Value>]] = [:]
-    var setKeys: Set<KeyMFDD> = []
-    var dependentKeys: Set<KeyMFDD> = []
+    var independentKeysToValues: [KeyMFDDLabel: Multiset<Value>] = [:]
+    var placeToDependentKeysToValues: [PlaceType: [KeyMFDDLabel: Multiset<Value>]] = [:]
+    var setKeys: Set<KeyMFDDLabel> = []
+    var dependentKeys: Set<KeyMFDDLabel> = []
     
     // Construct set of keys
     for (_, keyToValues) in placeToKeyToValues {
@@ -599,7 +599,7 @@ extension HeroNet {
   ///   - factory: Current factory
   /// - Returns:
   ///   Returns a new mfdd pointer where values of the independent keys have been added.
-  private func addIndependentLabel(mfddPointer: HeroMFDD.Pointer, independentKeyToValues: [KeyMFDD: Multiset<Value>], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
+  private func addIndependentLabel(mfddPointer: HeroMFDD.Pointer, independentKeyToValues: [KeyMFDDLabel: Multiset<Value>], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
     let mfddPointerForIndependentKeys = constructMFDDIndependentKeys(keyToExprs: independentKeyToValues, factory: factory)
     return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependentKeys)
   }
@@ -611,7 +611,7 @@ extension HeroNet {
   /// - Returns:
   ///   Returns the MFDD that represents all independent keys with their corresponding values
   private func constructMFDDIndependentKeys(
-    keyToExprs: [KeyMFDD: Multiset<Value>],
+    keyToExprs: [KeyMFDDLabel: Multiset<Value>],
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
     
@@ -648,11 +648,11 @@ extension HeroNet {
   private func applyCondition(
     mfddPointer: HeroMFDD.Pointer,
     condition: Pair<Value, Value>,
-    keySet: Set<KeyMFDD>,
+    keySet: Set<KeyMFDDLabel>,
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
     
-    var morphisms: MFDDMorphismFactory<KeyMFDD, Value> { factory.morphisms }
+    var morphisms: MFDDMorphismFactory<KeyMFDDLabel, Value> { factory.morphisms }
     let keyCond = keySet.filter({(key) in
       if condition.l.contains(key.label) || condition.r.contains(key.label) {
         return true
@@ -666,10 +666,10 @@ extension HeroNet {
     
   }
   
-  private func countKeyForAnArc(transition: TransitionType, place: PlaceType, keySet: Set<KeyMFDD>) -> [KeyMFDD: Int] {
+  private func countKeyForAnArc(transition: TransitionType, place: PlaceType, keySet: Set<KeyMFDDLabel>) -> [KeyMFDDLabel: Int] {
    
     var labelOccurences: [Label: Int] = [:]
-    var keyOccurences: [KeyMFDD: Int] = [:]
+    var keyOccurences: [KeyMFDDLabel: Int] = [:]
     
     if let labels = input[transition]?[place] {
         for label in labels {
@@ -689,12 +689,12 @@ extension HeroNet {
   }
   
   private func constructMFDD(
-    placeToKeyToValues: [PlaceType: [KeyMFDD: Multiset<Value>]],
+    placeToKeyToValues: [PlaceType: [KeyMFDDLabel: Multiset<Value>]],
     transition: TransitionType,
     factory: HeroMFDDFactory) -> HeroMFDD.Pointer
   {
     var mfddPointer = factory.zero.pointer
-    var keySet: Set<KeyMFDD> = []
+    var keySet: Set<KeyMFDDLabel> = []
     
     for (_, keyToValues) in placeToKeyToValues {
       for (key, _) in keyToValues {
@@ -706,7 +706,7 @@ extension HeroNet {
       
       let keyOccurences = countKeyForAnArc(transition: transition, place: place, keySet: keySet)
       
-      var keyToValuesWithKeyOccurence: [KeyMFDD: (Multiset<Value>, Int)] = [:]
+      var keyToValuesWithKeyOccurence: [KeyMFDDLabel: (Multiset<Value>, Int)] = [:]
       keyToValuesWithKeyOccurence = keyToValues.reduce(into: [:], {(res, couple) in
         res[couple.key] = (couple.value, keyOccurences[couple.key]!)
       })
@@ -730,7 +730,7 @@ extension HeroNet {
   /// - Returns:
   ///   A MFDD pointer that contains every possibilities for the given args for a place.
   private func constructMFDD(
-    keyToValuesAndOccurences: [KeyMFDD: (Multiset<Value>, Int)],
+    keyToValuesAndOccurences: [KeyMFDDLabel: (Multiset<Value>, Int)],
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
     
