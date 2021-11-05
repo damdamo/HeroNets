@@ -1,46 +1,39 @@
 import DDKit
 ///// A Hero net marking in the form of a MFDD
 
-extension Marking where PlaceType.Content == Multiset<String> {
+extension Marking where PlaceType.Content == Multiset<String>, PlaceType: Comparable {
   
-  public typealias KeyMarking = KeyMFDD<PlaceType>
+  public typealias KeyMarking = PlaceType
   public typealias ValueMarking = Pair<PlaceType.Content.Key, Int>
   public typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
   public typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
   
-  func markingToMFDD(markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD {
+  public func markingToMFDD(markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD {
     
-//    for l in PlaceType.allCases {
-//      print(self[l])
-//    }
+    return MarkingMFDD(
+      pointer: createMarkingMFDD(places: PlaceType.allCases as! [PlaceType], markingMFDDFactory: markingMFDDFactory),
+      factory: markingMFDDFactory
+    )
     
-    return markingMFDDFactory.one
+  }
+  
+  func createMarkingMFDD(places: [PlaceType], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD.Pointer {
+    
+    if let place = places.first {
+      var take: [ValueMarking: MarkingMFDD.Pointer] = [:]
+      let p = createMarkingMFDD(places: Array(places.dropFirst()), markingMFDDFactory: markingMFDDFactory)
+      
+      if self[place].isEmpty {
+        return markingMFDDFactory.node(key: place, take: [:], skip: p)
+      }
+      for el in self[place].distinctMembers {
+        take[Pair(el, self[place].occurences(of: el))] = p
+      }
+      
+      return markingMFDDFactory.node(key: place, take: take, skip:  markingMFDDFactory.zero.pointer)
+    }
+    
+    return markingMFDDFactory.one.pointer
   }
   
 }
-
-
-//public struct MarkingMFDD<PlaceType>
-//where PlaceType: Place, PlaceType.Content == Multiset<String> {
-//
-//  public typealias KeyMarking = Key<PlaceType>
-//  public typealias ValueMarking = Pair<PlaceType.Content.Key, Int>
-//  public typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
-//  public typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
-//
-//
-//  let factory: MarkingMFDDFactory
-//  let markingMFDD: MarkingMFDD
-//
-//  public init (marking: Marking<PlaceType>, factory: MarkingMFDDFactory) {
-//    self.markingMFDD = lol(marking: marking, factory: factory)
-//    self.factory = factory
-//  }
-//
-//  public func lol(marking: Marking<PlaceType>, factory: MarkingMFDDFactory) -> MarkingMFDD {
-//    return factory.zero
-//  }
-////  let factory: Factory
-//
-//
-//}

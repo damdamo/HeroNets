@@ -59,7 +59,7 @@ final class MultiSetTests: XCTestCase {
     XCTAssertEqual(m1.multisetToArray(), [])
     XCTAssertEqual(m2.multisetToArray().sorted(by: {$0 < $1}), ["a", "a", "b", "b", "c"])
     XCTAssertEqual(m2.count, 5)
-    XCTAssertEqual(m2.distinctMembers.sorted(by: {$0 < $1}), [1,2,2])
+    XCTAssertEqual(Set(m2.distinctMembers), Set(["a","b","c"]))
     XCTAssertEqual(m2.union(m4), m5)
     XCTAssertEqual(m2 + m4, m6)
     XCTAssertEqual(m2.subtract(m4), m7)
