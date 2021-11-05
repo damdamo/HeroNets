@@ -48,8 +48,8 @@ public struct Multiset<Element>: Hashable where Element: Hashable {
     return storage.values.reduce(0, +)
   }
 
-  public var distinctMembers: Dictionary<Element, Int>.Values {
-    return storage.values
+  public var distinctMembers: Dictionary<Element, Int>.Keys {
+    return storage.keys
   }
 
   public func occurences(of member: Element) -> Int {
