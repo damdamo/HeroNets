@@ -106,10 +106,18 @@ final class MarkingTests: XCTestCase {
   
   func testLol() {
     
-    var interpreter = Interpreter()
+    typealias KeyMarking = P
+    typealias ValueMarking = Pair<P.Content.Key, Int>
+    typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
+    typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
+    
+    let interpreter = Interpreter()
+    
+    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
     
     let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: ["$x"]),
+      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$y"]),
       .post(from: .t1, to: .p3, labeled: ["$x"]),
       guards: [.t1: nil, .t2: nil],
@@ -118,10 +126,19 @@ final class MarkingTests: XCTestCase {
     
     let marking1 = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
     
-    let factoryMarking = MFDDFactory<P, Pair<String, Int>>()
 
-    let mfddMarking = marking1.markingToMFDD(markingMFDDFactory: factoryMarking)
+    let mfddMarking = marking1.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
     print(simplifyMarking(marking: mfddMarking))
+//
+//    let lol = model.fire(transition: .t1, from: marking1, with: ["$x": "1", "$y": "2"], markingMFDDFactory: markingMFDDFactory)
+//
+    let m = morphisms.filterMarking(excluding: [(key: .p1, values: [Pair("2",1)])])
+    
+    let res = m.apply(on: mfddMarking)
+    
+    print(simplifyMarking(marking: res))
+    
+//    print(simplifyMarking(marking: lol))
     
   }
 

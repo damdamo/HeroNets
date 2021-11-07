@@ -6,7 +6,7 @@ final class AllFiringTests: XCTestCase {
   
   func testIsFireable() {
     
-    enum P: Place {
+    enum P: Place, Comparable {
       typealias Content = Multiset<String>
       
       case p1,p2,p3,p4

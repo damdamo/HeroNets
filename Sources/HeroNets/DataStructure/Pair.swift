@@ -1,6 +1,6 @@
 public struct Pair<T,U>: Hashable where T: Hashable, U: Hashable {
   
-  var l:  T
+  var l: T
   var r: U
   
   public init (_ l: T, _ r: U) {

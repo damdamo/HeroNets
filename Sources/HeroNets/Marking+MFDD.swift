@@ -17,7 +17,7 @@ extension Marking where PlaceType.Content == Multiset<String>, PlaceType: Compar
     
   }
   
-  func createMarkingMFDD(places: [PlaceType], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD.Pointer {
+  private func createMarkingMFDD(places: [PlaceType], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD.Pointer {
     
     if let place = places.first {
       var take: [ValueMarking: MarkingMFDD.Pointer] = [:]
