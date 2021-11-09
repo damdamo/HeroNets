@@ -48,18 +48,9 @@ final class MarkingHomomorphismTests: XCTestCase {
   }
   
   func testFilterExcludeMarking() {
-    let interpreter = Interpreter()
     
     let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
     var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
-    
-    let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
-      .pre(from: .p2, to: .t1, labeled: ["$y"]),
-      .post(from: .t1, to: .p3, labeled: ["$x"]),
-      guards: [.t1: nil, .t2: nil],
-      interpreter: interpreter
-    )
     
     let marking1 = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
     
@@ -87,11 +78,92 @@ final class MarkingHomomorphismTests: XCTestCase {
     res = m.apply(on: mfddMarking)
     expectedRes = ["p1": [:], "p2": ["1": 2, "2": 1], "p3": [:]]
     
+    print(markingMFDDFactory.one.pointer)
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
     
   }
   
+  func testInsertValueInMarking() {
+
+    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+
+    let marking0 = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
+
+    let mfddMarking = marking0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+
+    var m = morphisms.insertValueInMarking(insert: [(key: .p1, values: [Pair("2",1)])])
+    var res = m.apply(on: mfddMarking)
+    
+    var expectedRes: [String: Multiset<String>] = ["p1": ["1": 2, "2": 2, "3": 1], "p2": ["1": 2, "2": 1], "p3": [:]]
+
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+
+    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42",2)])])
+    res = m.apply(on: mfddMarking)
+    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 2]]
+
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+    
+    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)]), (key: .p3, values: [Pair("43", 1)])])
+    res = m.apply(on: mfddMarking)
+    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 1, "43": 1]]
+    
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+    
+    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)])])
+    res = m.apply(on: mfddMarking)
+    res = m.apply(on: res)
+    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 2]]
+
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+
+    
+    let marking1 = Marking<P>([.p1: [], .p2: ["1", "1", "2"], .p3: []])
+
+    let mfddMarking1 = marking1.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+    m = morphisms.insertValueInMarking(insert: [(key: .p1, values: [Pair("42", 1)])])
+    res = m.apply(on: mfddMarking1)
+    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)])])
+    res = m.apply(on: res)
+    expectedRes = ["p1": ["42": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 1]]
+
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+  }
+  
   static var allTests = [
     ("testFilterExcludeMarking", testFilterExcludeMarking),
+    ("testInsertValueInMarking", testInsertValueInMarking),
   ]
 }
+
+
+//  func testLol() {
+////    let markingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>()
+////    let markingMFDDFactory = MFDDFactory<KeyMarking, Int>()
+//    let markingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>()
+//
+////    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+////    var morphisms: MFDDMorphismFactory<KeyMarking, Int> { markingMFDDFactory.morphisms }
+//    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+//
+//    let assign = [[P.p1: Pair("1",1), P.p2: Pair("2",1)]]
+//
+////    let morphism = morphisms.insert(assignments: [P.p1: Pair("42",1), P.p2: Pair("100",1)])
+//
+////    var encode = markingMFDDFactory.encode(family: assign)
+//    var encode = markingMFDDFactory.encode(family: [[:]])
+//
+//    var assignements = [[P.p1: Pair("1",1)], [P.p1: Pair("2",1)], [P.p2: Pair("1",1)], [P.p2: Pair("2",1)], [P.p2: Pair("3",1)]]
+//
+//    for a in assignements {
+//      var morphism = morphisms.insert(assignments: a)
+//      encode = morphism.apply(on: encode)
+//    }
+////    assignements = [[]]
+//
+//    print(encode)
+////    print(morphism.apply(on: encode))
+//
+//  }
+  
