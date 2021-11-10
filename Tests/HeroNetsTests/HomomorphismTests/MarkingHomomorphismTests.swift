@@ -54,29 +54,44 @@ final class MarkingHomomorphismTests: XCTestCase {
     
     let marking1 = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
     
-    let mfddMarking = marking1.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+    let mfddMarking1 = marking1.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
     
     var m = morphisms.filterMarking(excluding: [(key: .p1, values: [Pair("2",1)])])
-    var res = m.apply(on: mfddMarking)
+    var res = m.apply(on: mfddMarking1)
     var expectedRes: [String: Multiset<String>] = ["p1": ["1": 2, "3": 1], "p2": ["1": 2, "2": 1], "p3": [:]]
     
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
     
     m = morphisms.filterMarking(excluding: [(key: .p1, values: [Pair("1",1)])])
-    res = m.apply(on: mfddMarking)
+    res = m.apply(on: mfddMarking1)
     expectedRes = ["p1": ["1": 1, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": [:]]
     
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
     
     m = morphisms.filterMarking(excluding: [(key: .p1, values: [Pair("1",2), Pair("2", 1)])])
-    res = m.apply(on: mfddMarking)
+    res = m.apply(on: mfddMarking1)
     expectedRes = ["p1": ["3": 1], "p2": ["1": 2, "2": 1], "p3": [:]]
     
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
     
     m = morphisms.filterMarking(excluding: [(key: .p1, values: [Pair("1",2), Pair("2", 1), Pair("3", 1)])])
-    res = m.apply(on: mfddMarking)
+    res = m.apply(on: mfddMarking1)
     expectedRes = ["p1": [:], "p2": ["1": 2, "2": 1], "p3": [:]]
+    
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+    
+    m = morphisms.filterMarking(excluding: [(key: .p1, values: [Pair("1",2), Pair("2", 1)]), (key: .p2, values: [Pair("1",1)])])
+    res = m.apply(on: mfddMarking1)
+    expectedRes = ["p1": ["3": 1], "p2": ["1": 1, "2": 1], "p3": [:]]
+    
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+    
+    let marking2 = Marking<P>([.p1: ["1"], .p2: ["2"], .p3: ["3"]])
+    let mfddMarking2 = marking2.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+    
+    m = morphisms.filterMarking(excluding: [(key: .p1, values: [Pair("1",1)]), (key: .p2, values: [Pair("2",1)])])
+    res = m.apply(on: mfddMarking2)
+    expectedRes = ["p1": [:], "p2": [:], "p3": ["3"]]
     
     print(markingMFDDFactory.one.pointer)
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)

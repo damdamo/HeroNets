@@ -136,9 +136,9 @@ final class MarkingTests: XCTestCase {
     
     let res = m.apply(on: mfddMarking)
     
-    print(simplifyMarking(marking: res))
+//    print(simplifyMarking(marking: res))
     
-//    print(simplifyMarking(marking: lol))
+//    print(simplifyMarking(marking: mfddMarking))
     
   }
 

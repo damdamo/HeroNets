@@ -75,10 +75,14 @@ where Key: Place, Key.Content == Multiset<String>, Value == Pair<String,Int> {
             take: next != nil ? take.mapValues(next!.apply(on:)) : take,
             skip: next?.apply(on: pointer.pointee.skip) ?? pointer.pointee.skip)
         } else {
+//          result = factory.node(
+//            key: pointer.pointee.key,
+//            take: [:],
+//            skip: pointer.pointee.take.first!.value)
           result = factory.node(
             key: pointer.pointee.key,
             take: [:],
-            skip: pointer.pointee.take.first!.value)
+            skip: next != nil ? pointer.pointee.take.mapValues(next!.apply(on:)).first!.value : pointer.pointee.take.first!.value)
         }
       } else {
         result = next?.apply(on: pointer) ?? pointer
