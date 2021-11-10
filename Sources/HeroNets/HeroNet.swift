@@ -324,7 +324,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   
   /// Substitute variables inside a string by corresponding binding
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-  private func bindingSubstitution(expr: Value, binding: [Label: Value]) -> String {
+  func bindingSubstitution(expr: Value, binding: [Label: Value]) -> String {
     var res: String = "\(expr)"
     for el in binding {
       res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")
