@@ -46,46 +46,8 @@ final class AllFiringTests: XCTestCase {
     return bindingSimplify
   }
   
-//  func testIsFireable() {
-//
-//    enum P: Place, Comparable {
-//      typealias Content = Multiset<String>
-//
-//      case p1,p2,p3,p4
-//    }
-//
-//    enum T: Transition {
-//      case t1
-//    }
-//
-//    let module: String = """
-//    func add(_ x: Int, _ y: Int) -> Int ::
-//      x + y
-//    """
-//
-//    var interpreter = Interpreter()
-//    try! interpreter.loadModule(fromString: module)
-//
-//    let model = HeroNet<P, T>(
-//      .pre(from: .p1, to: .t1, labeled: ["$x","$y"]),
-//      .pre(from: .p2, to: .t1, labeled: ["$x"]),
-//      .post(from: .t1, to: .p3, labeled: ["$x"]),
-//      .post(from: .t1, to: .p4, labeled: ["$x+$y"]),
-//      guards: [.t1: nil],
-//      interpreter: interpreter
-//    )
-//
-//    let marking1 = Marking<P>([.p1: ["1","2"], .p2: ["1", "2"], .p3: [], .p4: []])
-//
-//    var expectedRes: Set<Marking<P>> = []
-//    expectedRes.insert([.p1: ["1","2"], .p2: ["1", "2"], .p3: [], .p4: []])
-//    expectedRes.insert([.p1: [], .p2: ["1"], .p3: ["2"], .p4: ["3"]])
-//    expectedRes.insert([.p1: [], .p2: ["2"], .p3: ["1"], .p4: ["3"]])
-//
-//    XCTAssertEqual(model.generateAllFiring(for: .t1, with: marking1), expectedRes)
-//  }
   
-  func testFiring() {
+  func testFiring0() {
     
     let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
     var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
@@ -114,8 +76,47 @@ final class AllFiringTests: XCTestCase {
     print(simplifyMarking(marking: res))
   }
   
+  
+  func testFiring1() {
+    
+    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+    
+    let interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: "")
+    
+    var model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x", "2"]),
+      .pre(from: .p2, to: .t1, labeled: ["$y"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: nil, .t2: nil],
+      interpreter: interpreter
+    )
+    
+    var marking = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
+    var res = model.fire(transition: .t1, from: marking, with: ["$x": "1", "$y": "2"], markingMFDDFactory: markingMFDDFactory)
+    var expectedRes: [String: Multiset<String>] = ["p1": ["1", "3"], "p2": ["1", "1"], "p3": ["3"]]
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+    
+    model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
+      .pre(from: .p2, to: .t1, labeled: ["$y"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: nil, .t2: nil],
+      interpreter: interpreter
+    )
+    
+    marking = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
+    res = model.fire(transition: .t1, from: marking, with: ["$x": "1", "$y": "2"], markingMFDDFactory: markingMFDDFactory)
+    expectedRes = ["p1": ["1", "3"], "p2": ["1", "1"], "p3": ["3"]]
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+    
+    print(simplifyMarking(marking: res))
+  }
+  
   static var allTests = [
 //    ("testIsFireable", testIsFireable),
-    ("testFiring", testFiring),
+    ("testFiring0", testFiring0),
+    ("testFiring1", testFiring1),
   ]
 }

@@ -208,34 +208,3 @@ final class MarkingHomomorphismTests: XCTestCase {
     ("testInsertValueInMarking", testInsertValueInMarking),
   ]
 }
-
-
-//  func testLol() {
-////    let markingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>()
-////    let markingMFDDFactory = MFDDFactory<KeyMarking, Int>()
-//    let markingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>()
-//
-////    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
-////    var morphisms: MFDDMorphismFactory<KeyMarking, Int> { markingMFDDFactory.morphisms }
-//    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
-//
-//    let assign = [[P.p1: Pair("1",1), P.p2: Pair("2",1)]]
-//
-////    let morphism = morphisms.insert(assignments: [P.p1: Pair("42",1), P.p2: Pair("100",1)])
-//
-////    var encode = markingMFDDFactory.encode(family: assign)
-//    var encode = markingMFDDFactory.encode(family: [[:]])
-//
-//    var assignements = [[P.p1: Pair("1",1)], [P.p1: Pair("2",1)], [P.p2: Pair("1",1)], [P.p2: Pair("2",1)], [P.p2: Pair("3",1)]]
-//
-//    for a in assignements {
-//      var morphism = morphisms.insert(assignments: a)
-//      encode = morphism.apply(on: encode)
-//    }
-////    assignements = [[]]
-//
-//    print(encode)
-////    print(morphism.apply(on: encode))
-//
-//  }
-  
