@@ -82,8 +82,11 @@ extension HeroNet where PlaceType: Comparable {
       for (place, labels) in pre {
         
         // Get the list of values using list of variables for each place
-        let listeValues = labels.map({(label) in
-          return binding[label]!
+        let listeValues = labels.map({(label) -> Value in
+          if let val = binding[label] {
+            return val
+          }
+          return label
         })
  
         // Using the listValues, we transform it into a dictionnary that
