@@ -114,9 +114,6 @@ final class AllFiringTests: XCTestCase {
     print(simplifyMarking(marking: res))
   }
   
-  
-  
-  
   static var allTests = [
 //    ("testIsFireable", testIsFireable),
     ("testFiring", testFiring),

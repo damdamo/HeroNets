@@ -105,11 +105,9 @@ where Key: Place, Key.Content == Multiset<String>, Value == Pair<String,Int> {
 
   }
   
-<<<<<<< HEAD
   /// Allow to compute the result of a firing for post condition.
   /// Results of bindings with post arcs is added to the marking
-=======
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
+
   public final class InsertValueInMarking: Morphism, MFDDSaturable {
 
     public typealias DD = MFDD
@@ -170,14 +168,12 @@ where Key: Place, Key.Content == Multiset<String>, Value == Pair<String,Int> {
       } else if pointer.pointee.key == assignments[0].key {
         var take = pointer.pointee.take
 
-<<<<<<< HEAD
+
         // If take is not empty, we look at values already contain in take and added to the current result.
         // e.g.: take ~= [("42",1): pointer], assignements[0] = [("42",2)] --> newTake = [("42",3): pointer]
-        if !pointer.pointee.take.isEmpty {
-=======
+
         if !pointer.pointee.take.isEmpty {
           print(assignments[0].key)
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
           for value in assignments[0].values {
             if let tail = pointer.pointee.take.first(where: {(k,v) in
               k.l == value.l
@@ -191,10 +187,7 @@ where Key: Place, Key.Content == Multiset<String>, Value == Pair<String,Int> {
               take[value] = pointer.pointee.skip
             }
           }
-<<<<<<< HEAD
         // If it is empty, we can simply add values in assignements
-=======
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
         } else {
           for value in assignments[0].values {
             if let tail = pointer.pointee.take[value] {
@@ -204,18 +197,12 @@ where Key: Place, Key.Content == Multiset<String>, Value == Pair<String,Int> {
             }
           }
         }
-<<<<<<< HEAD
-=======
-
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
         result = factory.node(
           key: pointer.pointee.key,
           take: next != nil ? take.mapValues(next!.apply(on:)) : take,
           skip: factory.zero.pointer)
-<<<<<<< HEAD
+
       // If pointer.pointee.key > assignments[0].key
-=======
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
       } else {
         var take: [Pair<String, Int> : MFDD<Key, Pair<String, Int>>.Pointer] = [:]
         for value in assignments[0].values {
@@ -223,15 +210,9 @@ where Key: Place, Key.Content == Multiset<String>, Value == Pair<String,Int> {
         }
         result = factory.node(
           key: assignments[0].key,
-<<<<<<< HEAD
           take: take,
           skip: factory.zero.pointer)
-=======
 //          take: [assignments[0].values: next?.apply(on: pointer) ?? pointer],
-          take: take,
-          skip: factory.zero.pointer)
-//        result = factory.zero.pointer
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
       }
 
       cache[pointer] = result

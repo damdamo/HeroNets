@@ -48,17 +48,10 @@ final class MarkingHomomorphismTests: XCTestCase {
   }
   
   func testFilterExcludeMarking() {
-<<<<<<< HEAD
-=======
-    
-//    let interpreter = Interpreter()
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
     
     let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
     var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
     
-<<<<<<< HEAD
-=======
 //    let model = HeroNet<P, T>(
 //      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
 //      .pre(from: .p2, to: .t1, labeled: ["$y"]),
@@ -67,7 +60,6 @@ final class MarkingHomomorphismTests: XCTestCase {
 //      interpreter: interpreter
 //    )
     
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
     let marking1 = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
     
     let mfddMarking1 = marking1.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
@@ -163,61 +155,57 @@ final class MarkingHomomorphismTests: XCTestCase {
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
   }
   
-  func testInsertValueInMarking() {
-
-    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
-    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
-
-    let marking0 = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
-
-    let mfddMarking = marking0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
-
-    var m = morphisms.insertValueInMarking(insert: [(key: .p1, values: [Pair("2",1)])])
-    var res = m.apply(on: mfddMarking)
-    
-    var expectedRes: [String: Multiset<String>] = ["p1": ["1": 2, "2": 2, "3": 1], "p2": ["1": 2, "2": 1], "p3": [:]]
-
-    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
-
-    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42",2)])])
-    res = m.apply(on: mfddMarking)
-    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 2]]
-
-    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
-    
-    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)]), (key: .p3, values: [Pair("43", 1)])])
-    res = m.apply(on: mfddMarking)
-    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 1, "43": 1]]
-    
-    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
-    
-    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)])])
-    res = m.apply(on: mfddMarking)
-    res = m.apply(on: res)
-    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 2]]
-
-    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
-
-    
-    let marking1 = Marking<P>([.p1: [], .p2: ["1", "1", "2"], .p3: []])
-
-    let mfddMarking1 = marking1.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
-    m = morphisms.insertValueInMarking(insert: [(key: .p1, values: [Pair("42", 1)])])
-    res = m.apply(on: mfddMarking1)
-    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)])])
-    res = m.apply(on: res)
-    expectedRes = ["p1": ["42": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 1]]
-
-    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
-  }
+//  func testInsertValueInMarking() {
+//
+//    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+//    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+//
+//    let marking0 = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
+//
+//    let mfddMarking = marking0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+//
+//    var m = morphisms.insertValueInMarking(insert: [(key: .p1, values: [Pair("2",1)])])
+//    var res = m.apply(on: mfddMarking)
+//    
+//    var expectedRes: [String: Multiset<String>] = ["p1": ["1": 2, "2": 2, "3": 1], "p2": ["1": 2, "2": 1], "p3": [:]]
+//
+//    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+//
+//    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42",2)])])
+//    res = m.apply(on: mfddMarking)
+//    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 2]]
+//
+//    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+//    
+//    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)]), (key: .p3, values: [Pair("43", 1)])])
+//    res = m.apply(on: mfddMarking)
+//    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 1, "43": 1]]
+//    
+//    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+//    
+//    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)])])
+//    res = m.apply(on: mfddMarking)
+//    res = m.apply(on: res)
+//    expectedRes = ["p1": ["1": 2, "2": 1, "3": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 2]]
+//
+//    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+//
+//    
+//    let marking1 = Marking<P>([.p1: [], .p2: ["1", "1", "2"], .p3: []])
+//
+//    let mfddMarking1 = marking1.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+//    m = morphisms.insertValueInMarking(insert: [(key: .p1, values: [Pair("42", 1)])])
+//    res = m.apply(on: mfddMarking1)
+//    m = morphisms.insertValueInMarking(insert: [(key: .p3, values: [Pair("42", 1)])])
+//    res = m.apply(on: res)
+//    expectedRes = ["p1": ["42": 1], "p2": ["1": 2, "2": 1], "p3": ["42": 1]]
+//
+//    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+//  }
   
   static var allTests = [
     ("testFilterExcludeMarking", testFilterExcludeMarking),
-<<<<<<< HEAD
     ("testInsertValueInMarking", testInsertValueInMarking),
-=======
-//    ("testInsertValueInMarking", testInsertValueInMarking),
->>>>>>> 80840e203df88fa30e9f0924e7fbd402cd75e909
   ]
 }
 
