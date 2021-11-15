@@ -8,6 +8,15 @@ extension HeroNet where PlaceType: Comparable {
   public typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
   public typealias MarkingMFDDMorphismFactory = MFDDMorphismFactory<KeyMarking, ValueMarking>
   
+  
+  /// Fire a transition using MFDD. It transforms a marking into a MFDD, then compute a homorphism for pre and post arcs.
+  /// Eventually, it computes the final result using a composition of both homorphism on the marking.
+  /// - Parameters:
+  ///   - transition: Transition to be fired
+  ///   - marking: Current marking
+  ///   - binding: The binding to use for the firing
+  ///   - markingMFDDFactory: A factory that keeps in memory the operations
+  /// - Returns: The new marking as a MFDD
   public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Label: Value], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD {
     
     var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
@@ -20,6 +29,8 @@ extension HeroNet where PlaceType: Comparable {
     return compositionHomomorphism.apply(on: markingMFDD)
   }
   
+  
+  /// Compute the homomorphism for post arcs. It transforms the binding into a specific format to create the homorphism.
   private func computePostHomomorphism(
     binding: [Label: Value],
     transition: TransitionType,
@@ -69,7 +80,7 @@ extension HeroNet where PlaceType: Comparable {
 
   }
   
-  
+  /// Compute the homomorphism for pre arcs. It transforms the binding into a specific format to create the homorphism.
   private func computePreHomomorphism(
     binding: [Label: Value],
     transition: TransitionType,
@@ -132,7 +143,7 @@ extension HeroNet where PlaceType: Comparable {
           })
                 
         res.insert(netStaticOptimized.fire(transition: transition, from: marking, with: bindingWithLabel)!)
-      }
+      } 
       
       return res
     }
