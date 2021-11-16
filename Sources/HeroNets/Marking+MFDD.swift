@@ -17,6 +17,57 @@ extension Marking where PlaceType.Content == Multiset<String>, PlaceType: Compar
     
   }
   
+  public func mfddToMarking(markingMFDD: MarkingMFDD, markingMFDDFactory: MarkingMFDDFactory) -> Marking<KeyMarking>{
+    
+    var mapping: [KeyMarking: KeyMarking.Content] = [:]
+    var setPairPerPlace: [KeyMarking: Set<ValueMarking>] = [:]
+    
+    for place in KeyMarking.allCases {
+      mapping[place] = []
+      setPairPerPlace[place] = []
+    }
+    
+    for el in markingMFDD {
+      for (place, values) in el {
+        setPairPerPlace[place]!.insert(values)
+      }
+    }
+    
+    for (place, values) in setPairPerPlace {
+      for value in values {
+        mapping[place]!.insert(value.l, occurences: value.r)
+      }
+    }
+    
+    return Marking<KeyMarking>(mapping)
+  }
+  
+  // Transform mfdd into a marking, i.e. a dictionnary with all values for each place.
+//  func simplifyMarking(marking: MFDD<P, Pair<String, Int>>) -> [String: Multiset<String>] {
+//
+//    var bindingSimplify: [String: Multiset<String>] = [:]
+//    var setPairPerPlace: [P: Set<Pair<String,Int>>] = [:]
+//
+//    for place in P.allCases {
+//      bindingSimplify["\(place)"] = []
+//      setPairPerPlace[place] = []
+//    }
+//
+//    for el in marking {
+//      for (k,v) in el {
+//        setPairPerPlace[k]!.insert(v)
+//      }
+//    }
+//
+//    for (place, values) in setPairPerPlace {
+//      for value in values {
+//        bindingSimplify["\(place)"]!.insert(value.l, occurences: value.r)
+//      }
+//    }
+//
+//    return bindingSimplify
+//  }
+  
   private func createMarkingMFDD(places: [PlaceType], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD.Pointer {
     
     if let place = places.first {

@@ -62,6 +62,9 @@ where Key: Place, Key.Content == Multiset<String>, Value == Pair<String,Int> {
           let pairTemp = take.first(where: {(k,v) in
             return k.l == value.l
           })
+          guard let _ = pairTemp else {
+            return factory.zero.pointer
+          }
           let newKey = Pair(pairTemp!.key.l, pairTemp!.key.r - value.r)
           if newKey.r > 0 {
             take[newKey] = pairTemp!.value

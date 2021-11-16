@@ -95,6 +95,12 @@ final class MarkingHomomorphismTests: XCTestCase {
     
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
     
+    m = morphisms.filterMarking(excluding: [(key: .p1, values: [Pair("42",1)])])
+    res = m.apply(on: mfddMarking1)
+    expectedRes = ["p1": [], "p2": [], "p3": []]
+    
+    XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+    
     let marking2 = Marking<P>([.p1: ["1"], .p2: ["2"], .p3: ["3"]])
     let mfddMarking2 = marking2.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
     
@@ -104,6 +110,8 @@ final class MarkingHomomorphismTests: XCTestCase {
     
     print(markingMFDDFactory.one.pointer)
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
+    
+    
     
   }
   

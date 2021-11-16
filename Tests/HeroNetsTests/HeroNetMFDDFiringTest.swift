@@ -12,7 +12,7 @@ final class AllFiringTests: XCTestCase {
   }
   
   enum T: Transition {
-    case t1, t2
+    case t1
   }
   
   typealias KeyMarking = P
@@ -59,7 +59,7 @@ final class AllFiringTests: XCTestCase {
       .pre(from: .p1, to: .t1, labeled: ["$x"]),
       .pre(from: .p2, to: .t1, labeled: ["$y"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-      guards: [.t1: nil, .t2: nil],
+      guards: [.t1: nil],
       interpreter: interpreter
     )
     
@@ -89,7 +89,7 @@ final class AllFiringTests: XCTestCase {
       .pre(from: .p1, to: .t1, labeled: ["$x", "2"]),
       .pre(from: .p2, to: .t1, labeled: ["$y"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-      guards: [.t1: nil, .t2: nil],
+      guards: [.t1: nil],
       interpreter: interpreter
     )
     
@@ -102,7 +102,7 @@ final class AllFiringTests: XCTestCase {
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
       .pre(from: .p2, to: .t1, labeled: ["$y"]),
       .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-      guards: [.t1: nil, .t2: nil],
+      guards: [.t1: nil],
       interpreter: interpreter
     )
     
@@ -112,6 +112,63 @@ final class AllFiringTests: XCTestCase {
     XCTAssertEqual(simplifyMarking(marking: res), expectedRes)
     
     print(simplifyMarking(marking: res))
+  }
+  
+  func testForAllFiring0() {
+    
+    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+    
+    let interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: "")
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x", "2"]),
+      .pre(from: .p2, to: .t1, labeled: ["$y"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: nil],
+      interpreter: interpreter
+    )
+    
+    let marking = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
+    let markings1 = model.fireForAllBindings(transition: .t1, from: marking, markingMFDDFactory: markingMFDDFactory)
+
+//    for m in markings1 {
+//      print(simplifyMarking(marking: m))
+//    }
+//
+//    print("----------------------------------------")
+//
+    let markings2 = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+//    for m in markings2 {
+//      print(simplifyMarking(marking: m))
+//    }
+//    print(markings1 == markings2)
+    XCTAssertEqual(markings1, markings2)
+    
+  }
+  
+  func testComputeSpace0() {
+    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+    
+    let interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: "")
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x"]),
+      .pre(from: .p2, to: .t1, labeled: ["$y"]),
+      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+      guards: [.t1: nil],
+      interpreter: interpreter
+    )
+    
+    let marking = Marking<P>([.p1: ["1", "2"], .p2: ["3", "4"], .p3: []])
+    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+    
+    for m in markings {
+      print(simplifyMarking(marking: m))
+    }
   }
   
   static var allTests = [
