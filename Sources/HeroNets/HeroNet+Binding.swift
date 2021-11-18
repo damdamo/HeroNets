@@ -600,8 +600,11 @@ extension HeroNet {
   /// - Returns:
   ///   Returns a new mfdd pointer where values of the independent keys have been added.
   private func addIndependentLabel(mfddPointer: HeroMFDD.Pointer, independentKeyToValues: [KeyMFDDLabel: Multiset<Value>], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
-    let mfddPointerForIndependentKeys = constructMFDDIndependentKeys(keyToExprs: independentKeyToValues, factory: factory)
-    return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependentKeys)
+    if independentKeyToValues.count > 0 {
+      let mfddPointerForIndependentKeys = constructMFDDIndependentKeys(keyToExprs: independentKeyToValues, factory: factory)
+      return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependentKeys)
+    }
+    return mfddPointer
   }
   
   /// Construct the MFDD for independent keys, without the need to filter.

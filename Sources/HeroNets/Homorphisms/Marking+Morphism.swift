@@ -176,7 +176,6 @@ where Key: Place, Key.Content == Multiset<String>, Value == Pair<String,Int> {
         // e.g.: take ~= [("42",1): pointer], assignements[0] = [("42",2)] --> newTake = [("42",3): pointer]
 
         if !pointer.pointee.take.isEmpty {
-          print(assignments[0].key)
           for value in assignments[0].values {
             if let tail = pointer.pointee.take.first(where: {(k,v) in
               k.l == value.l

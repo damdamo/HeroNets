@@ -36,6 +36,29 @@ final class GuardTests: XCTestCase {
     return bindingSimplify
   }
   
+  func testNoBinding() {
+    let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
+    let conditionList: [Pair<String,String>]? = nil
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
+      .pre(from: .p2, to: .t1, labeled: ["$z"]),
+      .post(from: .t1, to: .p3, labeled: ["$z"]),
+      guards: [.t1: conditionList],
+      interpreter: interpreter
+    )
+    
+    let marking = Marking<P>([.p1: [], .p2: [], .p3: []])
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
+    
+    let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
+    let expectedRes: Set<[String:String]> = []
+    XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
+  }
+  
   func testWithoutGuard() {
     
     let module = ""

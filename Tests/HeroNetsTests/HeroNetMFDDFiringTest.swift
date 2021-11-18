@@ -165,10 +165,35 @@ final class AllFiringTests: XCTestCase {
     
     let marking = Marking<P>([.p1: ["1", "2"], .p2: ["3", "4"], .p3: []])
     let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+
+    XCTAssertEqual(markings.count, 7)
+//    for m in markings {
+//      print(simplifyMarking(marking: m))
+//    }
+  }
+  
+  func testComputeSpace1() {
     
-    for m in markings {
-      print(simplifyMarking(marking: m))
-    }
+    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+    
+    let interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: "")
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x"]),
+      .post(from: .t1, to: .p2, labeled: ["$x"]),
+      guards: [.t1: nil],
+      interpreter: interpreter
+    )
+    
+    let marking = Marking<P>([.p1: ["1", "2", "3","4"], .p2: [], .p3: []])
+    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+    
+//    for m in markings {
+//      print(simplifyMarking(marking: m))
+//    }
+    XCTAssertEqual(markings.count, 16)
   }
   
   static var allTests = [
