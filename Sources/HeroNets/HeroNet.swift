@@ -239,9 +239,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       for (place, expressions) in post {
         for expr in expressions {
           exprSubs = bindingSubstitution(expr: expr, binding: binding)
-          let context = interpreter.saveContext()
-          valOutput = "\(try! interpreter.eval(string: exprSubs))"
-          interpreter.reloadContext(context: context)
+          valOutput = eval(exprSubs)
           // In the case or we get the signature of a function, we just return the function name
           if valOutput.contains("function") {
             multiset.insert(exprSubs)
@@ -311,8 +309,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     // Moreover, allows to compare functions in a syntactic way
     if lhs != rhs {
       let context = interpreter.saveContext()
-      let v1 = try! interpreter.eval(string: lhs)
-      let v2 = try! interpreter.eval(string: rhs)
+      let v1 = eval(lhs)
+      let v2 = eval(rhs)
       interpreter.reloadContext(context: context)
       // If values are different and not are signature functions
       if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
@@ -344,6 +342,16 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     } else {
       matrix[arc.transition] = [arc.place: arc.labels]
     }
+  }
+  
+  func eval(_ s: Value) -> Value {
+    let context = interpreter.saveContext()
+    let value = try! "\(interpreter.eval(string: s))"
+    interpreter.reloadContext(context: context)
+    if value.contains("func") {
+      return s
+    }
+    return value
   }
 
 }

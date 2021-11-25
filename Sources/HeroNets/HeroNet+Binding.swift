@@ -147,19 +147,11 @@ extension HeroNet {
     for (label, conditionList) in dicUniqueLabelToCondition {
       for condition in conditionList {
         var value: Value = ""
-        let context = interpreter.saveContext()
         if condition.l == label {
-          value = try! "\(interpreter.eval(string: condition.r))"
-          if value.contains("func") {
-            value = condition.r
-          }
+          value = eval(condition.r)
         } else {
-          value = try! "\(interpreter.eval(string: condition.l))"
-          if value.contains("func") {
-            value = condition.l
-          }
+          value = eval(condition.l)
         }
-        interpreter.reloadContext(context: context)
         if let val = constantCondition[label] {
           // Two conditions with different constant value
           if val != value {
@@ -303,6 +295,15 @@ extension HeroNet {
       let placeToLabelToValues = netWithoutConstant.computeValuesForLabel(transition: transition, marking: markingWithoutConstant)
       // Filter condition with the same variable that are more complex than just x = constant (e.g.:  x%2 = 0).
       // Remove the conditions and keep values that satisfie these kind of conditions.
+      
+      // If there is no value for a label, it means there are no valid bindings
+      for (_, labelToValues) in placeToLabelToValues {
+        for (_, values) in labelToValues {
+          if values.isEmpty {
+            return nil
+          }
+        }
+      }
      return optimizedGuardWithSameLabel(transition: transition, placeToLabelToValues: placeToLabelToValues)
 
     }

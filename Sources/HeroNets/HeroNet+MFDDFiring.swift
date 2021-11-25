@@ -142,9 +142,7 @@ extension HeroNet where PlaceType: Comparable {
         elementsToAdd[place] = [:]
         for expr in expressions {
           exprSubs = bindingSubstitution(expr: expr, binding: binding)
-          let context = interpreter.saveContext()
-          valOutput = "\(try! interpreter.eval(string: exprSubs))"
-          interpreter.reloadContext(context: context)
+          valOutput = eval(exprSubs)
           if let _ = elementsToAdd[place]![valOutput] {
             elementsToAdd[place]![valOutput]! += 1
           } else {
