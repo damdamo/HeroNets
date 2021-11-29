@@ -3,7 +3,7 @@ import XCTest
 import Interpreter
 import DDKit
 
-final class PaperExample: XCTestCase {
+final class Calculator: XCTestCase {
   
   enum P: Place, Hashable, Comparable {
     typealias Content = Multiset<String>
@@ -50,7 +50,7 @@ final class PaperExample: XCTestCase {
   }
   
   
-  func testComputeStateSpace0() {
+  func testCalculator() {
     let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
     var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
     
@@ -86,7 +86,7 @@ final class PaperExample: XCTestCase {
       .pre(from: .s0, to: .t0, labeled: ["1"]),
       .pre(from: .num, to: .t0, labeled: ["$x"]),
       .post(from: .t0, to: .s1, labeled: ["$x"]),
-      .post(from: .t0, to: .num, labeled: ["$x"]),
+//      .post(from: .t0, to: .num, labeled: ["$x"]),
       // Transition c
       .pre(from: .s1, to: .c, labeled: ["$x"]),
       .post(from: .c, to: .s0, labeled: ["1"]),
@@ -95,35 +95,37 @@ final class PaperExample: XCTestCase {
       .pre(from: .op, to: .t1, labeled: ["$f"]),
       .post(from: .t1, to: .s2, labeled: ["$f($x)"]),
       .post(from: .t1, to: .op, labeled: ["$f"]),
-      // Transition tadd
+      // Transition tapply
       .pre(from: .s2, to: .tapply, labeled: ["$f"]),
       .pre(from: .num, to: .tapply, labeled: ["$x"]),
       .post(from: .tapply, to: .s1, labeled: ["$f($x)"]),
-//      .pre(from: .p2, to: .t2, labeled: ["$y"]),
-//      .post(from: .t1, to: .p3, labeled: ["$x"]),
-//      .post(from: .t2, to: .p3, labeled: ["$y"]),
+//      .post(from: .tapply, to: .num, labeled: ["$x"]),
       guards: [.t0: nil, .t1: nil, .c: nil, .tapply: nil],
       interpreter: interpreter
     )
     
-    var l: [String] = []
-    
-    
-    let marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["1"], .op: ["add","sub","div","mul"]])
+    var marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["0","1"], .op: ["add","sub"]])
+    var markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+
+    XCTAssertEqual(markings.count, 19)
+
+    marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["2","3","4","5"], .op: ["sub","mul","add","div"]])
     
     let s = Stopwatch()
-    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
-//    let markings = model.fireForAllBindings(transition: .t1, from: marking, markingMFDDFactory: markingMFDDFactory)
+    markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
     print(s.elapsed.humanFormat)
     print(markings.count)
-//    XCTAssertEqual(markings.count, 12)
-    for m in markings {
-      print(simplifyMarking(marking: m))
-    }
+    
+    XCTAssertEqual(markings.count, 1186)
+
+//    let s = Stopwatch()
+//    print(s.elapsed.humanFormat)
+//    for m in markings {
+//      print(simplifyMarking(marking: m))
+//    }
   }
   
   static var allTests = [
-//    ("testIsFireable", testIsFireable),
-    ("testComputeStateSpace0", testComputeStateSpace0),
+    ("testCalculator", testCalculator),
   ]
 }

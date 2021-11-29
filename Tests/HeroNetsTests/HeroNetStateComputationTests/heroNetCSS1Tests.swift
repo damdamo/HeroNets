@@ -1,33 +1,107 @@
-//
-//  heroNetCSS1Tests.swift
-//  HeroNetsTests
-//
-//  Created by Damien Morard on 25.11.21.
-//
-
 import XCTest
+@testable import HeroNets
+import Interpreter
+import DDKit
 
-class heroNetCSS1Tests: XCTestCase {
+final class ComputeStateSpaceTests1: XCTestCase {
 
-    override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
+  enum P: Place, Hashable, Comparable {
+    typealias Content = Multiset<String>
+    case p1,p2
+  }
 
-        // In UI tests it is usually best to stop immediately when a failure occurs.
-        continueAfterFailure = false
+  enum T: Transition {
+    case t1,t2
+  }
 
-        // UI tests must launch the application that they test. Doing this in setup will make sure it happens for each test method.
-        XCUIApplication().launch()
+  typealias KeyMarking = P
+  typealias ValueMarking = Pair<P.Content.Key, Int>
+  typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
+  typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
 
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
+  // Transform mfdd into a marking, i.e. a dictionnary with all values for each place.
+  func simplifyMarking(marking: MFDD<P, Pair<String, Int>>) -> [String: Multiset<String>] {
+
+    var bindingSimplify: [String: Multiset<String>] = [:]
+    var setPairPerPlace: [P: Set<Pair<String,Int>>] = [:]
+
+    for place in P.allCases {
+      bindingSimplify["\(place)"] = []
+      setPairPerPlace[place] = []
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
+    for el in marking {
+      for (k,v) in el {
+        setPairPerPlace[k]!.insert(v)
+      }
     }
 
-    func testExample() throws {
-        // Use recording to get started writing UI tests.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+    for (place, values) in setPairPerPlace {
+      for value in values {
+        bindingSimplify["\(place)"]!.insert(value.l, occurences: value.r)
+      }
     }
 
+    return bindingSimplify
+  }
+
+
+  func testComputeStateSpace0() {
+    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+
+    let interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: "")
+
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x"]),
+      .post(from: .t1, to: .p2, labeled: ["$x"]),
+      .pre(from: .p2, to: .t2, labeled: ["$x"]),
+      .post(from: .t2, to: .p1, labeled: ["$x"]),
+      guards: [.t1: nil, .t2: nil],
+      interpreter: interpreter
+    )
+
+    let marking = Marking<P>([.p1: ["1","2","3"], .p2: []])
+    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+
+    print(markings.count)
+    
+    XCTAssertEqual(markings.count, 8)
+//    for m in markings {
+//      print(simplifyMarking(marking: m))
+//    }
+  }
+  
+  func testComputeStateSpace1() {
+    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+
+    let interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: "")
+
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x"]),
+      .post(from: .t1, to: .p2, labeled: ["$x", "$x"]),
+      .pre(from: .p2, to: .t2, labeled: ["$x", "$x"]),
+      .post(from: .t2, to: .p1, labeled: ["$x"]),
+      guards: [.t1: nil, .t2: nil],
+      interpreter: interpreter
+    )
+
+    let marking = Marking<P>([.p1: ["1","2","3"], .p2: []])
+    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+
+    print(markings.count)
+    
+    XCTAssertEqual(markings.count, 8)
+//    for m in markings {
+//      print(simplifyMarking(marking: m))
+//    }
+  }
+
+  static var allTests = [
+//    ("testIsFireable", testIsFireable),
+    ("testComputeStateSpace0", testComputeStateSpace0),
+  ]
 }

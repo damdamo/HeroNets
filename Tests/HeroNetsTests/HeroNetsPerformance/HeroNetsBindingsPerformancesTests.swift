@@ -6,7 +6,6 @@
 //final class HeroNetsPerformancesTests: XCTestCase {
 //
 //  typealias Label = String
-//  typealias KeyMFDD = Key<String>
 //  typealias ValueMFDD = String
 //
 //  func testPerformance1() {
@@ -49,7 +48,7 @@
 //    var interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: module)
 //
-//    let conditionList: [Pair<String>]? = nil
+//    let conditionList: [Pair<String, String>]? = nil
 //
 //    let model = HeroNet<P1, T1>(
 //      .pre(from: .p1, to: .apply, labeled: ["$x","$y"]),
@@ -70,7 +69,7 @@
 //    var seq: Multiset<String>  = []
 //
 //
-//    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+//    let factory = MFDDFactory<KeyMFDD<String>,ValueMFDD>()
 //
 //    var times: [Double] = []
 //    var s: Stopwatch = Stopwatch()
@@ -149,7 +148,7 @@
 //    var interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: module)
 //
-//    let conditionList: [Pair<String>]? = nil
+//    let conditionList: [Pair<String, String>]? = nil
 //
 //    let model = HeroNet<P1, T1>(
 //      .pre(from: .p1, to: .apply, labeled: ["$x","$y"]),
@@ -170,7 +169,7 @@
 //    var seq: Multiset<String>  = []
 //
 //
-//    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+//    let factory = MFDDFactory<KeyMFDD<String>,ValueMFDD>()
 //
 //    var times: [Double] = []
 //    var s: Stopwatch = Stopwatch()
@@ -248,7 +247,7 @@
 //    var interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: module)
 //
-//    let conditionList: [Pair<String>]? = [Pair("$x","2")]
+//    let conditionList: [Pair<String, String>]? = [Pair("$x","2")]
 //
 //    let model = HeroNet<P1, T1>(
 //      .pre(from: .p1, to: .apply, labeled: ["$x","$y"]),
@@ -269,7 +268,7 @@
 //    var seq: Multiset<String>  = []
 //
 //
-//    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+//    let factory = MFDDFactory<KeyMFDD<String>,ValueMFDD>()
 //
 //    var times: [Double] = []
 //    var s: Stopwatch = Stopwatch()
@@ -349,7 +348,7 @@
 //    var interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: module)
 //
-//    let conditionList: [Pair<String>]? = [Pair("$x","$y+1")]
+//    let conditionList: [Pair<String, String>]? = [Pair("$x","$y+1")]
 //
 //    let model = HeroNet<P1, T1>(
 //      .pre(from: .p1, to: .apply, labeled: ["$x","$y"]),
@@ -359,14 +358,14 @@
 //      interpreter: interpreter
 //    )
 //
-//    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+//    let factory = MFDDFactory<KeyMFDD<String>,ValueMFDD>()
 //
 //    // Number of tests
 //    let test_number = 5
 //
 //    // How many values in the place
-//    let nb_el_in_place = [200]
-////    let nb_el_in_place = [100]
+////    let nb_el_in_place = [200]
+//    let nb_el_in_place = [10]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
@@ -454,8 +453,8 @@
 //    var interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: module)
 //
-////    let conditionList: [Pair<String>]? = [Pair("eq(mod($a,2),0)","true")]
-//    let conditionList: [Pair<String>]? = [Pair("add($a,5)","6"), Pair("eq($c,0)", "false"),Pair("mod($g($b,$c),2)", "0")]
+////    let conditionList: [Pair<String, String>]? = [Pair("eq(mod($a,2),0)","true")]
+//    let conditionList: [Pair<String, String>]? = [Pair("add($a,5)","6"), Pair("eq($c,0)", "false"),Pair("mod($g($b,$c),2)", "0")]
 //
 //    let model = HeroNet<P1, T1>(
 //      .pre(from: .op, to: .apply, labeled: ["$f","$g"]),
@@ -473,7 +472,7 @@
 //      seq.insert(String(i))
 //    }
 //
-//    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+//    let factory = MFDDFactory<KeyMFDD<String>,ValueMFDD>()
 //    let marking1 = Marking<P1>([.op: ["add","sub","mul","div"], .n: seq, .res: []])
 //
 //
@@ -489,14 +488,14 @@
 //  }
 //
 //  func testPerformance5() {
-//    enum P: Place, Equatable {
+//    enum P: Place, Hashable, Comparable {
 //      typealias Content = Multiset<String>
 //
-//      case p1,p2,p3
+//      case p1,p2,p3,res
 //    }
 //
 //    enum T: Transition {
-//      case t1, t2
+//      case t1
 //    }
 //
 //    let module: String = """
@@ -507,24 +506,30 @@
 //    var interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: module)
 //
-//    let conditionList: [Pair<String>]? = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
-////    let conditionList: [Pair<String>]? = nil
+//    let conditionList: [Pair<String, String>]? = [Pair("$x","$y-1"), Pair("$y", "$z"), Pair("$a", "1")]
+////    let conditionList: [Pair<String, String>]? = nil
 //
 //    let model = HeroNet<P, T>(
 //      .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
 //      .pre(from: .p2, to: .t1, labeled: ["$z", "$a"]),
-//      .pre(from: .p3, to: .t1, labeled: ["$b", "3"]),
-//      guards: [.t1: conditionList, .t2: nil],
+//      .pre(from: .p3, to: .t1, labeled: ["$b", "1"]),
+//      .post(from: .t1, to: .res, labeled: ["$x"]),
+//      guards: [.t1: conditionList],
 //      interpreter: interpreter
 //    )
 //
-//    let factory = MFDDFactory<KeyMFDD,ValueMFDD>()
+//    let factory = MFDDFactory<KeyMFDD<String>,ValueMFDD>()
+////    typealias ValueMarking = Pair<P.Content.Key, Int>
+////    typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
+////    typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
+//
+//    let markingMFDDFactory = MFDDFactory<P, Pair<P.Content.Key, Int>>()
 //    // Number of tests
 //    let test_number = 5
 //
 //    // How many values in the place
 ////    let nb_el_in_place = [2000]
-//    let nb_el_in_place = [100]
+//    let nb_el_in_place = [10]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
@@ -534,7 +539,7 @@
 //    var count = 0
 //
 //    for len in nb_el_in_place {
-//      for i in 0..<len {
+//      for i in 1 ..< len+1 {
 //        seq.insert(String(i))
 //      }
 ////      var seq2 = seq
@@ -544,20 +549,20 @@
 ////      }
 ////
 //
-//      let marking1 = Marking<P>([.p1: seq, .p2: seq, .p3: seq])
+//      let marking1 = Marking<P>([.p1: seq, .p2: seq, .p3: seq, .res: []])
 //
 //      print("Nb P1: \(len)")
 //      for i in 0 ..< test_number {
 //        print("Try nb: \(i)")
 //        s.reset()
 ////        print(s.elapsed.humanFormat)
-//        let x = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+////        let x = model.fireableBindings(for: .t1, with: marking1, factory: factory)
+//        let x = model.computeStateSpace(from: marking1, markingMFDDFactory: markingMFDDFactory)
 ////        print(s.elapsed.humanFormat)
 //        times.append(s.elapsed.s)
 ////        print(times[i])
 //        s.reset()
 //        count = x.count
-//        print(x)
 //      }
 //      let average = times.reduce(0, +) / Double(times.count)
 //      let standard_deviation: Double = times

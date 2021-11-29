@@ -3,7 +3,7 @@ import XCTest
 import Interpreter
 import DDKit
 
-final class ComputeStateSpaceTests: XCTestCase {
+final class ComputeStateSpaceTests0: XCTestCase {
 
   enum P: Place, Hashable, Comparable {
     typealias Content = Multiset<String>

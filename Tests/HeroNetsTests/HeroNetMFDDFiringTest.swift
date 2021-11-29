@@ -133,18 +133,7 @@ final class AllFiringTests: XCTestCase {
     let marking = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
     let markings1 = model.fireForAllBindings(transition: .t1, from: marking, markingMFDDFactory: markingMFDDFactory)
 
-//    for m in markings1 {
-//      print(simplifyMarking(marking: m))
-//    }
-//
-//    print("----------------------------------------")
-//
-    let markings2 = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
-//    for m in markings2 {
-//      print(simplifyMarking(marking: m))
-//    }
-//    print(markings1 == markings2)
-    XCTAssertEqual(markings1, markings2)
+    XCTAssertEqual(markings1.count, 4)
     
   }
   

@@ -59,7 +59,7 @@ final class GuardTests: XCTestCase {
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
   }
   
-  func testWithoutGuard() {
+  func testWithoutGuard0() {
     
     let module = ""
     var interpreter = Interpreter()
@@ -80,6 +80,30 @@ final class GuardTests: XCTestCase {
     
     let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
     let expectedRes: Set<[String:String]> = [["$x": "1", "$y": "2", "$z": "4"], ["$x": "2", "$y": "1", "$z": "4"], ["$x": "1", "$y": "2", "$z": "5"], ["$x": "2", "$y": "1", "$z": "5"]]
+    XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
+  }
+  
+  func testWithoutGuard1() {
+    
+    let module = ""
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
+    let conditionList: [Pair<String,String>]? = nil
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: ["$x"]),
+      .pre(from: .p2, to: .t1, labeled: ["$y"]),
+      .post(from: .t1, to: .p3, labeled: ["$x"]),
+      guards: [.t1: conditionList],
+      interpreter: interpreter
+    )
+    
+    let marking = Marking<P>([.p1: ["1", "2"], .p2: [], .p3: []])
+    let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()
+    
+    let mfdd = model.fireableBindings(for: .t1, with: marking, factory: factory)
+    let expectedRes: Set<[String:String]> = []
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
   }
   
