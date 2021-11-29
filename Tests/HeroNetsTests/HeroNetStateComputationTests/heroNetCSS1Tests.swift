@@ -1,13 +1,13 @@
 //
-//  heroNetPaperExample.swift
+//  heroNetCSS1Tests.swift
 //  HeroNetsTests
 //
-//  Created by Damien Morard on 24.11.21.
+//  Created by Damien Morard on 25.11.21.
 //
 
 import XCTest
 
-class heroNetPaperExample: XCTestCase {
+class heroNetCSS1Tests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

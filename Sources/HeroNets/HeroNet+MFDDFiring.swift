@@ -14,9 +14,9 @@ extension HeroNet where PlaceType: Comparable {
     markingMFDDFactory: MarkingMFDDFactory)
   -> Set<MarkingMFDD> {
     
-    
-    var markingToCheck: Set<MarkingMFDD> = [m0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)]
-    var markingAlreadyChecked: Set<MarkingMFDD> = []
+    let m0MFDD = m0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+    var markingToCheck: Set<MarkingMFDD> = [m0MFDD]
+    var markingAlreadyChecked: Set<MarkingMFDD> = [m0MFDD]
     
     while !markingToCheck.isEmpty {
       for marking in markingToCheck {
@@ -56,7 +56,7 @@ extension HeroNet where PlaceType: Comparable {
     if let netStaticOptimized = netStaticOptimized {
       let markingMFDD = marking.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
       let allBindings = netStaticOptimized.fireableBindings(for: transition, with: marking, factory: heroMFDDFactory)
-      var res: Set<MarkingMFDD> = [markingMFDD]
+      var res: Set<MarkingMFDD> = []
       for binding in allBindings {
         let bindingWithLabel = Dictionary(
           uniqueKeysWithValues: binding.map {

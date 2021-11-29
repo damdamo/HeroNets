@@ -19,28 +19,31 @@ extension Marking where PlaceType.Content == Multiset<String>, PlaceType: Compar
   
   public func mfddToMarking(markingMFDD: MarkingMFDD, markingMFDDFactory: MarkingMFDDFactory) -> Marking<KeyMarking>{
     
-    var mapping: [KeyMarking: KeyMarking.Content] = [:]
-    var setPairPerPlace: [KeyMarking: Set<ValueMarking>] = [:]
+    var res: [PlaceType: Multiset<String>] = [:]
+    var multisetTemp: Multiset<String> = []
+    var pointer = markingMFDD.pointer
     
-    for place in KeyMarking.allCases {
-      mapping[place] = []
-      setPairPerPlace[place] = []
+    for place in PlaceType.allCases {
+      res[place] = [:]
     }
     
-    for el in markingMFDD {
-      for (place, values) in el {
-        setPairPerPlace[place]!.insert(values)
+    while pointer != markingMFDDFactory.one.pointer || pointer == markingMFDDFactory.zero.pointer {
+      for (key, _) in pointer.pointee.take {
+        multisetTemp.insert(key.l, occurences: key.r)
+      }
+      res[pointer.pointee.key] = multisetTemp
+      multisetTemp = []
+      
+      if let next = pointer.pointee.take.first?.value {
+        pointer = next
+      } else {
+        pointer = pointer.pointee.skip
       }
     }
     
-    for (place, values) in setPairPerPlace {
-      for value in values {
-        mapping[place]!.insert(value.l, occurences: value.r)
-      }
-    }
-    
-    return Marking<KeyMarking>(mapping)
+    return Marking<KeyMarking>(res)
   }
+  
   
   // Transform mfdd into a marking, i.e. a dictionnary with all values for each place.
 //  func simplifyMarking(marking: MFDD<P, Pair<String, Int>>) -> [String: Multiset<String>] {
