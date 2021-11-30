@@ -18,17 +18,16 @@ extension HeroNet where PlaceType: Comparable {
     let heroMFDDFactory = HeroMFDDFactory()
     var markingToCheck: Set<MarkingMFDD> = [m0MFDD]
     var markingAlreadyChecked: Set<MarkingMFDD> = [m0MFDD]
+    let netStaticOptimized = computeStaticOptimizedNet()
     
     while !markingToCheck.isEmpty {
       for marking in markingToCheck {
         for transition in TransitionType.allCases {
-          let markingsForAllBindings = fireForAllBindings(
+          let markingsForAllBindings = netStaticOptimized.fireForAllBindings(
             transition: transition,
             from: m0.mfddToMarking(markingMFDD: marking, markingMFDDFactory: markingMFDDFactory),
             markingMFDDFactory: markingMFDDFactory, heroMFDDFactory: heroMFDDFactory)
-//            .map({(mfddMarking) in
-//              return marking.mfddToMarking(markingMFDD: mfddMarking, markingMFDDFactory: markingMFDDFactory)
-//            })
+
           for newMarking in markingsForAllBindings {
             if !markingAlreadyChecked.contains(newMarking) {
               markingToCheck.insert(newMarking)
@@ -44,7 +43,7 @@ extension HeroNet where PlaceType: Comparable {
     
   }
   
-  public func fireForAllBindings(
+  private func fireForAllBindings(
     transition: TransitionType,
     from marking: Marking<PlaceType>,
     markingMFDDFactory: MarkingMFDDFactory,
@@ -52,23 +51,20 @@ extension HeroNet where PlaceType: Comparable {
   )
   -> Set<MarkingMFDD> {
         
-    let netStaticOptimized = computeStaticOptimizedNet(transition: transition)
+//    let netStaticOptimized = computeStaticOptimizedNet()
     
-    if let netStaticOptimized = netStaticOptimized {
-      let allBindings = netStaticOptimized.fireableBindings(for: transition, with: marking, factory: heroMFDDFactory)
-      var res: Set<MarkingMFDD> = []
-      for binding in allBindings {
-        let bindingWithLabel = Dictionary(
-          uniqueKeysWithValues: binding.map {
-            (key, value) in
-              (key.label, value)
-          })
-        res.insert(netStaticOptimized.fire(transition: transition, from: marking, with: bindingWithLabel, markingMFDDFactory: markingMFDDFactory))
-      }
-
-      return res
+    let allBindings = self.fireableBindings(for: transition, with: marking, factory: heroMFDDFactory)
+    var res: Set<MarkingMFDD> = []
+    for binding in allBindings {
+      let bindingWithLabel = Dictionary(
+        uniqueKeysWithValues: binding.map {
+          (key, value) in
+            (key.label, value)
+        })
+      res.insert(self.fire(transition: transition, from: marking, with: bindingWithLabel, markingMFDDFactory: markingMFDDFactory))
     }
-    return []
+
+    return res  
   }
   
   

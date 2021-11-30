@@ -24,10 +24,10 @@ extension HeroNet {
   func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
     
     // Static optimization, only depends on the structure of the net
-    let staticOptimizedNet = computeStaticOptimizedNet(transition: transition)
+    let staticOptimizedNet = computeStaticOptimizedNet()
     
     // Dynamic optimization, depends on the structure of the net and the marking
-    let tupleDynamicOptimizedNetAndnewMarking = staticOptimizedNet!.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
+    let tupleDynamicOptimizedNetAndnewMarking = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
     
     if let (dynamicOptimizedNet, placeToLabelToValues) = tupleDynamicOptimizedNetAndnewMarking {
       return dynamicOptimizedNet.fireableBindings(for: transition, placeToLabelToValues: placeToLabelToValues, factory: factory)
@@ -44,14 +44,16 @@ extension HeroNet {
   
   /// Takes the input net and optimizes it to get an optimize version if possible. It uses the information on guard to shift certain conditions such as equality variable or a constant expression equal to a variable on the structure and removes the condition.
   /// This is a purely static optimization that is applied on the structure, it does not depend on the marking.
-  /// - Parameters:
-  ///   - transition: The transition to optimize
   /// - Returns:
   ///   Returns an optimized net
-  public func computeStaticOptimizedNet(transition: TransitionType) -> HeroNet? {
-    let netConstantPropagationVariable = constantPropagationVariable(transition: transition)
-    let netConstantPropagation = constantPropagation(net: netConstantPropagationVariable, transition: transition)
-    return netConstantPropagation
+  public func computeStaticOptimizedNet() -> HeroNet {
+    
+    var netOptimized = self
+    for transition in TransitionType.allCases {
+      netOptimized = netOptimized.constantPropagationVariable(transition: transition)
+      netOptimized = netOptimized.constantPropagation(transition: transition)
+    }
+    return netOptimized
   }
   
   /// The constant propagation optimization uses guard of the form "x = constant expression" to replace all occurences of x by the constant expression in every possible expressions (e.g.: arcs, guards)
@@ -60,24 +62,23 @@ extension HeroNet {
   ///   - transition: The current transition
   /// - Returns:
   ///  Returns a new net where constant propagation is applied
-  private func constantPropagation(net: HeroNet, transition: TransitionType) -> HeroNet? {
+  private func constantPropagation(transition: TransitionType) -> HeroNet {
     
-    let labelSet = createLabelSet(net: net, transition: transition)
+    let labelSet = createLabelSet(transition: transition)
     
-    if let conditions = net.guards[transition] {
+    if let conditions = guards[transition] {
       // Isolate condition with a unique variable
       let (dicSameLabelToCondition, condRest) = isolateCondWithUniqueLabel(labelSet: labelSet, conditions: conditions)
       
       if let labelToConstant = createDicOfConstantLabel(dicUniqueLabelToCondition: dicSameLabelToCondition) {
         // We do not keep condition with a unique label in the future net !
-        var guardsTemp = net.guards
+        var guardsTemp = guards
         guardsTemp[transition] = condRest
-        let netTemp = HeroNet(input: net.input, output: net.output, guards: guardsTemp, interpreter: interpreter)
+        let netTemp = HeroNet(input: input, output: output, guards: guardsTemp, interpreter: interpreter)
         return replaceLabelsForATransition(labelToValue: labelToConstant, transition: transition, net: netTemp)
       }
-      return nil
     }
-    return net
+    return self
   }
   
   /// A general function to replace all occurence of a label by a certain value or variable. It looks at every arcs and guards.
@@ -187,7 +188,7 @@ extension HeroNet {
     
     guard let _ = guards[transition] else { return [:] }
     
-    let labelSet = createLabelSet(net: self, transition: transition)
+    let labelSet = createLabelSet(transition: transition)
     
     var eqLabelList: [Pair<Label, Label>] = []
     
@@ -352,7 +353,7 @@ extension HeroNet {
       return (self, placeToLabelToValues)
     }
     
-    let labelSet = createLabelSet(net: self, transition: transition)
+    let labelSet = createLabelSet(transition: transition)
     let (conditionWithSameLabel, conditionRest) = isolateCondWithSameLabel(labelSet: labelSet, transition: transition)
     let newPlaceToLabelToValue = optimizedCondWithSameLabel(placeToLabelToValue: placeToLabelToValues, conditionsWithSameLabel: conditionWithSameLabel)
     
@@ -459,7 +460,7 @@ extension HeroNet {
   
   private func fireableBindings(for transition: TransitionType, placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]], factory: HeroMFDDFactory) -> HeroMFDD {
     
-    let labelSet = createLabelSet(net: self, transition: transition)
+    let labelSet = createLabelSet(transition: transition)
     
     // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
     let (labelWeights, conditionWeights) = computeScoreOrder(
@@ -854,11 +855,11 @@ extension HeroNet {
   // ------------------------------ General functions -------------------------------- //
   // --------------------------------------------------------------------------------- //
   
-  private func createLabelSet(net: HeroNet, transition: TransitionType) -> Set<Label> {
+  private func createLabelSet(transition: TransitionType) -> Set<Label> {
     var labelSet: Set<Label> = []
     
     // Construct labelList by looking at on arcs
-    if let pre = net.input[transition] {
+    if let pre = input[transition] {
       for (_, labels) in pre {
         for label in labels {
           labelSet.insert(label)
