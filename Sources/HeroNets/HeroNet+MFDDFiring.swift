@@ -15,6 +15,7 @@ extension HeroNet where PlaceType: Comparable {
   -> Set<MarkingMFDD> {
     
     let m0MFDD = m0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+    let heroMFDDFactory = HeroMFDDFactory()
     var markingToCheck: Set<MarkingMFDD> = [m0MFDD]
     var markingAlreadyChecked: Set<MarkingMFDD> = [m0MFDD]
     
@@ -24,7 +25,7 @@ extension HeroNet where PlaceType: Comparable {
           let markingsForAllBindings = fireForAllBindings(
             transition: transition,
             from: m0.mfddToMarking(markingMFDD: marking, markingMFDDFactory: markingMFDDFactory),
-            markingMFDDFactory: markingMFDDFactory)
+            markingMFDDFactory: markingMFDDFactory, heroMFDDFactory: heroMFDDFactory)
 //            .map({(mfddMarking) in
 //              return marking.mfddToMarking(markingMFDD: mfddMarking, markingMFDDFactory: markingMFDDFactory)
 //            })
@@ -46,15 +47,14 @@ extension HeroNet where PlaceType: Comparable {
   public func fireForAllBindings(
     transition: TransitionType,
     from marking: Marking<PlaceType>,
-    markingMFDDFactory: MarkingMFDDFactory)
+    markingMFDDFactory: MarkingMFDDFactory,
+    heroMFDDFactory: HeroMFDDFactory
+  )
   -> Set<MarkingMFDD> {
-    
-    let heroMFDDFactory = HeroMFDDFactory()
-    
+        
     let netStaticOptimized = computeStaticOptimizedNet(transition: transition)
     
     if let netStaticOptimized = netStaticOptimized {
-      let markingMFDD = marking.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
       let allBindings = netStaticOptimized.fireableBindings(for: transition, with: marking, factory: heroMFDDFactory)
       var res: Set<MarkingMFDD> = []
       for binding in allBindings {
