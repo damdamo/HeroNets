@@ -88,7 +88,7 @@ extension HeroNet {
   ///   - net:The net that is optimized
   /// - Returns:
   ///  Returns a new net where label has been replaced by new values
-  private func replaceLabelsForATransition(labelToValue: [Label: Value], transition: TransitionType, net: HeroNet) -> HeroNet {
+  public func replaceLabelsForATransition(labelToValue: [Label: Value], transition: TransitionType, net: HeroNet) -> HeroNet {
     var newInput = net.input
     var newOutput = net.output
     var newGuards = net.guards
@@ -283,7 +283,7 @@ extension HeroNet {
   ///   - marking: The current marking
   /// - Returns:
   ///   Returns a new net modify with the optimizations and a dictionnary that contains for each place, possible values for labels
-  private func computeDynamicOptimizedNet(
+  public func computeDynamicOptimizedNet(
     transition: TransitionType,
     marking: Marking<PlaceType>) -> (HeroNet, [PlaceType: [Label: Multiset<Value>]])?
   {
@@ -855,7 +855,7 @@ extension HeroNet {
   // ------------------------------ General functions -------------------------------- //
   // --------------------------------------------------------------------------------- //
   
-  private func createLabelSet(transition: TransitionType) -> Set<Label> {
+  public func createLabelSet(transition: TransitionType) -> Set<Label> {
     var labelSet: Set<Label> = []
     
     // Construct labelList by looking at on arcs
