@@ -292,17 +292,17 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards for a list of conditions
-  private func checkGuards(conditions: [Pair<Value, Value>], with binding: [Label: Value]) -> Bool {
+  func checkGuards(conditions: [Pair<Value, Value>], with binding: [Label: Value]) -> Bool {
     for condition in conditions {
-      if !checkGuards(condition: condition, with: binding) {
+      if !checkGuard(condition: condition, with: binding) {
         return false
       }
     }
     return true
   }
   
-  // Check guards for a condition
-  func checkGuards(condition: Pair<Value, Value>, with binding: [Label: Value]) -> Bool {
+  // Check a guard
+  func checkGuard(condition: Pair<Value, Value>, with binding: [Label: Value]) -> Bool {
     let lhs = bindingSubstitution(expr: condition.l, binding: binding)
     let rhs = bindingSubstitution(expr: condition.r, binding: binding)
     // Check if both term are equals, thanks to the syntactic equivalence !
