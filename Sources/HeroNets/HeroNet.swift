@@ -322,7 +322,11 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
   func bindingSubstitution(expr: Value, binding: [Label: Value]) -> String {
     var res: String = "\(expr)"
-    for el in binding {
+    // The sorting is needed to avoid conflict where a variable is shorter than another and could take its place
+    // E.g.: $x = 2, $x_1 = 42, if the expression is $x_1 and the binding $x is read before, $x_1 -> 1_1
+    for el in binding.sorted(by: {(b1,b2) in
+      return b1.key.count > b2.key.count
+    }) {
       res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")
     }
     return res

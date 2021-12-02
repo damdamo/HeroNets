@@ -37,7 +37,7 @@ extension HeroNet {
           result[tuple.key.label] = tuple.value
           return result
         }
-        if heroNet.checkGuards(condition: condition, with: s) {
+        if heroNet.checkGuard(condition: condition, with: s) {
           return pointer
         } else {
           return factory.zero.pointer

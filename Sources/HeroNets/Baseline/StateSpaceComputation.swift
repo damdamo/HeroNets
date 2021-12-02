@@ -12,23 +12,92 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 //    
 //  }
   
+  
+  func bindingBruteForceWithOptimizedNet(
+    transition: TransitionType,
+    marking: Marking<PlaceType>)
+  -> Set<[Label: Value]> {
+    // Static optimization, only depends on the structure of the net
+    let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
+    
+    // Dynamic optimization, depends on the structure of the net and the marking
+//    let dynamicOptimizedNet = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
+    
+    if let (netWithoutConstant, newMarking) = staticOptimizedNet.removeConstantOnArcs(transition: transition, marking: marking) {
+      
+      // From old name to new name
+      let originalLabels = netWithoutConstant.createLabelSet(transition: transition)
+      let newNetWithUniqueLabel = setUniqueVariableForATransition(transition: transition, net: netWithoutConstant)
+      return fireableBindingsBF(transition: transition, marking: newMarking, net: newNetWithUniqueLabel, originalLabels: originalLabels)
+    }
+    
+    return []
+  }
+  
+  func CSSBruteForceWithOptimizedNet() {
+    
+  }
+  
+  func BindingBruteForce() {
+    
+  }
+  
+  func CSSBruteForce() {
+    
+  }
+  
+  // Return all fireable bindings for a transition in a brute force way
   func fireableBindingsBF(
     transition: TransitionType,
     marking: Marking<PlaceType>,
-    net: HeroNet<PlaceType, TransitionType>)
+    net: HeroNet<PlaceType, TransitionType>,
+    originalLabels: Set<Label>)
   -> Set<[Label: Value]> {
     
     var res: Set<[Label: Value]> = []
+    var temp: Set<[Label: Value]> = []
     var labels: [Label] = []
     
-    for place in PlaceType.allCases {
-      labels = net.input[transition]![place]!
-      res = computeBindingsForAPlaceBF(labels: labels, placeValues: marking[place])
-      labels = []
+    if let placeToValues = net.input[transition] {
+      for (place, values) in placeToValues {
+        labels = values
+        temp = computeBindingsForAPlaceBF(labels: labels, placeValues: marking[place])
+        
+        if res.isEmpty {
+          res = temp
+        }
+        
+        res = res.map({(dic1) -> Set<[Label: Value]> in
+          return Set(temp.map({(dic2) -> [Label: Value] in
+            return dic1.merging(dic2, uniquingKeysWith: {(old, _) in old})
+          }))
+        }).reduce([], {(cur, new) in
+          cur.union(new)
+        })
+      }
     }
+    
+    if let conditions = net.guards[transition] {
+      for binding in res {
+        if !net.checkGuards(conditions: conditions, with: binding) {
+          res.remove(binding)
+        }
+      }
+    }
+    
+    res = Set(res.map({(dic) -> [Label: Value] in
+      var dicTemp = dic
+      for (k,_) in dic {
+        if !originalLabels.contains(k) {
+          dicTemp.removeValue(forKey: k)
+        }
+      }
+      return dicTemp
+    }))
     
     return res
   }
+  
   
   func computeBindingsForAPlaceBF(
     labels: [Label],
@@ -72,45 +141,6 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     return res
   }
   
-  
-  func BindingBruteForceWithOptimizedNet(
-    transition: TransitionType,
-    marking: Marking<PlaceType>)
-  -> Set<[Label: Value]> {
-    // Static optimization, only depends on the structure of the net
-    let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
-    
-    // Dynamic optimization, depends on the structure of the net and the marking
-//    let dynamicOptimizedNet = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
-    
-    if let (netWithoutConstant, markingWithoutConstant) = staticOptimizedNet.removeConstantOnArcs(transition: transition, marking: marking) {
-      
-      // From old name to new name
-      let newNetWithUniqueLabel = setUniqueVariableForATransition(transition: transition, net: netWithoutConstant)
-
-      let labelSet = newNetWithUniqueLabel.createLabelSet(transition: transition)
-
-      
-//      replaceLabelsForATransition
-      
-      return fireableBindingsBF(transition: transition, marking: marking, net: newNetWithUniqueLabel)
-    }
-    
-    return []
-  }
-  
-  func CSSBruteForceWithOptimizedNet() {
-    
-  }
-  
-  func BindingBruteForce() {
-    
-  }
-  
-  func CSSBruteForce() {
-    
-  }
-  
   func setUniqueVariableForATransition(transition: TransitionType, net: HeroNet<PlaceType, TransitionType>) -> HeroNet<PlaceType, TransitionType> {
     
     var dicCountLabel: [Label: Int] = [:]
@@ -146,27 +176,27 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
     }
     
-    if let post = newOutput[transition] {
-      for (place, labels) in post {
-        for label in labels {
-          if dicCountLabel[label] != 0 {
-            if let index = newOutput[transition]![place]?.firstIndex(of: label) {
-              newOutput[transition]![place]!.remove(at: index)
-              let newName = "\(label)_\(dicCountLabel[label]!)"
-              newOutput[transition]![place]!.append(newName)
-              if let _ = newGuards[transition] {
-                newGuards[transition]!.append(Pair(label,newName))
-              } else {
-                newGuards[transition] = [Pair(label,newName)]
-              }
-              dicCountLabel[label]! += 1
-            }
-          } else {
-            dicCountLabel[label]! += 1
-          }
-        }
-      }
-    }
+//    if let post = newOutput[transition] {
+//      for (place, labels) in post {
+//        for label in labels {
+//          if dicCountLabel[label] != 0 {
+//            if let index = newOutput[transition]![place]?.firstIndex(of: label) {
+//              newOutput[transition]![place]!.remove(at: index)
+//              let newName = "\(label)_\(dicCountLabel[label]!)"
+//              newOutput[transition]![place]!.append(newName)
+//              if let _ = newGuards[transition] {
+//                newGuards[transition]!.append(Pair(label,newName))
+//              } else {
+//                newGuards[transition] = [Pair(label,newName)]
+//              }
+//              dicCountLabel[label]! += 1
+//            }
+//          } else {
+//            dicCountLabel[label]! += 1
+//          }
+//        }
+//      }
+//    }
     
     return HeroNet(input: newInput, output: newOutput, guards: newGuards, interpreter: net.interpreter)
     

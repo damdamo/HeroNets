@@ -376,7 +376,7 @@ extension HeroNet {
         if let conditions = conditionsWithSameLabel[label] {
           for condition in conditions {
             for value in Set(values) {
-              if !checkGuards(condition: condition, with: [label: value]) {
+              if !checkGuard(condition: condition, with: [label: value]) {
                 newPlaceToLabelToValue[place]![label]!.removeAll(value)
               }
             }
