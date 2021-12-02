@@ -312,7 +312,7 @@ extension HeroNet {
     return nil
   }
   
-  private func removeConstantOnArcs(
+  public func removeConstantOnArcs(
     transition: TransitionType,
     marking: Marking<PlaceType>) -> (HeroNet, Marking<PlaceType>)?
   {

@@ -13,25 +13,102 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 //  }
   
   func fireableBindingsBF(
-    net: HeroNet<PlaceType, TransitionType>,
-    placeToLabelToValues: [PlaceType : [Label : Multiset<Value>]])
+    transition: TransitionType,
+    marking: Marking<PlaceType>,
+    net: HeroNet<PlaceType, TransitionType>)
   -> Set<[Label: Value]> {
     
     var res: Set<[Label: Value]> = []
+    var labels: [Label] = []
     
-    for (place, labelToValues) in placeToLabelToValues {
-      res = computeBindingsForAPlaceBF(net: net, labelToValues: labelToValues)
+    for place in PlaceType.allCases {
+      labels = net.input[transition]![place]!
+      res = computeBindingsForAPlaceBF(labels: labels, placeValues: marking[place])
+      labels = []
     }
     
     return res
   }
   
   func computeBindingsForAPlaceBF(
-    net: HeroNet<PlaceType, TransitionType>,
-    labelToValues: [Label : Multiset<Value>]
+    labels: [Label],
+    placeValues: Multiset<Value>
   ) -> Set<[Label: Value]> {
     
+    if labels.count == 0 {
+      return []
+    }
+    
+    var res: Set<[Label: Value]> = []
+    var temp: Set<[Label: Value]> = []
+    var values = placeValues
+    
+    if let firstLabel = labels.first {
+      for value in values {
+        values.remove(value, occurences: 1)
+        temp = computeBindingsForAPlaceBF(labels: Array(labels.dropFirst()), placeValues: values)
+        res.insert([firstLabel: value])
+        
+        if temp.isEmpty {
+          for v in values {
+            res.insert([firstLabel: v])
+          }
+          return res
+        }
+        
+        res = res.map({(dic1) -> Set<[Label: Value]> in
+          return Set(temp.map({(dic2) -> [Label: Value] in
+            return dic1.merging(dic2, uniquingKeysWith: {(old, _) in old})
+          }))
+        }).reduce([], {(cur, new) in
+          cur.union(new)
+        })
+        
+        values = placeValues
+        
+      }
+    }
+    
+    return res
+  }
+  
+  
+  func BindingBruteForceWithOptimizedNet(
+    transition: TransitionType,
+    marking: Marking<PlaceType>)
+  -> Set<[Label: Value]> {
+    // Static optimization, only depends on the structure of the net
+    let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
+    
+    // Dynamic optimization, depends on the structure of the net and the marking
+//    let dynamicOptimizedNet = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
+    
+    if let (netWithoutConstant, markingWithoutConstant) = staticOptimizedNet.removeConstantOnArcs(transition: transition, marking: marking) {
+      
+      // From old name to new name
+      let newNetWithUniqueLabel = setUniqueVariableForATransition(transition: transition, net: netWithoutConstant)
+
+      let labelSet = newNetWithUniqueLabel.createLabelSet(transition: transition)
+
+      
+//      replaceLabelsForATransition
+      
+      return fireableBindingsBF(transition: transition, marking: marking, net: newNetWithUniqueLabel)
+    }
+    
     return []
+  }
+  
+  func CSSBruteForceWithOptimizedNet() {
+    
+  }
+  
+  func BindingBruteForce() {
+    
+  }
+  
+  func CSSBruteForce() {
+    
   }
   
   func setUniqueVariableForATransition(transition: TransitionType, net: HeroNet<PlaceType, TransitionType>) -> HeroNet<PlaceType, TransitionType> {
@@ -53,9 +130,14 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
           if dicCountLabel[label] != 0 {
             if let index = newInput[transition]![place]?.firstIndex(of: label) {
               newInput[transition]![place]!.remove(at: index)
-              let newName = "\(label)_\(dicCountLabel[label])"
+              let newName = "\(label)_\(dicCountLabel[label]!)"
               newInput[transition]![place]!.append(newName)
-              newGuards[transition]?.append(Pair(label,newName))
+              if let _ = newGuards[transition] {
+                newGuards[transition]!.append(Pair(label,newName))
+              } else {
+                newGuards[transition] = [Pair(label,newName)]
+              }
+              dicCountLabel[label]! += 1
             }
           } else {
             dicCountLabel[label]! += 1
@@ -70,9 +152,14 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
           if dicCountLabel[label] != 0 {
             if let index = newOutput[transition]![place]?.firstIndex(of: label) {
               newOutput[transition]![place]!.remove(at: index)
-              let newName = "\(label)_\(dicCountLabel[label])"
+              let newName = "\(label)_\(dicCountLabel[label]!)"
               newOutput[transition]![place]!.append(newName)
-              newGuards[transition]?.append(Pair(label,newName))
+              if let _ = newGuards[transition] {
+                newGuards[transition]!.append(Pair(label,newName))
+              } else {
+                newGuards[transition] = [Pair(label,newName)]
+              }
+              dicCountLabel[label]! += 1
             }
           } else {
             dicCountLabel[label]! += 1
@@ -82,43 +169,6 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     }
     
     return HeroNet(input: newInput, output: newOutput, guards: newGuards, interpreter: net.interpreter)
-    
-  }
-  
-  func BindingBruteForceWithOptimizedNet(
-    transition: TransitionType,
-    marking: Marking<PlaceType>)
-  -> Set<[Label: Value]> {
-    // Static optimization, only depends on the structure of the net
-    let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
-    
-    // Dynamic optimization, depends on the structure of the net and the marking
-    let dynamicOptimizedNet = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
-    
-    if let (dynamicOptimizedNet, placeToLabelToValues) = dynamicOptimizedNet {
-      
-      let labelSet = heroNet.createLabelSet(transition: transition)
-      // From old name to new name
-      var dicCountLabel: [Label: Int] = [:]
-      
-      
-//      replaceLabelsForATransition
-      
-      return fireableBindingsBF(net: dynamicOptimizedNet,placeToLabelToValues: placeToLabelToValues)
-    }
-    
-    return []
-  }
-  
-  func CSSBruteForceWithOptimizedNet() {
-    
-  }
-  
-  func BindingBruteForce() {
-    
-  }
-  
-  func CSSBruteForce() {
     
   }
   
