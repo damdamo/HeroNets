@@ -308,10 +308,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     // Check if both term are equals, thanks to the syntactic equivalence !
     // Moreover, allows to compare functions in a syntactic way
     if lhs != rhs {
-      let context = interpreter.saveContext()
       let v1 = eval(lhs)
       let v2 = eval(rhs)
-      interpreter.reloadContext(context: context)
       // If values are different and not are signature functions
       if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
         return false
