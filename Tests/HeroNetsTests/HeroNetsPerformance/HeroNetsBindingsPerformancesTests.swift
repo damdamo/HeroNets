@@ -59,11 +59,11 @@
 //    )
 //
 //    // Number of tests
-//    let test_number = 5
+//    let test_number = 1
 //
 //    // How many values in the place
 ////    let nb_el_in_place = [100,500,1000,2000,4000,6000]
-//    let nb_el_in_place = [100]
+//    let nb_el_in_place = [40]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
@@ -163,7 +163,7 @@
 //
 //    // How many values in the place
 //    //    let nb_el_in_place = [100,500,1000,2000,4000,6000]
-//    let nb_el_in_place = [100]
+//    let nb_el_in_place = [40]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
@@ -525,11 +525,11 @@
 //
 //    let markingMFDDFactory = MFDDFactory<P, Pair<P.Content.Key, Int>>()
 //    // Number of tests
-//    let test_number = 5
+//    let test_number = 1
 //
 //    // How many values in the place
 ////    let nb_el_in_place = [2000]
-//    let nb_el_in_place = [10]
+//    let nb_el_in_place = [2]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
