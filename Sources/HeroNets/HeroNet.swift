@@ -217,8 +217,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
       // In the case of pre, expressions is just a list of labels
       for (place, expressions) in pre {
-        for var_ in expressions {
-          multiset.insert(binding[var_]!)
+        for expr in expressions {
+          if expr.contains("$") {
+            multiset.insert(binding[expr]!)
+          } else {
+            multiset.insert(expr)
+          }
         }
         // Create a multiset for each place of input arcs of the transition
         inputMarking[place] = multiset
