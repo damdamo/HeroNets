@@ -21,7 +21,7 @@ extension HeroNet {
   ///   - factory: The factory needed to work on MFDD
   /// - Returns:
   ///   Returns all bindings for a specific transition and a marking
-  func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
+  public func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
     
     // Static optimization, only depends on the structure of the net
     let staticOptimizedNet = computeStaticOptimizedNet()
@@ -29,12 +29,27 @@ extension HeroNet {
     // Dynamic optimization, depends on the structure of the net and the marking
     let tupleDynamicOptimizedNetAndnewMarking = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
     
-    if let (dynamicOptimizedNet, placeToLabelToValues) = tupleDynamicOptimizedNetAndnewMarking {
-      return dynamicOptimizedNet.fireableBindings(for: transition, placeToLabelToValues: placeToLabelToValues, factory: factory)
+    if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
+      return dynamicOptimizedNet.fireableBindings(for: transition, marking: newMarking, factory: factory)
     }
     
     return factory.zero
   }
+  
+  /// Same method as fireableBindings, however there is no static optimization  here.
+  /// When the state space computation is performed, the static optimization is realized before to avoid unecessary computations.
+  func fireableBindingsForCSS(for transition: TransitionType, with marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
+    
+    // Dynamic optimization, depends on the structure of the net and the marking
+    let tupleDynamicOptimizedNetAndnewMarking = self.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
+    
+    if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
+      return dynamicOptimizedNet.fireableBindings(for: transition, marking: newMarking, factory: factory)
+    }
+    
+    return factory.zero
+  }
+
   
   
   // --------------------------------------------------------------------------------- //
@@ -274,10 +289,8 @@ extension HeroNet {
   // --------------------------------------------------------------------------------- //
   
   /// Computes dynamic optimizations on the net and constructs dictionnary that binds place to their labels and their corresponding values
-  /// Thereare three dynamics optimizations:
+  /// There is one optimization:
   /// - Remove constant on arcs: Remove the constant on the arc and remove it into the marking
-  /// - Optimize guard with same label: If a condition has the same variable, the possible values for this label will be tested to keep only which are satisfied. Moreover, it deletes the condition
-  /// - Optimize same label on arcs: If different arcs have the same label, we apply a kind of intersection to keep only values that are possibles for both arcs.
   /// - Parameters:
   ///   - transition: The current transition
   ///   - marking: The current marking
@@ -285,30 +298,12 @@ extension HeroNet {
   ///   Returns a new net modify with the optimizations and a dictionnary that contains for each place, possible values for labels
   public func computeDynamicOptimizedNet(
     transition: TransitionType,
-    marking: Marking<PlaceType>) -> (HeroNet, [PlaceType: [Label: Multiset<Value>]])?
+    marking: Marking<PlaceType>) -> (HeroNet, Marking<PlaceType>)?
   {
-    
-    // Dynamic optimizations that modify the structure and the marking
-    
     // Optimizations on constant on arcs, removing it from the net and from the marking in  the place
     if let (netWithoutConstant, markingWithoutConstant) = removeConstantOnArcs(transition: transition, marking: marking) {
-      // Transform the marking into a more complete structure that says how many values are available for each label of each place
-      let placeToLabelToValues = netWithoutConstant.computeValuesForLabel(transition: transition, marking: markingWithoutConstant)
-      // Filter condition with the same variable that are more complex than just x = constant (e.g.:  x%2 = 0).
-      // Remove the conditions and keep values that satisfie these kind of conditions.
-      
-      // If there is no value for a label, it means there are no valid bindings
-      for (_, labelToValues) in placeToLabelToValues {
-        for (_, values) in labelToValues {
-          if values.isEmpty {
-            return nil
-          }
-        }
-      }
-     return optimizedGuardWithSameLabel(transition: transition, placeToLabelToValues: placeToLabelToValues)
-
+      return (netWithoutConstant, markingWithoutConstant)
     }
-    
     return nil
   }
   
@@ -316,7 +311,6 @@ extension HeroNet {
     transition: TransitionType,
     marking: Marking<PlaceType>) -> (HeroNet, Marking<PlaceType>)?
   {
-
     var newMarking = marking
     var newInput = input
     
@@ -346,49 +340,6 @@ extension HeroNet {
   }
   
   
-  private func optimizedGuardWithSameLabel(transition: TransitionType, placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]])
-  -> (HeroNet, [PlaceType: [Label: Multiset<Value>]])
-  {
-    guard let _ = guards[transition] else {
-      return (self, placeToLabelToValues)
-    }
-    
-    let labelSet = createLabelSet(transition: transition)
-    let (conditionWithSameLabel, conditionRest) = isolateCondWithSameLabel(labelSet: labelSet, transition: transition)
-    let newPlaceToLabelToValue = optimizedCondWithSameLabel(placeToLabelToValue: placeToLabelToValues, conditionsWithSameLabel: conditionWithSameLabel)
-    
-    var newGuard = guards
-    newGuard[transition]! = conditionRest
-    
-    return (
-      HeroNet(input: self.input, output: self.output, guards: newGuard, interpreter: interpreter),
-      newPlaceToLabelToValue
-    )
-  }
-  
-  private func optimizedCondWithSameLabel(placeToLabelToValue: [PlaceType: [Label: Multiset<Value>]], conditionsWithSameLabel: [Label: [Pair<Value, Value>]]) -> [PlaceType: [Label: Multiset<Value>]]
-  {
-
-    var newPlaceToLabelToValue = placeToLabelToValue
-
-    for (place, labelToValues) in newPlaceToLabelToValue {
-      for (label, values) in labelToValues {
-        if let conditions = conditionsWithSameLabel[label] {
-          for condition in conditions {
-            for value in Set(values) {
-              if !checkGuard(condition: condition, with: [label: value]) {
-                newPlaceToLabelToValue[place]![label]!.removeAll(value)
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    return newPlaceToLabelToValue
-    
-  }
-  
   /// Compute possible values for labels of each place
   /// - Parameters:
   ///   - transition: The current transition
@@ -413,43 +364,6 @@ extension HeroNet {
   }
   
   
-  /// Isolate conditions with the same variable to apply
-  /// - Parameters:
-  ///   - labelSet: A set containing each label of the net
-  ///   - transition: The current transition
-  /// - Returns:
-  ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
-  private func isolateCondWithSameLabel(labelSet: Set<Label>, transition: TransitionType) -> ([Label: [Pair<Value, Value>]], [Pair<Value, Value>]) {
-
-    var labelSetTemp: Set<Label> = []
-    var condWithUniqueVariable: [Label: [Pair<Value, Value>]] = [:]
-    var restConditions: [Pair<Value, Value>] = []
-
-    if let conditions = guards[transition] {
-      for condition in conditions {
-        for label in labelSet {
-          if condition.l.contains(label) || condition.r.contains(label) {
-            labelSetTemp.insert(label)
-          }
-        }
-        // Check that we have the same variable, and one of both side contains just this variable
-        if labelSetTemp.count == 1 {
-          if let _ = condWithUniqueVariable[labelSetTemp.first!] {
-            condWithUniqueVariable[labelSetTemp.first!]!.append(condition)
-          } else {
-            condWithUniqueVariable[labelSetTemp.first!] = [condition]
-          }
-        } else {
-          restConditions.append(condition)
-        }
-        labelSetTemp = []
-      }
-    }
-    return (condWithUniqueVariable, restConditions)
-
-  }
-  
-  
   // --------------------------------------------------------------------------------- //
   // ------------------- End of functions for dynamic optimization ------------------- //
   // --------------------------------------------------------------------------------- //
@@ -458,7 +372,7 @@ extension HeroNet {
   // ----------------------------- Functions for MFDD -------------------------------- //
   // --------------------------------------------------------------------------------- //
   
-  private func fireableBindings(for transition: TransitionType, placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]], factory: HeroMFDDFactory) -> HeroMFDD {
+  private func fireableBindings(for transition: TransitionType, marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
     
     let labelSet = createLabelSet(transition: transition)
     
@@ -467,6 +381,18 @@ extension HeroNet {
       labelSet: labelSet,
       conditions: guards[transition]
     )
+    
+    let placeToLabelToValues = bindValuesToLabels(transition: transition, marking: marking)
+    
+    // Check that each labels has at least one possibility
+    for (place, dicLabelToValues) in placeToLabelToValues {
+      for (label, _) in dicLabelToValues {
+        if placeToLabelToValues[place]![label]!.isEmpty {
+          return factory.zero
+        }
+      }
+    }
+    
     
     // Return the precedent placeToLabelToValues value to the same one where label are now key
     let placeToKeyToValues = fromLabelToKey(labelSet: labelSet, labelWeights: labelWeights, placeToLabelToValues: placeToLabelToValues)
@@ -499,6 +425,24 @@ extension HeroNet {
     
     return MFDD(pointer: mfddPointer, factory: factory)
 
+  }
+  
+  private func bindValuesToLabels(
+    transition: TransitionType,
+    marking: Marking<PlaceType>
+  ) -> [PlaceType: [Label: Multiset<Value>]] {
+    
+    var res: [PlaceType: [Label: Multiset<Value>]] = [:]
+    if let dicPlaceToLabel = input[transition] {
+      for (place, labels) in dicPlaceToLabel {
+        res[place] = [:]
+        for label in labels {
+          res[place]![label] = marking[place]
+        }
+      }
+      return res
+    }
+    return [:]
   }
   
   /// Transform labels into key in the place to label to values structure.

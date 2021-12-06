@@ -53,7 +53,7 @@ extension HeroNet where PlaceType: Comparable {
         
 //    let netStaticOptimized = computeStaticOptimizedNet()
     
-    let allBindings = self.fireableBindings(for: transition, with: marking, factory: heroMFDDFactory)
+    let allBindings = self.fireableBindingsForCSS(for: transition, with: marking, factory: heroMFDDFactory)
     var res: Set<MarkingMFDD> = []
     for binding in allBindings {
       let bindingWithLabel = Dictionary(
@@ -67,37 +67,6 @@ extension HeroNet where PlaceType: Comparable {
     return res  
   }
   
-  
-//  public func fireForAllBindings(
-//    transition: TransitionType,
-//    from marking: Marking<PlaceType>,
-//    markingMFDDFactory: MarkingMFDDFactory)
-//  -> Set<MarkingMFDD> {
-//
-//    let heroMFDDFactory = HeroMFDDFactory()
-//
-//    let netStaticOptimized = computeStaticOptimizedNet(transition: transition)
-//    let markingMFDD = marking.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
-//
-//    if let netStaticOptimized = netStaticOptimized {
-//
-//      let allBindings = netStaticOptimized.fireableBindings(for: transition, with: marking, factory: heroMFDDFactory)
-//      var res: Set<MarkingMFDD> = [markingMFDD]
-//
-//      for binding in allBindings {
-//        let bindingWithLabel = Dictionary(
-//          uniqueKeysWithValues: binding.map {
-//            (key, value) in
-//              (key.label, value)
-//          })
-//
-//        res.insert(netStaticOptimized.fire(transition: transition, from: marking, with: bindingWithLabel, markingMFDDFactory: markingMFDDFactory))
-//      }
-//
-//      return res
-//    }
-//    return []
-//  }
   
   /// Fire a transition using MFDD. It transforms a marking into a MFDD, then compute a homorphism for pre and post arcs.
   /// Eventually, it computes the final result using a composition of both homorphism on the marking.
