@@ -5,7 +5,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   typealias Label = String
   typealias Value = PlaceType.Content.Key
 
-  let heroNet: HeroNet<PlaceType, TransitionType>
+  var heroNet: HeroNet<PlaceType, TransitionType>
   
 //  func optimizedNet() -> HeroNet<PlaceType, TransitionType> {
 //    var optimizedNet = heroNet.computeStaticOptimizedNet()
@@ -34,17 +34,76 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     return []
   }
   
-  func CSSBruteForceWithOptimizedNet() {
-    
-  }
   
   func BindingBruteForce() {
     
   }
   
+  
+  func CSSBruteForceWithOptimizedNet(marking: Marking<PlaceType>) -> Set<Marking<PlaceType>> {
+    let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
+    return computeStateSpace(from: marking, net: staticOptimizedNet)
+  }
+  
+  
   func CSSBruteForce() {
     
   }
+  
+  func computeStateSpace(
+    from m0: Marking<PlaceType>,
+    net: HeroNet<PlaceType, TransitionType>
+  ) -> Set<Marking<PlaceType>> {
+    var markingToCheck: Set<Marking<PlaceType>> = [m0]
+    var markingAlreadyChecked: Set<Marking<PlaceType>> = [m0]
+//    let netStaticOptimized = self.heroNet.computeStaticOptimizedNet()
+    
+    while !markingToCheck.isEmpty {
+      for marking in markingToCheck {
+        for transition in TransitionType.allCases {
+          if let (newNet, newMarking) = net.removeConstantOnArcs(transition: transition, marking: marking) {
+            let markingsForAllBindings = fireForAllBindings(
+              transition: transition,
+              from: newMarking,
+              net: newNet
+            )
+
+            for newMarking in markingsForAllBindings {
+              if !markingAlreadyChecked.contains(newMarking) {
+                markingToCheck.insert(newMarking)
+                markingAlreadyChecked.insert(newMarking)
+              }
+            }
+          }
+          markingToCheck.remove(marking)
+        }
+      }
+    }
+    
+    return markingAlreadyChecked
+    
+  }
+  
+  func fireForAllBindings(
+    transition: TransitionType,
+    from marking: Marking<PlaceType>,
+    net: HeroNet<PlaceType, TransitionType>
+  ) -> Set<Marking<PlaceType>> {
+    
+    let originalLabels = net.createLabelSet(transition: transition)
+    let allBindings = fireableBindingsBF(transition: transition, marking: marking, net: net, originalLabels: originalLabels)
+//    let allBindings = bindingBruteForceWithOptimizedNet(transition: transition, marking: marking)
+    var res: Set<Marking<PlaceType>> = []
+    for binding in allBindings {
+      if let firingResult = net.fire(transition: transition, from: marking, with: binding) {
+        res.insert(firingResult)
+      }
+    }
+
+    return res
+    
+  }
+  
   
   // Return all fireable bindings for a transition in a brute force way
   func fireableBindingsBF(
@@ -151,7 +210,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     }
     
     var newInput = net.input
-    var newOutput = net.output
+    let newOutput = net.output
     var newGuards = net.guards
     
     if let pre = newInput[transition] {
