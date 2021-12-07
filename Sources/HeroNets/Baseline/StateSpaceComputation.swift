@@ -66,6 +66,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
               transition: transition,
               from: newMarking,
               net: newNet
+//              from: newMarking,
+//              net: newNet
             )
 
             for newMarking in markingsForAllBindings {
@@ -92,7 +94,6 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     
     let originalLabels = net.createLabelSet(transition: transition)
     let allBindings = fireableBindingsBF(transition: transition, marking: marking, net: net, originalLabels: originalLabels)
-//    let allBindings = bindingBruteForceWithOptimizedNet(transition: transition, marking: marking)
     var res: Set<Marking<PlaceType>> = []
     for binding in allBindings {
       if let firingResult = net.fire(transition: transition, from: marking, with: binding) {
@@ -120,7 +121,13 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     if let placeToValues = net.input[transition] {
       for (place, values) in placeToValues {
         labels = values
-        temp = computeBindingsForAPlaceBF(labels: labels, placeValues: marking[place])
+        
+        // If there is no label, the empty solution is good
+        if labels.isEmpty {
+          temp = [[:]]
+        } else {
+          temp = computeBindingsForAPlaceBF(labels: labels, placeValues: marking[place])
+        }
         
         if res.isEmpty {
           res = temp

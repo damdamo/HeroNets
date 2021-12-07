@@ -141,6 +141,38 @@ final class HeroNetsTests: XCTestCase {
     XCTAssertEqual(marking1AfterFiringApply, marking1AfterFiringApplyExpected)
     
   }
+  
+  func testFireWithoutValuesOnPreArcs() {
+    enum P3: Place {
+      typealias Content = Multiset<String>
+      
+      case p1,p2
+    }
+    
+    enum T3: Transition {
+      case t1
+    }
+    
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
+
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
+    let model = HeroNet<P3, T3>(
+      .pre(from: .p1, to: .t1, labeled: []),
+      .post(from: .t1, to: .p2, labeled: ["1"]),
+      guards: [.t1: nil],
+      interpreter: interpreter
+    )
+    
+    let marking1 = Marking<P3>([.p1: [], .p2: []])
+    
+    let res = model.fire(transition: .t1, from: marking1, with: [:])!
+    XCTAssertEqual(res, Marking<P3>([.p1: [], .p2: ["1"]]))
+  }
 
   static var allTests = [
     ("testIsFireable", testIsFireable),

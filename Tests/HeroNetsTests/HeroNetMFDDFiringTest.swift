@@ -114,29 +114,29 @@ final class AllFiringTests: XCTestCase {
     print(simplifyMarking(marking: res))
   }
   
-  func testForAllFiring0() {
-    
-    let heroMFDDFactory = MFDDFactory<KeyMFDD<String>, String>()
-    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
-    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
-    
-    let interpreter = Interpreter()
-//    try! interpreter.loadModule(fromString: "")
-    
-    let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: ["$x", "2"]),
-      .pre(from: .p2, to: .t1, labeled: ["$y"]),
-      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
-      guards: [.t1: nil],
-      interpreter: interpreter
-    )
-    
-    let marking = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
-//    let markings1 = model.fireForAllBindings(transition: .t1, from: marking, markingMFDDFactory: markingMFDDFactory, heroMFDDFactory: heroMFDDFactory)
-//
-//    XCTAssertEqual(markings1.count, 4)
-    
-  }
+//  func testForAllFiring0() {
+//    
+//    let heroMFDDFactory = MFDDFactory<KeyMFDD<String>, String>()
+//    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+//    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+//    
+//    let interpreter = Interpreter()
+////    try! interpreter.loadModule(fromString: "")
+//    
+//    let model = HeroNet<P, T>(
+//      .pre(from: .p1, to: .t1, labeled: ["$x", "2"]),
+//      .pre(from: .p2, to: .t1, labeled: ["$y"]),
+//      .post(from: .t1, to: .p3, labeled: ["$x+$y"]),
+//      guards: [.t1: nil],
+//      interpreter: interpreter
+//    )
+//    
+//    let marking = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
+////    let markings1 = model.fireForAllBindings(transition: .t1, from: marking, markingMFDDFactory: markingMFDDFactory, heroMFDDFactory: heroMFDDFactory)
+////
+////    XCTAssertEqual(markings1.count, 4)
+//    
+//  }
   
   func testComputeSpace0() {
     let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
