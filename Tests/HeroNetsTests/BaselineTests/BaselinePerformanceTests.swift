@@ -63,11 +63,11 @@
 //
 //    // How many values in the place
 ////    let nb_el_in_place = [100,500,1000,2000,4000,6000]
-//    let nb_el_in_place = [40]
+//    let nb_el_in_place = [20]
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
-//    
+//
 //    let baseline = Baseline(heroNet: model)
 //
 //    var times: [Double] = []
@@ -84,6 +84,8 @@
 //        print("Try nb: \(i)")
 //        s.reset()
 //        let x = baseline.bindingBruteForceWithOptimizedNet(transition: .apply, marking: marking1)
+////        let x = baseline.bindingBruteForce(transition: .apply, marking: marking1)
+//
 //        print(x.count)
 //        times.append(s.elapsed.s)
 //        s.reset()
@@ -166,7 +168,7 @@
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
-//    
+//
 //    let baseline = Baseline(heroNet: model)
 //
 //    var times: [Double] = []
@@ -364,7 +366,7 @@
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
-//    
+//
 //    let baseline = Baseline(heroNet: model)
 //
 //    var times: [Double] = []
@@ -472,7 +474,7 @@
 //    let marking1 = Marking<P1>([.op: ["add","sub","mul","div"], .n: seq, .res: []])
 //
 //    let baseline = Baseline(heroNet: model)
-//    
+//
 //    let s: Stopwatch = Stopwatch()
 //
 //    let x = baseline.bindingBruteForceWithOptimizedNet(transition: .apply, marking: marking1)
@@ -483,7 +485,7 @@
 //    print(s.elapsed.humanFormat)
 //    print("----------------------------------")
 //  }
-//  
+//
 //
 //  func testPerformance5() {
 //    enum P: Place, Hashable, Comparable {
@@ -525,7 +527,7 @@
 //    var res: [Int: (avg_time: Double, count: Int, std_time: Double)] = [:]
 //
 //    var seq: Multiset<String>  = []
-//    
+//
 //    let baseline = Baseline(heroNet: model)
 //
 //    var times: [Double] = []

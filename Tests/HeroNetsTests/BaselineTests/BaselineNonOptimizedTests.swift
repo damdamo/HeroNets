@@ -3,7 +3,7 @@ import DDKit
 @testable import HeroNets
 import XCTest
 
-final class BaselineTests: XCTestCase {
+final class BaselineNonOptimizedTests: XCTestCase {
   
   typealias Label = String
   typealias Value = String
@@ -65,9 +65,9 @@ final class BaselineTests: XCTestCase {
     
     let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "3", "4"], .p3: ["1", "3"]])
     let baseline = Baseline(heroNet: model)
-    let bindings = baseline.bindingBruteForceWithOptimizedNet(transition: .t1, marking: marking)
+    let bindings = baseline.bindingBruteForce(transition: .t1, marking: marking)
     
-    let expectedRes = Set([["$x": "1", "$b": "1", "$z": "2"], ["$b": "1", "$x": "2", "$z": "3"]])
+    let expectedRes = Set([["$a": "1", "$y": "2", "$x": "1", "$b": "1", "$z": "2"], ["$b": "1", "$y": "3", "$a": "1", "$z": "3", "$x": "2"]])
     
     XCTAssertEqual(bindings, expectedRes)
   }
@@ -116,7 +116,7 @@ final class BaselineTests: XCTestCase {
 
     let marking = Marking<P>([.p1: ["1","2","3"], .p2: []])
     let baseline = Baseline(heroNet: model)
-    let markings = baseline.CSSBruteForceWithOptimizedNet(marking: marking)
+    let markings = baseline.CSSBruteForce(marking: marking)
 
     print(markings.count)
     
@@ -186,14 +186,14 @@ final class BaselineTests: XCTestCase {
     
     var marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["0","1"], .op: ["add","sub"]])
     let baseline = Baseline(heroNet: model)
-    var markings = baseline.CSSBruteForceWithOptimizedNet(marking: marking)
+    var markings = baseline.CSSBruteForce(marking: marking)
 
     XCTAssertEqual(markings.count, 19)
 
     marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["2","3","4","5"], .op: ["sub","mul","add","div"]])
 
     let s = Stopwatch()
-    markings = baseline.CSSBruteForceWithOptimizedNet(marking: marking)
+    markings = baseline.CSSBruteForce(marking: marking)
     print(s.elapsed.humanFormat)
     print(markings.count)
 

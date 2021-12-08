@@ -7,21 +7,15 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 
   var heroNet: HeroNet<PlaceType, TransitionType>
   
-//  func optimizedNet() -> HeroNet<PlaceType, TransitionType> {
-//    var optimizedNet = heroNet.computeStaticOptimizedNet()
-//    
-//  }
+  // -------------------------- BRUTE FORCE OPTIMIZED NET -------------------------- //
   
-  
+  /// Compute bindings of a transition and a marking in a hero net with optimizations
   func bindingBruteForceWithOptimizedNet(
     transition: TransitionType,
     marking: Marking<PlaceType>)
   -> Set<[Label: Value]> {
     // Static optimization, only depends on the structure of the net
     let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
-    
-    // Dynamic optimization, depends on the structure of the net and the marking
-//    let dynamicOptimizedNet = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
     
     if let (netWithoutConstant, newMarking) = staticOptimizedNet.removeConstantOnArcs(transition: transition, marking: marking) {
       
@@ -34,29 +28,43 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     return []
   }
   
-  
-  func BindingBruteForce() {
-    
-  }
-  
-  
+  /// Compute the state space of a hero net for a marking with optimizations
   func CSSBruteForceWithOptimizedNet(marking: Marking<PlaceType>) -> Set<Marking<PlaceType>> {
     let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
     return computeStateSpace(from: marking, net: staticOptimizedNet)
   }
   
+  // -------------------------- BRUTE FORCE NON OPTIMIZED NET -------------------------- //
   
-  func CSSBruteForce() {
+  /// Compute bindings of a transition and a marking in a hero net without optimization
+  func bindingBruteForce(
+    transition: TransitionType,
+    marking: Marking<PlaceType>)
+  -> Set<[Label: Value]> {
     
+    if let (netWithoutConstant, newMarking) = self.heroNet.removeConstantOnArcs(transition: transition, marking: marking) {
+      // From old name to new name
+      let originalLabels = netWithoutConstant.createLabelSet(transition: transition)
+      let newNetWithUniqueLabel = setUniqueVariableForATransition(transition: transition, net: netWithoutConstant)
+      return fireableBindingsBF(transition: transition, marking: newMarking, net: newNetWithUniqueLabel, originalLabels: originalLabels)
+    }
+    return []
   }
   
+  /// Compute the state space of a hero net for a marking without optimization
+  func CSSBruteForce(marking: Marking<PlaceType>) -> Set<Marking<PlaceType>> {
+    return computeStateSpace(from: marking, net: self.heroNet)
+  }
+  
+  // -------------------------- Computation functions -------------------------- //
+
+  /// Compute the state space of a hero net for a marking
   func computeStateSpace(
     from m0: Marking<PlaceType>,
     net: HeroNet<PlaceType, TransitionType>
   ) -> Set<Marking<PlaceType>> {
     var markingToCheck: Set<Marking<PlaceType>> = [m0]
     var markingAlreadyChecked: Set<Marking<PlaceType>> = [m0]
-//    let netStaticOptimized = self.heroNet.computeStaticOptimizedNet()
     
     while !markingToCheck.isEmpty {
       for marking in markingToCheck {
@@ -66,8 +74,6 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
               transition: transition,
               from: newMarking,
               net: newNet
-//              from: newMarking,
-//              net: newNet
             )
 
             for newMarking in markingsForAllBindings {
@@ -86,6 +92,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     
   }
   
+  /// Fire all possible bindings for a transition
   func fireForAllBindings(
     transition: TransitionType,
     from marking: Marking<PlaceType>,
@@ -106,7 +113,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   
-  // Return all fireable bindings for a transition in a brute force way
+  /// Return all fireable bindings for a transition in a brute force way
   func fireableBindingsBF(
     transition: TransitionType,
     marking: Marking<PlaceType>,
@@ -242,32 +249,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
     }
     
-//    if let post = newOutput[transition] {
-//      for (place, labels) in post {
-//        for label in labels {
-//          if dicCountLabel[label] != 0 {
-//            if let index = newOutput[transition]![place]?.firstIndex(of: label) {
-//              newOutput[transition]![place]!.remove(at: index)
-//              let newName = "\(label)_\(dicCountLabel[label]!)"
-//              newOutput[transition]![place]!.append(newName)
-//              if let _ = newGuards[transition] {
-//                newGuards[transition]!.append(Pair(label,newName))
-//              } else {
-//                newGuards[transition] = [Pair(label,newName)]
-//              }
-//              dicCountLabel[label]! += 1
-//            }
-//          } else {
-//            dicCountLabel[label]! += 1
-//          }
-//        }
-//      }
-//    }
-    
     return HeroNet(input: newInput, output: newOutput, guards: newGuards, interpreter: net.interpreter)
     
   }
-  
-//  func computeAllBindings() -> Set<Marking<Pla>> {}
   
 }
