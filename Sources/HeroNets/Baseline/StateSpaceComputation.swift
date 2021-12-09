@@ -2,15 +2,15 @@ public struct Baseline<PlaceType, TransitionType>
 where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: Transition
 {
   
-  typealias Label = String
-  typealias Value = PlaceType.Content.Key
+  public typealias Label = String
+  public typealias Value = PlaceType.Content.Key
 
   var heroNet: HeroNet<PlaceType, TransitionType>
   
   // -------------------------- BRUTE FORCE OPTIMIZED NET -------------------------- //
   
   /// Compute bindings of a transition and a marking in a hero net with optimizations
-  func bindingBruteForceWithOptimizedNet(
+  public func bindingBruteForceWithOptimizedNet(
     transition: TransitionType,
     marking: Marking<PlaceType>)
   -> Set<[Label: Value]> {
@@ -29,7 +29,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   /// Compute the state space of a hero net for a marking with optimizations
-  func CSSBruteForceWithOptimizedNet(marking: Marking<PlaceType>) -> Set<Marking<PlaceType>> {
+  public func CSSBruteForceWithOptimizedNet(marking: Marking<PlaceType>) -> Set<Marking<PlaceType>> {
     let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
     return computeStateSpace(from: marking, net: staticOptimizedNet)
   }
@@ -37,7 +37,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   // -------------------------- BRUTE FORCE NON OPTIMIZED NET -------------------------- //
   
   /// Compute bindings of a transition and a marking in a hero net without optimization
-  func bindingBruteForce(
+  public func bindingBruteForce(
     transition: TransitionType,
     marking: Marking<PlaceType>)
   -> Set<[Label: Value]> {
@@ -52,7 +52,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   /// Compute the state space of a hero net for a marking without optimization
-  func CSSBruteForce(marking: Marking<PlaceType>) -> Set<Marking<PlaceType>> {
+  public func CSSBruteForce(marking: Marking<PlaceType>) -> Set<Marking<PlaceType>> {
     return computeStateSpace(from: marking, net: self.heroNet)
   }
   
