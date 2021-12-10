@@ -7,6 +7,10 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
 
   var heroNet: HeroNet<PlaceType, TransitionType>
   
+  public init(heroNet: HeroNet<PlaceType, TransitionType>) {
+    self.heroNet = heroNet
+  }
+  
   // -------------------------- BRUTE FORCE OPTIMIZED NET -------------------------- //
   
   /// Compute bindings of a transition and a marking in a hero net with optimizations
