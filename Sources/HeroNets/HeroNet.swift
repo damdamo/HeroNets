@@ -208,13 +208,15 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     
     var inputMarking: [PlaceType: PlaceType.Content] = [:]
     var outputMarking: [PlaceType: PlaceType.Content] = [:]
+      
+    for place in PlaceType.allCases {
+      inputMarking[place] = [:]
+      outputMarking[place] = [:]
+    }
     
     // Compute input marking
     if let pre = input[transition] {
       var multiset: Multiset<String> = [:]
-      for place in PlaceType.allCases {
-        inputMarking[place] = [:]
-      }
       // In the case of pre, expressions is just a list of labels
       for (place, expressions) in pre {
         for expr in expressions {
@@ -236,9 +238,6 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     // Compute result of input arcs
     if let post = output[transition] {
       var multiset: Multiset<String> = [:]
-      for place in PlaceType.allCases {
-        outputMarking[place] = [:]
-      }
       // In the case of post, expressions is a list of strings containing labels
       for (place, expressions) in post {
         for expr in expressions {
