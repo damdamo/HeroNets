@@ -8,7 +8,6 @@ extension HeroNet where PlaceType: Comparable {
   public typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
   public typealias MarkingMFDDMorphismFactory = MFDDMorphismFactory<KeyMarking, ValueMarking>
   
-  
   public func computeStateSpace(
     from m0: Marking<PlaceType>,
     markingMFDDFactory: MarkingMFDDFactory)
@@ -28,6 +27,39 @@ extension HeroNet where PlaceType: Comparable {
             from: m0.mfddToMarking(markingMFDD: marking, markingMFDDFactory: markingMFDDFactory),
             markingMFDDFactory: markingMFDDFactory, heroMFDDFactory: heroMFDDFactory)
 
+          for newMarking in markingsForAllBindings {
+            if !markingAlreadyChecked.contains(newMarking) {
+              markingToCheck.insert(newMarking)
+              markingAlreadyChecked.insert(newMarking)
+            }
+          }
+        }
+        markingToCheck.remove(marking)
+      }
+    }
+    
+    return markingAlreadyChecked
+    
+  }
+  
+  public func computeStateSpaceAlternative(
+    from m0: Marking<PlaceType>,
+    markingMFDDFactory: MarkingMFDDFactory)
+  -> Set<Marking<PlaceType>> {
+    
+    var markingToCheck: Set<Marking<PlaceType>> = [m0]
+    var markingAlreadyChecked: Set<Marking<PlaceType>> = [m0]
+    let netStaticOptimized = computeStaticOptimizedNet()
+    let x = Baseline(heroNet: self)
+    
+    while !markingToCheck.isEmpty {
+      for marking in markingToCheck {
+        for transition in TransitionType.allCases {
+          let markingsForAllBindings = x.fireForAllBindings(
+            transition: transition,
+            from: marking,
+            net: netStaticOptimized
+          )
           for newMarking in markingsForAllBindings {
             if !markingAlreadyChecked.contains(newMarking) {
               markingToCheck.insert(newMarking)
@@ -79,13 +111,15 @@ extension HeroNet where PlaceType: Comparable {
   public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Label: Value], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD {
     
     var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
-
     let markingMFDD = marking.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
     let preHomomorphism = computePreHomomorphism(binding: binding, transition: transition, morphisms: morphisms)
-    let postHomomorphism = computePostHomomorphism(binding: binding, transition: transition, morphisms: morphisms)
     
-    let compositionHomomorphism = morphisms.composition(of: preHomomorphism, with: postHomomorphism)
-    return compositionHomomorphism.apply(on: markingMFDD)
+    if let _ = output[transition] {
+      let postHomomorphism = computePostHomomorphism(binding: binding, transition: transition, morphisms: morphisms)
+      let compositionHomomorphism = morphisms.composition(of: preHomomorphism, with: postHomomorphism)
+      return compositionHomomorphism.apply(on: markingMFDD)
+    }
+    return preHomomorphism.apply(on: markingMFDD)
   }
   
   
