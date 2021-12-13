@@ -267,11 +267,17 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     if let pre = input[transition] {
       for (place,variables) in pre {
         multiset = [:]
-        for var_ in variables {
-          if let varSubs = binding[var_] {
-            multiset.insert(varSubs)
+        for expr in variables {
+          // If expr is a variable
+          if expr.contains("$") {
+            if let varSubs = binding[expr] {
+              multiset.insert(varSubs)
+            } else {
+              return false
+            }
           } else {
-            return false
+            // Otherwise it is a value
+            multiset.insert(expr)
           }
         }
         guard multiset <= marking[place] else {
