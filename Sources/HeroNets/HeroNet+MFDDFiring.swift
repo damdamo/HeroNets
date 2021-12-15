@@ -42,23 +42,21 @@ extension HeroNet where PlaceType: Comparable {
     
   }
   
-  public func computeStateSpaceAlternative(
-    from m0: Marking<PlaceType>,
-    markingMFDDFactory: MarkingMFDDFactory)
+  public func computeStateSpaceAlternative(from m0: Marking<PlaceType>)
   -> Set<Marking<PlaceType>> {
     
     var markingToCheck: Set<Marking<PlaceType>> = [m0]
     var markingAlreadyChecked: Set<Marking<PlaceType>> = [m0]
     let netStaticOptimized = computeStaticOptimizedNet()
-    let x = Baseline(heroNet: self)
+    let heroMFDDFactory = HeroMFDDFactory()
     
     while !markingToCheck.isEmpty {
       for marking in markingToCheck {
         for transition in TransitionType.allCases {
-          let markingsForAllBindings = x.fireForAllBindings(
+          let markingsForAllBindings = netStaticOptimized.fireForAllBindingsAlternative(
             transition: transition,
             from: marking,
-            net: netStaticOptimized
+            heroMFDDFactory: heroMFDDFactory
           )
           for newMarking in markingsForAllBindings {
             if !markingAlreadyChecked.contains(newMarking) {
@@ -82,9 +80,7 @@ extension HeroNet where PlaceType: Comparable {
     heroMFDDFactory: HeroMFDDFactory
   )
   -> Set<MarkingMFDD> {
-        
-//    let netStaticOptimized = computeStaticOptimizedNet()
-    
+            
     let allBindings = self.fireableBindingsForCSS(for: transition, with: marking, factory: heroMFDDFactory)
     var res: Set<MarkingMFDD> = []
     for binding in allBindings {
@@ -97,6 +93,29 @@ extension HeroNet where PlaceType: Comparable {
     }
 
     return res  
+  }
+  
+  private func fireForAllBindingsAlternative(
+    transition: TransitionType,
+    from marking: Marking<PlaceType>,
+    heroMFDDFactory: HeroMFDDFactory
+  )
+  -> Set<Marking<PlaceType>> {
+            
+    let allBindings = fireableBindingsForCSS(for: transition, with: marking, factory: heroMFDDFactory)
+    var res: Set<Marking<PlaceType>> = []
+    for binding in allBindings {
+      let bindingWithLabel = Dictionary(
+        uniqueKeysWithValues: binding.map {
+          (key, value) in
+            (key.label, value)
+        })
+      if let r = fire(transition: transition, from: marking, with: bindingWithLabel) {
+        res.insert(r)
+      }
+    }
+
+    return res
   }
   
   
