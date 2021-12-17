@@ -4,26 +4,26 @@ import DDKit
 import XCTest
 
 final class BaselineNonOptimizedTests: XCTestCase {
-  
+
   typealias Label = String
   typealias Value = String
-  
+
   enum P: Place, Equatable {
     typealias Content = Multiset<String>
-    
+
     case p1,p2,p3
   }
-  
+
   enum T: Transition {
     case t1
   }
-  
-  
+
+
   func testBinding0() {
     let module = ""
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
-    
+
     let conditionList: [Pair<String, String>]? = nil
     let model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: ["$x", "$y"]),
@@ -32,16 +32,16 @@ final class BaselineNonOptimizedTests: XCTestCase {
       guards: [.t1: conditionList],
       interpreter: interpreter
     )
-    
+
     let baseline = Baseline(heroNet: model)
     let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "4", "5"], .p3: ["1", "2", "4"]])
 
     let res = baseline.bindingBruteForceWithOptimizedNet(transition: .t1, marking: marking)
-    
+
     let expectedRes: Set<[String:String]> = [["$y": "3", "$x": "2"], ["$x": "1", "$y": "3"], ["$x": "2", "$y": "1"], ["$y": "2", "$x": "1"]]
     XCTAssertEqual(res, expectedRes)
   }
-  
+
   // Conditions + same variables + constant + independant variable + constant propagation
   func testBinding1() {
 
@@ -49,7 +49,7 @@ final class BaselineNonOptimizedTests: XCTestCase {
     func add(_ x: Int, _ y: Int) -> Int ::
       x + y
     """
-    
+
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
 
@@ -62,17 +62,17 @@ final class BaselineNonOptimizedTests: XCTestCase {
       guards: [.t1: conditionList],
       interpreter: interpreter
     )
-    
+
     let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "3", "4"], .p3: ["1", "3"]])
     let baseline = Baseline(heroNet: model)
     let bindings = baseline.bindingBruteForce(transition: .t1, marking: marking)
-    
+
     let expectedRes = Set([["$a": "1", "$y": "2", "$x": "1", "$b": "1", "$z": "2"], ["$b": "1", "$y": "3", "$a": "1", "$z": "3", "$x": "2"]])
-    
+
     XCTAssertEqual(bindings, expectedRes)
   }
-  
-  
+
+
   func testFireForAllBinding0() {
     let interpreter = Interpreter()
 //    try! interpreter.loadModule(fromString: "")
@@ -91,7 +91,7 @@ final class BaselineNonOptimizedTests: XCTestCase {
 
     XCTAssertEqual(markings1.count, 4)
   }
-  
+
   func testComputeStateSpace0() {
     enum P: Place, Hashable, Comparable {
       typealias Content = Multiset<String>
@@ -119,17 +119,17 @@ final class BaselineNonOptimizedTests: XCTestCase {
     let markings = baseline.CSSBruteForce(marking: marking)
 
     print(markings.count)
-    
+
     XCTAssertEqual(markings.count, 8)
   }
-  
+
   func testComputeStateSpace1() {
     enum P: Place, Hashable, Comparable {
       typealias Content = Multiset<String>
-      
+
       case s0,s1,op,s2,num
     }
-    
+
     enum T: Transition {
       case t0, t1, c, tapply
     }
@@ -157,10 +157,10 @@ final class BaselineNonOptimizedTests: XCTestCase {
         then true
         else false
     """
-    
+
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
-    
+
     let model = HeroNet<P, T>(
       // Transition t0
       .pre(from: .s0, to: .t0, labeled: ["1"]),
@@ -183,7 +183,7 @@ final class BaselineNonOptimizedTests: XCTestCase {
       guards: [.t0: nil, .t1: nil, .c: nil, .tapply: nil],
       interpreter: interpreter
     )
-    
+
     var marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["0","1"], .op: ["add","sub"]])
     let baseline = Baseline(heroNet: model)
     var markings = baseline.CSSBruteForce(marking: marking)
@@ -198,8 +198,8 @@ final class BaselineNonOptimizedTests: XCTestCase {
     print(markings.count)
 
     XCTAssertEqual(markings.count, 1186)
-    
+
   }
-  
+
 }
 
