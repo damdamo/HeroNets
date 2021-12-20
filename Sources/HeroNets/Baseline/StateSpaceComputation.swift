@@ -1,9 +1,9 @@
 public struct Baseline<PlaceType, TransitionType>
-where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: Transition
+where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Transition
 {
   
-  public typealias Label = String
-  public typealias Value = PlaceType.Content.Key
+  public typealias Var = String
+//  public typealias Val = PlaceType.Content.Key
 
   var heroNet: HeroNet<PlaceType, TransitionType>
   
@@ -17,14 +17,14 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public func bindingBruteForceWithOptimizedNet(
     transition: TransitionType,
     marking: Marking<PlaceType>)
-  -> Set<[Label: Value]> {
+  -> Set<[Var: Val]> {
     // Static optimization, only depends on the structure of the net
     let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
     
-    if let (netWithoutConstant, newMarking) = staticOptimizedNet.removeConstantOnArcs(transition: transition, marking: marking) {
+    if let (netWithoutConstant, newMarking) = staticOptimizedNet.consumeConstantOnArcs(transition: transition, marking: marking) {
       
       // From old name to new name
-      let originalLabels = netWithoutConstant.createLabelSet(transition: transition)
+      let originalLabels = netWithoutConstant.createSetOfVariableLabel(transition: transition)
       let newNetWithUniqueLabel = setUniqueVariableForATransition(transition: transition, net: netWithoutConstant)
       return fireableBindingsBF(transition: transition, marking: newMarking, net: newNetWithUniqueLabel, originalLabels: originalLabels)
     }
@@ -44,11 +44,11 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public func bindingBruteForce(
     transition: TransitionType,
     marking: Marking<PlaceType>)
-  -> Set<[Label: Value]> {
+  -> Set<[Var: Val]> {
     
-    if let (netWithoutConstant, newMarking) = self.heroNet.removeConstantOnArcs(transition: transition, marking: marking) {
+    if let (netWithoutConstant, newMarking) = self.heroNet.consumeConstantOnArcs(transition: transition, marking: marking) {
       // From old name to new name
-      let originalLabels = netWithoutConstant.createLabelSet(transition: transition)
+      let originalLabels = netWithoutConstant.createSetOfVariableLabel(transition: transition)
       let newNetWithUniqueLabel = setUniqueVariableForATransition(transition: transition, net: netWithoutConstant)
       return fireableBindingsBF(transition: transition, marking: newMarking, net: newNetWithUniqueLabel, originalLabels: originalLabels)
     }
@@ -73,7 +73,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     while !markingToCheck.isEmpty {
       for marking in markingToCheck {
         for transition in TransitionType.allCases {
-          if let (newNet, newMarking) = net.removeConstantOnArcs(transition: transition, marking: marking) {
+          if let (newNet, newMarking) = net.consumeConstantOnArcs(transition: transition, marking: marking) {
             let markingsForAllBindings = fireForAllBindings(
               transition: transition,
               from: newMarking,
@@ -103,7 +103,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     net: HeroNet<PlaceType, TransitionType>
   ) -> Set<Marking<PlaceType>> {
     
-    let originalLabels = net.createLabelSet(transition: transition)
+    let originalLabels = net.createSetOfVariableLabel(transition: transition)
     let allBindings = fireableBindingsBF(transition: transition, marking: marking, net: net, originalLabels: originalLabels)
     var res: Set<Marking<PlaceType>> = []
     for binding in allBindings {
@@ -122,16 +122,24 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     transition: TransitionType,
     marking: Marking<PlaceType>,
     net: HeroNet<PlaceType, TransitionType>,
-    originalLabels: Set<Label>)
-  -> Set<[Label: Value]> {
+    originalLabels: Set<Var>)
+  -> Set<[Var: Val]> {
     
-    var res: Set<[Label: Value]> = []
-    var temp: Set<[Label: Value]> = []
-    var labels: [Label] = []
+    var res: Set<[Var: Val]> = []
+    var temp: Set<[Var: Val]> = []
+    var labels: [Var] = []
     
     if let placeToValues = net.input[transition] {
       for (place, values) in placeToValues {
-        labels = values
+        for value in values {
+          switch value {
+          case .var(let v):
+            labels.append(v)
+          default:
+            continue
+          }
+        }
+//        labels = values
         
         // If there is no label, the empty solution is good
         if labels.isEmpty {
@@ -144,8 +152,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
           res = temp
         }
         
-        res = res.map({(dic1) -> Set<[Label: Value]> in
-          return Set(temp.map({(dic2) -> [Label: Value] in
+        res = res.map({(dic1) -> Set<[Var: Val]> in
+          return Set(temp.map({(dic2) -> [Var: Val] in
             return dic1.merging(dic2, uniquingKeysWith: {(old, _) in old})
           }))
         }).reduce([], {(cur, new) in
@@ -162,7 +170,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
       }
     }
     
-    res = Set(res.map({(dic) -> [Label: Value] in
+    res = Set(res.map({(dic) -> [Var: Val] in
       var dicTemp = dic
       for (k,_) in dic {
         if !originalLabels.contains(k) {
@@ -177,16 +185,16 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   
   
   func computeBindingsForAPlaceBF(
-    labels: [Label],
-    placeValues: Multiset<Value>
-  ) -> Set<[Label: Value]> {
+    labels: [Var],
+    placeValues: Multiset<Val>
+  ) -> Set<[Var: Val]> {
     
     if labels.count == 0 {
       return []
     }
     
-    var res: Set<[Label: Value]> = []
-    var temp: Set<[Label: Value]> = []
+    var res: Set<[Var: Val]> = []
+    var temp: Set<[Var: Val]> = []
     var values = placeValues
     
     if let firstLabel = labels.first {
@@ -202,8 +210,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
           return res
         }
         
-        res = res.map({(dic1) -> Set<[Label: Value]> in
-          return Set(temp.map({(dic2) -> [Label: Value] in
+        res = res.map({(dic1) -> Set<[Var: Val]> in
+          return Set(temp.map({(dic2) -> [Var: Val] in
             return dic1.merging(dic2, uniquingKeysWith: {(old, _) in old})
           }))
         }).reduce([], {(cur, new) in
@@ -220,34 +228,38 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   
   func setUniqueVariableForATransition(transition: TransitionType, net: HeroNet<PlaceType, TransitionType>) -> HeroNet<PlaceType, TransitionType> {
     
-    var dicCountLabel: [Label: Int] = [:]
-    let labelSet = heroNet.createLabelSet(transition: transition)
+    // ILang but only variables
+    var dicCountLabel: [ILang: Int] = [:]
+    let labelSet = heroNet.createSetOfVariableLabel(transition: transition)
 
     for label in labelSet {
-      dicCountLabel[label] = 0
+      dicCountLabel[.var(label)] = 0
     }
     
     var newInput = net.input
     let newOutput = net.output
     var newGuards = net.guards
-    
+
     if let pre = newInput[transition] {
       for (place, labels) in pre {
         for label in labels {
-          if dicCountLabel[label] != 0 {
-            if let index = newInput[transition]![place]?.firstIndex(of: label) {
-              newInput[transition]![place]!.remove(at: index)
-              let newName = "\(label)_\(dicCountLabel[label]!)"
-              newInput[transition]![place]!.append(newName)
+          switch label {
+          case .var(let v):
+            if dicCountLabel[label] != 0 {
+              let newVar = ILang.var("\(v)_\(dicCountLabel[label]!)")
+              newInput[transition]![place]!.remove(label)
+              newInput[transition]![place]!.insert(newVar)
               if let _ = newGuards[transition] {
-                newGuards[transition]!.append(Pair(label,newName))
+                newGuards[transition]!.append(Pair(label,newVar))
               } else {
-                newGuards[transition] = [Pair(label,newName)]
+                newGuards[transition] = [Pair(label,newVar)]
               }
               dicCountLabel[label]! += 1
+            } else {
+              dicCountLabel[label]! += 1
             }
-          } else {
-            dicCountLabel[label]! += 1
+          default:
+            continue
           }
         }
       }

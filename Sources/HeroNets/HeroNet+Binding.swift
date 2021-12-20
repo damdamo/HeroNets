@@ -4,9 +4,9 @@ import Interpreter
 /// A Hero net binding computes all the possibles marking for a given  transition
 extension HeroNet {
     
-  public typealias KeyMFDDLabel = KeyMFDD<Label>
-  public typealias HeroMFDD = MFDD<KeyMFDDLabel,Value>
-  public typealias HeroMFDDFactory = MFDDFactory<KeyMFDDLabel,Value>
+  public typealias KeyMFDDVar = KeyMFDD<Var>
+  public typealias HeroMFDD = MFDD<KeyMFDDVar, Val>
+  public typealias HeroMFDDFactory = MFDDFactory<KeyMFDDVar, Val>
     
   /// Compute the whole binding for a transition and a marking. The binding represents all possibilities of values for each variable that satisfied the conditions of the net (i.e.: Guards, same label name multiple times). It creates a MFDD (Map family decision diagram) which is a compact implicit representation based on the theory on DD (Decision diagrams).
   /// A factory has to be created outside the scope that allows to manage the DD efficiently. (e.g.: `let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()`
@@ -66,7 +66,7 @@ extension HeroNet {
     var netOptimized = self
     for transition in TransitionType.allCases {
       netOptimized = netOptimized.constantPropagationVariable(transition: transition)
-      netOptimized = netOptimized.constantPropagation(transition: transition)
+      netOptimized = netOptimized.constantPropagationValue(transition: transition)
     }
     return netOptimized
   }
@@ -77,69 +77,118 @@ extension HeroNet {
   ///   - transition: The current transition
   /// - Returns:
   ///  Returns a new net where constant propagation is applied
-  private func constantPropagation(transition: TransitionType) -> HeroNet {
+  private func constantPropagationValue(transition: TransitionType) -> HeroNet {
     
-    let labelSet = createLabelSet(transition: transition)
+    let labelSet = createSetOfVariableLabel(transition: transition)
     
     if let conditions = guards[transition] {
       // Isolate condition with a unique variable
-      let (dicSameLabelToCondition, condRest) = isolateCondWithUniqueLabel(labelSet: labelSet, conditions: conditions)
+      let (constantLabels, condRest) = getConstantLabels(labelSet: labelSet, conditions: conditions)
       
-      if let labelToConstant = createDicOfConstantLabel(dicUniqueLabelToCondition: dicSameLabelToCondition) {
-        // We do not keep condition with a unique label in the future net !
-        var guardsTemp = guards
-        guardsTemp[transition] = condRest
-        let netTemp = HeroNet(input: input, output: output, guards: guardsTemp, interpreter: interpreter)
-        return replaceLabelsForATransition(labelToValue: labelToConstant, transition: transition, net: netTemp)
-      }
+
+      // We do not keep condition with a unique label in the future net !
+      var guardsTemp = guards
+      guardsTemp[transition] = condRest
+      let netTemp = HeroNet(input: input, output: output, guards: guardsTemp, interpreter: interpreter)
+      return replaceVarsForATransition(varToValue: constantLabels, transition: transition, net: netTemp)
+      
     }
     return self
   }
   
-  /// A general function to replace all occurence of a label by a certain value or variable. It looks at every arcs and guards.
+  /// A general function to replace all occurence of a label by a certain **value**. It looks at every arcs and guards.
   /// - Parameters:
   ///   - labelToValue: A dictionnary that binds every labels to their new value (or variable)
   ///   - transition: The current transition
   ///   - net:The net that is optimized
   /// - Returns:
   ///  Returns a new net where label has been replaced by new values
-  public func replaceLabelsForATransition(labelToValue: [Label: Value], transition: TransitionType, net: HeroNet) -> HeroNet {
+  public func replaceVarsForATransition(varToValue: [Var: Val], transition: TransitionType, net: HeroNet) -> HeroNet {
     var newInput = net.input
     var newOutput = net.output
     var newGuards = net.guards
     
+    // TODO: Insert and remove all in one using something like distinctMember
     if let pre = newInput[transition] {
       for (place, labels) in pre {
-        newInput[transition]![place] = labels.map({(label) in
-          if let newLabel = labelToValue[label] {
-            return newLabel
-          } else {
-            return label
+        for label in labels {
+          switch label {
+          case .var(let v):
+            if let newV = varToValue[v] {
+              newInput[transition]![place]!
+                .insert(.val(newV))
+              newInput[transition]![place]!
+                .remove(label)
+            }
+          default:
+            continue
           }
-        })
+        }
       }
     }
     
     if let post = newOutput[transition] {
       for (place, labels) in post {
-        newOutput[transition]![place] = labels.map({(label) in
-          if let newLabel = labelToValue[label] {
-            return newLabel
-          } else {
-            return label
+        for label in labels {
+          switch label {
+          case .var(let v):
+            if let newV = varToValue[v] {
+              newOutput[transition]![place]!
+                .insert(.val(newV))
+              newOutput[transition]![place]!
+                .remove(label)
+            }
+          case .exp(let e):
+            newOutput[transition]![place]!
+              .insert(bindVariables(expr: .exp(e), binding: varToValue))
+          default:
+            continue
           }
-        })
+        }
       }
     }
     
     if let _ = guards[transition] {
-      newGuards[transition] = newGuards[transition]!.compactMap({(pair) in
-        var l = pair.l
-        var r = pair.r
-        for (key, value) in labelToValue {
-          l = l.replacingOccurrences(of: key, with: value)
-          r = r.replacingOccurrences(of: key, with: value)
+      newGuards[transition] = newGuards[transition]!.compactMap({(cond) in
+        var l = cond.l
+        var r = cond.r
+        
+        switch l {
+        case .var(let v):
+          if let res = varToValue[v] {
+            l = .val(res)
+          }
+        case .exp(let e):
+          for (var_, val) in varToValue {
+            switch val {
+            case .cst(let c):
+              l = .exp(e.replacingOccurrences(of: var_, with: c))
+            case .btk:
+              fatalError("You try to substitue a variable by a token inside an expression")
+            }
+          }
+        case .val(_):
+          break
         }
+        
+        switch r {
+        case .var(let v):
+          if let res = varToValue[v] {
+            r = .val(res)
+          }
+        case .exp(let e):
+          for (var_, val) in varToValue {
+            switch val {
+            case .cst(let c):
+              r = .exp(e.replacingOccurrences(of: var_, with: c))
+            case .btk:
+              fatalError("You try to substitue a variable by a token inside an expression")
+            }
+          }
+        case .val(_):
+          break
+        }
+        
         if l == r {
           return nil
         }
@@ -150,37 +199,101 @@ extension HeroNet {
     return HeroNet(input: newInput, output: newOutput, guards: newGuards, interpreter: interpreter)
   }
   
-  /// Takes a dictionnary of label binds to condition with a unique variable, then evaluates each condition to have a value for each expression.
-  /// Each label is associated to a value.
+  /// A general function to replace all occurence of a label by a certain **variable**. It looks at every arcs and guards.
   /// - Parameters:
-  ///   - dicUniqueLabelToCondition: The dictionnary that binds label to a list of conditions which are already in the good format (i.e.: var == a constant expression)
+  ///   - labelToValue: A dictionnary that binds every labels to their new value (or variable)
+  ///   - transition: The current transition
+  ///   - net:The net that is optimized
   /// - Returns:
-  ///  Returns a new dictionnary of label to values, where each previous expressions has been evaluated
-  private func createDicOfConstantLabel(dicUniqueLabelToCondition: [Label: [Pair<Value, Value>]]) -> [Label: Value]? {
+  ///  Returns a new net where label has been replaced by new values
+  public func replaceVarsForATransition(varToVar: [Var: Var], transition: TransitionType, net: HeroNet) -> HeroNet {
+    var newInput = net.input
+    var newOutput = net.output
+    var newGuards = net.guards
     
-    var constantCondition: [Label: Value] = [:]
-    
-    for (label, conditionList) in dicUniqueLabelToCondition {
-      for condition in conditionList {
-        var value: Value = ""
-        if condition.l == label {
-          value = eval(condition.r)
-        } else {
-          value = eval(condition.l)
-        }
-        if let val = constantCondition[label] {
-          // Two conditions with different constant value
-          if val != value {
-            return nil
+    // TODO: Insert and remove all in one using something like distinctMember
+    if let pre = newInput[transition] {
+      for (place, labels) in pre {
+        for label in labels {
+          switch label {
+          case .var(let v):
+            if let newV = varToVar[v] {
+              newInput[transition]![place]!
+                .insert(.var(newV))
+              newInput[transition]![place]!
+                .remove(label)
+            }
+          default:
+            continue
           }
-        } else {
-          constantCondition[label] = value
         }
       }
     }
     
-    return constantCondition
+    if let post = newOutput[transition] {
+      for (place, labels) in post {
+        for label in labels {
+          switch label {
+          case .var(let v):
+            if let newV = varToVar[v] {
+              newOutput[transition]![place]!
+                .insert(.var(newV))
+              newOutput[transition]![place]!
+                .remove(label)
+            }
+          case .exp(let e):
+            for (varSource, varTarget) in varToVar {
+              newOutput[transition]![place]!
+                .insert(.exp(e.replacingOccurrences(of: varSource, with: varTarget)))
+            }
+          default:
+            continue
+          }
+        }
+      }
+    }
+    
+    if let _ = guards[transition] {
+      newGuards[transition] = newGuards[transition]!.compactMap({(cond) in
+        var l = cond.l
+        var r = cond.r
+        
+        switch l {
+        case .var(let v):
+          if let res = varToVar[v] {
+            l = .var(res)
+          }
+        case .exp(let e):
+          for (varSource, varTarget) in varToVar {
+            l = .exp(e.replacingOccurrences(of: varSource, with: varTarget))
+          }
+        case .val(_):
+          break
+        }
+        
+        switch r {
+        case .var(let v):
+          if let res = varToVar[v] {
+            r = .var(res)
+          }
+        case .exp(let e):
+          for (varSource, varTarget) in varToVar {
+            r = .exp(e.replacingOccurrences(of: varSource, with: varTarget))
+          }
+        case .val(_):
+          break
+        }
+        
+        if l == r {
+          return nil
+        }
+        return Pair(l,r)
+      })
+    }
+        
+    return HeroNet(input: newInput, output: newOutput, guards: newGuards, interpreter: interpreter)
   }
+  
   
   /// Optimization function that takes conditions of the form "x = y" and replaces each occurence of x by y in the net. Then, it removes the condition.
   /// - Parameters:
@@ -191,7 +304,7 @@ extension HeroNet {
     // Equality guards
     let equivalentVariables  = createDicOfEquivalentLabel(transition: transition)
     
-    return replaceLabelsForATransition(labelToValue: equivalentVariables, transition: transition, net: self)
+    return replaceVarsForATransition(varToVar: equivalentVariables, transition: transition, net: self)
   }
   
   /// Creates a dictionnary from the equivalent label that binds a label to its new name. It means that if we have a condition of the form " x = y", a new entry will be added in the dictionnary (e.g.: [x:y]). At the end this dictionnary will  be used to know which labels has to be replaced.
@@ -199,85 +312,57 @@ extension HeroNet {
   ///   - transition: The transition that is looking at
   /// - Returns:
   ///  Returns a dictionnary of label to label where the key is the old name of the label and the value its new name
-  private func createDicOfEquivalentLabel(transition: TransitionType) -> [Label: Label] {
+  private func createDicOfEquivalentLabel(transition: TransitionType) -> [Var: Var] {
     
     guard let _ = guards[transition] else { return [:] }
     
-    let labelSet = createLabelSet(transition: transition)
+    var res: [Var: Var] = [:]
     
-    var eqLabelList: [Pair<Label, Label>] = []
-    
-    // Construct a list of equal label coming from the conditions
     if let conditions = guards[transition] {
       for condition in conditions {
-        if labelSet.contains(condition.l) && labelSet.contains(condition.r) {
-          eqLabelList.append(Pair(condition.l, condition.r))
+        switch (condition.l, condition.r) {
+        case (.var(let v1), .var(let v2)):
+          res[v1] = v2
+        default:
+          continue
         }
       }
     }
     
-    var eqLabelDic: [Label: Label] = [:]
-    
-    // Construct the dictionnary that binds label to its renaming label
-    while !eqLabelList.isEmpty {
-      if let firstPairOfLabel = eqLabelList.first {
-        eqLabelList.remove(at: 0)
-        if eqLabelDic.contains(where: {$0.key == firstPairOfLabel.l}) {
-          for (key, value) in eqLabelDic {
-            if value == firstPairOfLabel.l {
-              eqLabelDic[key] = firstPairOfLabel.r
-            }
-          }
-          eqLabelDic[firstPairOfLabel.l] = firstPairOfLabel.r
-        } else {
-          eqLabelDic[firstPairOfLabel.l] = firstPairOfLabel.r
-        }
-      }
-    }
-    
-    return eqLabelDic
+    return res
   }
   
-  /// Isolate conditions with the same variable to apply
+  /// Isolate conditions with a unique label (only one)
   /// - Parameters:
   ///   - LabelSet: An array containing a list of keys binds to their possible expressions
   ///   - conditions: List of condition for a specific transition
   /// - Returns:
   ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
-  private func isolateCondWithUniqueLabel(labelSet: Set<Label>, conditions: [Pair<Value, Value>]?) -> ([Label: [Pair<Value, Value>]], [Pair<Value,Value>]) {
+  private func getConstantLabels(labelSet: Set<Var>, conditions: [Guard]?)
+  -> (constantLabels: [Var: Val], restGuards: [Guard]) {
 
-    var condWithUniqueVariable: [Label: [Pair<Value, Value>]] = [:]
-    var restConditions: [Pair<Value, Value>] = []
-
+    var constantLabels: [Var: Val] = [:]
+    var restGuards: [Guard] = []
+    
     if let conds = conditions {
       for cond in conds {
-        if labelSet.contains(cond.l) {
-          if !cond.r.contains("$") {
-            if let _ = condWithUniqueVariable[cond.l] {
-              condWithUniqueVariable[cond.l]!.append(cond)
-            } else {
-              condWithUniqueVariable[cond.l] = [cond]
-            }
-          } else {
-            restConditions.append(cond)
+        switch (cond.l, cond.r) {
+        case (.var(let v), .val(let val)):
+          guard let _ = constantLabels[v] else {
+            fatalError("A constant is assigned more than two times to the same variable")
           }
-        } else if labelSet.contains(cond.r) {
-          if !cond.l.contains("$") {
-            if let _ = condWithUniqueVariable[cond.r] {
-              condWithUniqueVariable[cond.r]!.append(cond)
-            } else {
-              condWithUniqueVariable[cond.r] = [cond]
-            }
-          } else {
-            restConditions.append(cond)
+          constantLabels[v] = val
+        case (.val(let val), .var(let v)):
+          guard let _ = constantLabels[v] else {
+            fatalError("A constant is assigned more than two times to the same variable")
           }
-        } else {
-          restConditions.append(cond)
+          constantLabels[v] = val
+        default:
+          restGuards.append(cond)
         }
       }
     }
-    return (condWithUniqueVariable, restConditions)
-
+    return (constantLabels: constantLabels, restGuards: restGuards)
   }
   
   // --------------------------------------------------------------------------------- //
@@ -301,13 +386,14 @@ extension HeroNet {
     marking: Marking<PlaceType>) -> (HeroNet, Marking<PlaceType>)?
   {
     // Optimizations on constant on arcs, removing it from the net and from the marking in  the place
-    if let (netWithoutConstant, markingWithoutConstant) = removeConstantOnArcs(transition: transition, marking: marking) {
+    if let (netWithoutConstant, markingWithoutConstant) = consumeConstantOnArcs(transition: transition, marking: marking) {
       return (netWithoutConstant, markingWithoutConstant)
     }
     return nil
   }
   
-  public func removeConstantOnArcs(
+  /// During the firing, consume directly the constant into the marking before starting the computation
+  public func consumeConstantOnArcs(
     transition: TransitionType,
     marking: Marking<PlaceType>) -> (HeroNet, Marking<PlaceType>)?
   {
@@ -317,16 +403,17 @@ extension HeroNet {
     if let pre = input[transition] {
       for (place, labels) in pre {
         for label in labels {
-          if !label.contains("$") {
-            // The content of the place is subtracted by the value of the constant
-            // If the condition is not satisfied, it means the marking does not contain the constant
-            if newMarking[place].occurences(of: label) > 0 {
-              newMarking[place].remove(label)
+          switch label {
+          case .val(let val):
+            if newMarking[place].occurences(of: val) > 0 {
+              newMarking[place].remove(val)
             } else {
               return nil
             }
-            // The constant label is removed
-            newInput[transition]![place]!.remove(at: newInput[transition]![place]!.firstIndex(where: {$0 == label})!)
+            // It removes the constant once time
+            newInput[transition]![place]!.remove(.val(val))
+          default:
+            continue
           }
         }
       }
@@ -347,15 +434,20 @@ extension HeroNet {
   /// - Returns:
   ///   Returns a dictionnary that binds each  place to its labels and their possible values
   private func computeValuesForLabel(transition: TransitionType, marking: Marking<PlaceType>)
-  -> [PlaceType: [Label: Multiset<Value>]]
+  -> [PlaceType: [Var: MultisetVal]]
   {
-    var placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]] = [:]
+    var placeToLabelToValues: [PlaceType: [Var: MultisetVal]] = [:]
     
     if let pre = input[transition] {
       for (place, labels) in pre {
         placeToLabelToValues[place] = [:]
         for label in labels {
-          placeToLabelToValues[place]![label] = marking[place]
+          switch label {
+          case .var(let v):
+            placeToLabelToValues[place]![v] = marking[place]
+          default:
+            continue
+          }
         }
       }
     }
@@ -374,15 +466,15 @@ extension HeroNet {
   
   private func fireableBindings(for transition: TransitionType, marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
     
-    let labelSet = createLabelSet(transition: transition)
+    let variableSet = createSetOfVariableLabel(transition: transition)
     
     // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
     let (labelWeights, conditionWeights) = computeScoreOrder(
-      labelSet: labelSet,
+      variableSet: variableSet,
       conditions: guards[transition]
     )
     
-    let placeToLabelToValues = bindValuesToLabels(transition: transition, marking: marking)
+    let placeToLabelToValues = bindLabelVariablesToValues(transition: transition, marking: marking)
     
     // Check that each labels has at least one possibility
     for (place, dicLabelToValues) in placeToLabelToValues {
@@ -395,7 +487,7 @@ extension HeroNet {
     
     
     // Return the precedent placeToLabelToValues value to the same one where label are now key
-    let placeToKeyToValues = fromLabelToKey(labelSet: labelSet, labelWeights: labelWeights, placeToLabelToValues: placeToLabelToValues)
+    let placeToKeyToValues = fromVariableToKey(variableSet: variableSet, variableWeights: labelWeights, placeToVariableToValues: placeToLabelToValues)
 
     let (dependentPlaceToKeyToValues, independentKeyToValues) = computeDependentAndIndependentKeys(placeToKeyToValues: placeToKeyToValues, transition: transition)
     
@@ -403,7 +495,7 @@ extension HeroNet {
     
     // If there are conditions, we have to apply them on the MFDD
     if let conditions = guards[transition] {
-      var keySet: Set<KeyMFDDLabel> = []
+      var keySet: Set<KeyMFDDVar> = []
       for (_, keyToValues) in dependentPlaceToKeyToValues {
         for (key, _) in keyToValues {
           keySet.insert(key)
@@ -427,17 +519,22 @@ extension HeroNet {
 
   }
   
-  private func bindValuesToLabels(
+  private func bindLabelVariablesToValues(
     transition: TransitionType,
     marking: Marking<PlaceType>
-  ) -> [PlaceType: [Label: Multiset<Value>]] {
+  ) -> [PlaceType: [Var: MultisetVal]] {
     
-    var res: [PlaceType: [Label: Multiset<Value>]] = [:]
+    var res: [PlaceType: [Var: MultisetVal]] = [:]
     if let dicPlaceToLabel = input[transition] {
       for (place, labels) in dicPlaceToLabel {
         res[place] = [:]
         for label in labels {
-          res[place]![label] = marking[place]
+          switch label {
+          case .var(let v):
+            res[place]![v] = marking[place]
+          default:
+            continue
+          }
         }
       }
       return res
@@ -451,28 +548,28 @@ extension HeroNet {
   ///   - labelWeights: Label weights
   ///   - placeToLabelToValues: The structure to change to pass from label to key
   /// - Returns:
-  ///   Returnsa dictionnary that binds each place to its key with their corresponding values
-  private func fromLabelToKey (
-    labelSet: Set<Label>,
-    labelWeights: [Label: Int]?,
-    placeToLabelToValues: [PlaceType: [Label: Multiset<Value>]]
-  ) -> [PlaceType: [KeyMFDDLabel: Multiset<Value>]] {
+  ///   Returns a dictionnary that binds each place to its key with their corresponding values
+  private func fromVariableToKey (
+    variableSet: Set<Var>,
+    variableWeights: [Var: Int]?,
+    placeToVariableToValues: [PlaceType: [Var: MultisetVal]]
+  ) -> [PlaceType: [KeyMFDDVar: MultisetVal]] {
 
-    let totalOrder: [Pair<Label, Label>]
-    var placeToKeyToValues: [PlaceType: [KeyMFDDLabel: Multiset<Value>]] = [:]
+    let totalOrder: [Pair<Var, Var>]
+    var placeToKeyToValues: [PlaceType: [KeyMFDDVar: MultisetVal]] = [:]
     
-    if let lw = labelWeights {
-      totalOrder = createTotalOrder(labels: labelSet.sorted(by: {(label1, label2) -> Bool in
+    if let lw = variableWeights {
+      totalOrder = createTotalOrder(variables: variableSet.sorted(by: {(label1, label2) -> Bool in
         lw[label1]! > lw[label2]!
       }))
     } else {
-      totalOrder = createTotalOrder(labels: Array(labelSet))
+      totalOrder = createTotalOrder(variables: Array(variableSet))
     }
     
-    for (place, labelToValues) in placeToLabelToValues {
+    for (place, labelToValues) in placeToVariableToValues {
       placeToKeyToValues[place] = [:]
       for (label, values) in labelToValues {
-        let key = KeyMFDDLabel(label: label, couple: totalOrder)
+        let key = KeyMFDDVar(label: label, couple: totalOrder)
         placeToKeyToValues[place]![key] = values
       }
     }
@@ -487,14 +584,14 @@ extension HeroNet {
   /// - Returns:
   ///   Returns a tuple of two dictionnary, where the first one is for independent keys and the second one for dependent keys.
   private func computeDependentAndIndependentKeys(
-    placeToKeyToValues: [PlaceType: [KeyMFDDLabel: Multiset<Value>]],
+    placeToKeyToValues: [PlaceType: [KeyMFDDVar: MultisetVal]],
     transition: TransitionType)
-  -> ([PlaceType: [KeyMFDDLabel: Multiset<Value>]], [KeyMFDDLabel: Multiset<Value>]) {
+  -> ([PlaceType: [KeyMFDDVar: MultisetVal]], [KeyMFDDVar: MultisetVal]) {
 
-    var independentKeysToValues: [KeyMFDDLabel: Multiset<Value>] = [:]
-    var placeToDependentKeysToValues: [PlaceType: [KeyMFDDLabel: Multiset<Value>]] = [:]
-    var setKeys: Set<KeyMFDDLabel> = []
-    var dependentKeys: Set<KeyMFDDLabel> = []
+    var independentKeysToValues: [KeyMFDDVar: MultisetVal] = [:]
+    var placeToDependentKeysToValues: [PlaceType: [KeyMFDDVar: MultisetVal]] = [:]
+    var setKeys: Set<KeyMFDDVar> = []
+    var dependentKeys: Set<KeyMFDDVar> = []
     
     // Construct set of keys
     for (_, keyToValues) in placeToKeyToValues {
@@ -506,8 +603,25 @@ extension HeroNet {
     if let conditions = guards[transition] {
       for condition in conditions {
         for key in setKeys {
-          if condition.l.contains(key.label) || condition.r.contains(key.label) {
-            dependentKeys.insert(key)
+          switch (condition.l, condition.r) {
+          case (.var(let v), _):
+            if key.label == v {
+              dependentKeys.insert(key)
+            }
+          case (_, .var(let v)):
+            if key.label == v {
+              dependentKeys.insert(key)
+            }
+          case (.exp(let e), _):
+            if e.contains(key.label) {
+              dependentKeys.insert(key)
+            }
+          case (_, .exp(let e)):
+            if e.contains(key.label) {
+              dependentKeys.insert(key)
+            }
+          default:
+            continue
           }
         }
       }
@@ -545,7 +659,7 @@ extension HeroNet {
   ///   - factory: Current factory
   /// - Returns:
   ///   Returns a new mfdd pointer where values of the independent keys have been added.
-  private func addIndependentLabel(mfddPointer: HeroMFDD.Pointer, independentKeyToValues: [KeyMFDDLabel: Multiset<Value>], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
+  private func addIndependentLabel(mfddPointer: HeroMFDD.Pointer, independentKeyToValues: [KeyMFDDVar: MultisetVal], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
     if independentKeyToValues.count > 0 {
       let mfddPointerForIndependentKeys = constructMFDDIndependentKeys(keyToExprs: independentKeyToValues, factory: factory)
       return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependentKeys)
@@ -560,7 +674,7 @@ extension HeroNet {
   /// - Returns:
   ///   Returns the MFDD that represents all independent keys with their corresponding values
   private func constructMFDDIndependentKeys(
-    keyToExprs: [KeyMFDDLabel: Multiset<Value>],
+    keyToExprs: [KeyMFDDVar: MultisetVal],
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
     
@@ -569,7 +683,7 @@ extension HeroNet {
     }
     
     if let (key, values) = keyToExprs.sorted(by: {$0.key < $1.key}).first {
-      var take: [Value: HeroMFDD.Pointer] = [:]
+      var take: [Val: HeroMFDD.Pointer] = [:]
       var keyToExprsFirstDrop = keyToExprs
       keyToExprsFirstDrop.removeValue(forKey: key)
       
@@ -596,17 +710,14 @@ extension HeroNet {
   ///   Returns the new mfdd that have applied the condition.
   private func applyCondition(
     mfddPointer: HeroMFDD.Pointer,
-    condition: Pair<Value, Value>,
-    keySet: Set<KeyMFDDLabel>,
+    condition: Guard,
+    keySet: Set<KeyMFDDVar>,
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
     
-    var morphisms: MFDDMorphismFactory<KeyMFDDLabel, Value> { factory.morphisms }
+    var morphisms: MFDDMorphismFactory<KeyMFDDVar, Val> { factory.morphisms }
     let keyCond = keySet.filter({(key) in
-      if condition.l.contains(key.label) || condition.r.contains(key.label) {
-        return true
-      }
-      return false
+      return contains(exp: condition.l, s: key.label) || contains(exp: condition.r, s: key.label)
     })
     
     let morphism = guardFilter(condition: condition, keyCond: Array(keyCond), factory: factory, heroNet: self)
@@ -615,35 +726,40 @@ extension HeroNet {
     
   }
   
-  private func countKeyForAnArc(transition: TransitionType, place: PlaceType, keySet: Set<KeyMFDDLabel>) -> [KeyMFDDLabel: Int] {
+  private func countKeyForAnArc(transition: TransitionType, place: PlaceType, keySet: Set<KeyMFDDVar>) -> [KeyMFDDVar: Int] {
    
-    var labelOccurences: [Label: Int] = [:]
-    var keyOccurences: [KeyMFDDLabel: Int] = [:]
+    var variableOccurences: [Var: Int] = [:]
+    var keyOccurences: [KeyMFDDVar: Int] = [:]
     
     if let labels = input[transition]?[place] {
         for label in labels {
-          if let _ = labelOccurences[label] {
-            labelOccurences[label]! += 1
-          } else {
-            labelOccurences[label] = 1
+          switch label {
+          case .var(let v):
+            if let _ = variableOccurences[v] {
+              variableOccurences[v]! += 1
+            } else {
+              variableOccurences[v] = 1
+            }
+          default:
+            continue
           }
         }
     }
     
     for key in keySet {
-      keyOccurences[key] = labelOccurences[key.label]
+      keyOccurences[key] = variableOccurences[key.label]
     }
     
     return keyOccurences
   }
   
   private func constructMFDD(
-    placeToKeyToValues: [PlaceType: [KeyMFDDLabel: Multiset<Value>]],
+    placeToKeyToValues: [PlaceType: [KeyMFDDVar: MultisetVal]],
     transition: TransitionType,
     factory: HeroMFDDFactory) -> HeroMFDD.Pointer
   {
     var mfddPointer = factory.zero.pointer
-    var keySet: Set<KeyMFDDLabel> = []
+    var keySet: Set<KeyMFDDVar> = []
     
     for (_, keyToValues) in placeToKeyToValues {
       for (key, _) in keyToValues {
@@ -655,7 +771,7 @@ extension HeroNet {
       
       let keyOccurences = countKeyForAnArc(transition: transition, place: place, keySet: keySet)
       
-      var keyToValuesWithKeyOccurence: [KeyMFDDLabel: (Multiset<Value>, Int)] = [:]
+      var keyToValuesWithKeyOccurence: [KeyMFDDVar: (MultisetVal, Int)] = [:]
       keyToValuesWithKeyOccurence = keyToValues.reduce(into: [:], {(res, couple) in
         res[couple.key] = (couple.value, keyOccurences[couple.key]!)
       })
@@ -674,12 +790,12 @@ extension HeroNet {
   /// The MFDD is specific for a place.
   ///
   /// - Parameters:
-  ///   - keyToValuesAndOccurences: A dictionnary that binds a key to its possible expressions
+  ///   - keyToValuesAndOccurences: A dictionnary that binds a key to its possible values
   ///   - factory: The factory to construct the MFDD
   /// - Returns:
   ///   A MFDD pointer that contains every possibilities for the given args for a place.
   private func constructMFDD(
-    keyToValuesAndOccurences: [KeyMFDDLabel: (Multiset<Value>, Int)],
+    keyToValuesAndOccurences: [KeyMFDDVar: (MultisetVal, Int)],
     factory: HeroMFDDFactory
   ) -> HeroMFDD.Pointer {
     
@@ -688,7 +804,7 @@ extension HeroNet {
     }
     
     if let (key, (values, n)) = keyToValuesAndOccurences.sorted(by: {$0.key < $1.key}).first {
-      var take: [Value: HeroMFDD.Pointer] = [:]
+      var take: [Val: HeroMFDD.Pointer] = [:]
       var keyToExprsFirstDrop = keyToValuesAndOccurences
       keyToExprsFirstDrop.removeValue(forKey: key)
       
@@ -719,23 +835,23 @@ extension HeroNet {
   /// - Returns:
   ///   Return a tuple with its first element a dictionnary that binds a label to its weight and second element a dictionnary that binds condition to a score !
   private func computeScoreOrder(
-    labelSet: Set<Label>,
-    conditions: [Pair<Value, Value>]?)
-  -> ([Label: Int]?, [Pair<Value, Value>: Int]?) {
+    variableSet: Set<Var>,
+    conditions: [Guard]?)
+  -> ([Var: Int]?, [Guard: Int]?) {
     
     // If there is no conditions
     guard let _ = conditions else {
       return (nil, nil)
     }
-    var labelWeights: [Label: Int] = [:]
-    var conditionWeights: [Pair<Value, Value>: Int] = [:]
-    var labelForCond: [Set<Label>] = []
-    var labelInACond: Set<Label> = []
+    var variableWeights: [Var: Int] = [:]
+    var conditionWeights: [Guard: Int] = [:]
+    var variableForACond: [Set<Var>] = []
+    var variableInACond: Set<Var> = []
     
     // Initialize the score to 100 for each variable
     // To avoid that a same variable has the same score, we increment its n value, allowing to distingue them
-    for label in labelSet {
-      labelWeights[label] = 100
+    for variable in variableSet {
+      variableWeights[variable] = 100
     }
     
     for condition in conditions! {
@@ -744,48 +860,65 @@ extension HeroNet {
     
     // To know condition variables
     for condition in conditions! {
-      for label in labelSet {
-        if condition.l.contains(label) || condition.r.contains(label) {
-          labelInACond.insert(label)
+      for variable in variableSet {
+        switch (condition.l, condition.r) {
+        case (.var(let v), _):
+          if variable == v {
+            variableInACond.insert(variable)
+          }
+        case (_, .var(let v)):
+          if variable == v {
+            variableInACond.insert(variable)
+          }
+        case (.exp(let e), _):
+          if e.contains(variable) {
+            variableInACond.insert(variable)
+          }
+        case (_, .exp(let e)):
+          if e.contains(variable) {
+            variableInACond.insert(variable)
+          }
+        default:
+          continue
         }
       }
       
       // Compute condition weights
-      if labelInACond.count != 0 {
-        conditionWeights[condition]! *= 2/labelInACond.count
+      if variableInACond.count != 0 {
+        conditionWeights[condition]! *= 2/variableInACond.count
       } else {
         conditionWeights[condition]! = 0
       }
       
-      labelForCond.append(labelInACond)
-      labelInACond = []
+      variableForACond.append(variableInACond)
+      variableInACond = []
     }
     
     // To compute a score
     // If a condition contains the same variable, it earns 50 points
     // If a condition contains a variable with other variables, every variables earn 10 points
-    for (label, _) in labelWeights {
-      for cond in labelForCond {
-        if cond.contains(label) {
+    for (variable, _) in variableWeights {
+      for cond in variableForACond {
+        if cond.contains(variable) {
           if cond.count == 1  {
-            labelWeights[label]! += 100
+            variableWeights[variable]! += 100
           } else {
-            labelWeights[label]! += 10
+            variableWeights[variable]! += 10
           }
         }
       }
     }
     
-    return (labelWeights, conditionWeights)
+    return (variableWeights, conditionWeights)
   }
   
   // createOrder creates a list of pair from a list of string
   // to represent a total order relation. Pair(l,r) => l < r
-  func createTotalOrder(labels: [Label]) -> [Pair<Label, Label>] {
-      var r: [Pair<Label, Label>] = []
-      for i in 0 ..< labels.count {
-        for j in i+1 ..< labels.count {
-          r.append(Pair(labels[i],labels[j]))
+  func createTotalOrder(variables: [Var]) -> [Pair<Var, Var>] {
+      var r: [Pair<Var, Var>] = []
+      for i in 0 ..< variables.count {
+        for j in i+1 ..< variables.count {
+          r.append(Pair(variables[i],variables[j]))
         }
       }
       return r
@@ -799,14 +932,20 @@ extension HeroNet {
   // ------------------------------ General functions -------------------------------- //
   // --------------------------------------------------------------------------------- //
   
-  public func createLabelSet(transition: TransitionType) -> Set<Label> {
-    var labelSet: Set<Label> = []
+  // TODO: CARE if it's not
+  public func createSetOfVariableLabel(transition: TransitionType) -> Set<Var> {
+    var labelSet: Set<Var> = []
     
     // Construct labelList by looking at on arcs
     if let pre = input[transition] {
       for (_, labels) in pre {
         for label in labels {
-          labelSet.insert(label)
+          switch label {
+          case .var(let v):
+            labelSet.insert(v)
+          default:
+            continue
+          }
         }
       }
     }

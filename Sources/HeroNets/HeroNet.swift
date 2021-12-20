@@ -56,13 +56,18 @@ import Interpreter
 ///     // Prints "[.p1: ["1", "3"], .p2: ["4"]]"
 ///
 public struct HeroNet<PlaceType, TransitionType>
-where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: Transition
+where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Transition
 {
 
-  public typealias Label = String
+//  public typealias Label = String
+  public typealias Var = String
+  public typealias MultisetVal = Multiset<Val>
+
   // The content inside the multiset (e.g.: String)
-  public typealias Value = PlaceType.Content.Key
-  public typealias ArcLabel = [Label]
+//  public typealias Value = PlaceType.Content.Key
+//  public typealias Value = String
+  public typealias ArcLabel = Multiset<ILang>
+  public typealias Guard = Pair<ILang, ILang>
   
   /// The description of an arc.
   public struct ArcDescription {
@@ -74,12 +79,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     fileprivate let transition: TransitionType
 
     /// The arc's label.
-    fileprivate let labels: [Label]
+    fileprivate let labels: ArcLabel
 
     /// The arc's direction.
     fileprivate let isPre: Bool
 
-    private init(place: PlaceType, transition: TransitionType, labels: [Label], isPre: Bool) {
+    private init(place: PlaceType, transition: TransitionType, labels: Multiset<ILang>, isPre: Bool) {
       self.place = place
       self.transition = transition
       self.labels = labels
@@ -95,7 +100,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     public static func pre(
       from place: PlaceType,
       to transition: TransitionType,
-      labeled labels: [Label])
+      labeled labels: Multiset<ILang>)
       -> ArcDescription
     {
       return ArcDescription(place: place, transition: transition, labels: labels, isPre: true)
@@ -110,7 +115,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     public static func post(
       from transition: TransitionType,
       to place: PlaceType,
-      labeled labels: [Label])
+      labeled labels: Multiset<ILang>)
       -> ArcDescription
     {
       return ArcDescription(place: place, transition: transition, labels: labels, isPre: false)
@@ -125,7 +130,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   public let output: [TransitionType: [PlaceType: ArcLabel]]
   
   /// Guards for transitions.
-  public let guards: TotalMap<TransitionType, [Pair<Value, Value>]?>
+  public let guards: TotalMap<TransitionType, [Guard]?>
   
   /// Interpreter needed to evaluate Hero terms.
   public var interpreter: Interpreter
@@ -140,7 +145,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///   - arcs: A sequence containing the descriptions of the Petri net's arcs.
   ///   - guards: Conditions to fire a transition
   ///   - interpreter: Interpreter needed to evaluate terms
-  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Pair<Value, Value>]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
+  public init<Arcs>(_ arcs: Arcs, guards: [TransitionType: [Guard]?], interpreter: Interpreter) where Arcs: Sequence, Arcs.Element == ArcDescription {
     var pre: [TransitionType: [PlaceType: ArcLabel]] = [:]
     var post: [TransitionType: [PlaceType: ArcLabel]] = [:]
 
@@ -172,7 +177,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   ///
   /// - Parameters:
   ///   - arcs: A variadic argument representing the descriptions of the Petri net's arcs.
-  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Pair<Value, Value>]?], interpreter: Interpreter) {
+  public init(_ arcs: ArcDescription..., guards: [TransitionType: [Guard]?], interpreter: Interpreter) {
     self.init(arcs, guards: guards, interpreter: interpreter)
   }
     
@@ -180,7 +185,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   init(
     input: [TransitionType: [PlaceType: ArcLabel]],
     output: [TransitionType: [PlaceType: ArcLabel]],
-    guards: TotalMap<TransitionType, [Pair<Value, Value>]?>,
+    guards: TotalMap<TransitionType, [Guard]?>,
     interpreter: Interpreter
   ) {
     self.input = input
@@ -199,7 +204,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   /// - Returns:
   ///   The marking that results from the firing of the given transition if it is fireable and guards check, or
   ///   `nil` otherwise.
-  public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Label: Value])
+  public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Var: Val])
     -> Marking<PlaceType>? {
     
     guard isFireable(transition: transition, from: marking, with: binding) else {
@@ -216,14 +221,17 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     
     // Compute input marking
     if let pre = input[transition] {
-      var multiset: Multiset<String> = [:]
+      var multiset: MultisetVal = [:]
       // In the case of pre, expressions is just a list of labels
-      for (place, expressions) in pre {
-        for expr in expressions {
-          if expr.contains("$") {
-            multiset.insert(binding[expr]!)
-          } else {
-            multiset.insert(expr)
+      for (place, labels) in pre {
+        for label in labels {
+          switch label {
+          case .var(let v):
+            multiset.insert(binding[v]!)
+          case .val(let val):
+            multiset.insert(val)
+          case .exp(_):
+            fatalError("No expressions allow in binding")
           }
         }
         // Create a multiset for each place of input arcs of the transition
@@ -231,23 +239,34 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
         multiset = [:]
       }
     }
-    
     // Interpreter evaluate terms which are expressed by String
-    var valOutput: String = ""
-    var exprSubs: String = ""
+    var valOutput: Val
+    var exprSubs: ILang
     // Compute result of input arcs
     if let post = output[transition] {
-      var multiset: Multiset<String> = [:]
+      var multiset: MultisetVal = [:]
       // In the case of post, expressions is a list of strings containing labels
-      for (place, expressions) in post {
-        for expr in expressions {
-          exprSubs = bindingSubstitution(expr: expr, binding: binding)
-          valOutput = eval(exprSubs)
-          // In the case or we get the signature of a function, we just return the function name
-          if valOutput.contains("function") {
-            multiset.insert(exprSubs)
-          } else {
-            multiset.insert(valOutput)
+      for (place, labels) in post {
+        for label in labels {
+          switch label {
+          case .var(let v):
+            multiset.insert(binding[v]!)
+          case .val(let val):
+            multiset.insert(val)
+          case .exp(let e):
+            exprSubs = bindVariables(expr: .exp(e), binding: binding)
+            valOutput = eval(exprSubs)
+            // In the case or we get the signature of a function, we just return the function name
+            switch valOutput {
+            case .cst(let c):
+              if c.contains("function") {
+                multiset.insert(.cst(c))
+              } else {
+                multiset.insert(.cst(c))
+              }
+            case .btk:
+              multiset.insert(.btk)
+            }
           }
         }
         // Create a multiset for each place of output arcs of the transition
@@ -262,22 +281,24 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check the fireability of a transition
-  public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Label: String]) -> Bool {
-    var multiset: Multiset<String>
+  public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Var: Val]) -> Bool {
+    
+    var multiset: Multiset<Val>
     if let pre = input[transition] {
-      for (place,variables) in pre {
+      for (place, labels) in pre {
         multiset = [:]
-        for expr in variables {
-          // If expr is a variable
-          if expr.contains("$") {
-            if let varSubs = binding[expr] {
-              multiset.insert(varSubs)
+        for label in labels {
+          switch label {
+          case .var(let v):
+            if let vSubs = binding[v] {
+              multiset.insert(vSubs)
             } else {
               return false
             }
-          } else {
-            // Otherwise it is a value
-            multiset.insert(expr)
+          case .val(let val):
+            multiset.insert(val)
+          default:
+            fatalError("No expressions allow in binding")
           }
         }
         guard multiset <= marking[place] else {
@@ -293,7 +314,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards of a transition
-  private func checkGuards(transition: TransitionType, with binding: [Label: Value]) -> Bool {
+  private func checkGuards(transition: TransitionType, with binding: [Var: Val]) -> Bool {
     if let conditions = guards[transition] {
       return checkGuards(conditions: conditions, with: binding)
     }
@@ -301,7 +322,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check guards for a list of conditions
-  func checkGuards(conditions: [Pair<Value, Value>], with binding: [Label: Value]) -> Bool {
+  func checkGuards(conditions: [Guard], with binding: [Var: Val]) -> Bool {
     for condition in conditions {
       if !checkGuard(condition: condition, with: binding) {
         return false
@@ -311,34 +332,50 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
   }
   
   // Check a guard
-  func checkGuard(condition: Pair<Value, Value>, with binding: [Label: Value]) -> Bool {
-    let lhs = bindingSubstitution(expr: condition.l, binding: binding)
-    let rhs = bindingSubstitution(expr: condition.r, binding: binding)
-    // Check if both term are equals, thanks to the syntactic equivalence !
-    // Moreover, allows to compare functions in a syntactic way
-    if lhs != rhs {
-      let v1 = eval(lhs)
-      let v2 = eval(rhs)
-      // If values are different and not are signature functions
-      if "\(v1)" != "\(v2)" || "\(v1)".contains("function") {
-        return false
+  func checkGuard(condition: Guard, with binding: [Var: Val]) -> Bool {
+    switch (condition.l, condition.r) {
+    case (.var(let x), .var(let y)):
+      if let xSubs = binding[x], let ySubs = binding[y] {
+        return xSubs == ySubs
       }
+      return x == y
+    case (.val(let x), .val(let y)):
+      return x == y
+    case (let x, let y):
+      if x == y {
+        return true
+      }
+      let newX = bindVariables(expr: x, binding: binding)
+      let newY = bindVariables(expr: y, binding: binding)
+      return eval(newX) == eval(newY)
     }
-    return true
   }
   
   /// Substitute variables inside a string by corresponding binding
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-  func bindingSubstitution(expr: Value, binding: [Label: Value]) -> String {
-    var res: String = "\(expr)"
-    // The sorting is needed to avoid conflict where a variable is shorter than another and could take its place
-    // E.g.: $x = 2, $x_1 = 42, if the expression is $x_1 and the binding $x is read before, $x_1 -> 1_1
-    for el in binding.sorted(by: {(b1,b2) in
-      return b1.key.count > b2.key.count
-    }) {
-      res = res.replacingOccurrences(of: "\(el.key)", with: "\(el.value)")
+  func bindVariables(expr: ILang, binding: [Var: Val]) -> ILang {
+    switch expr {
+    case .val(_):
+      return expr
+    case .var(let v):
+      if let vSubs = binding[v] {
+        return .val(vSubs)
+      }
+      return expr
+    case .exp(let e):
+      var res: String = e
+      for el in binding.sorted(by: {(b1,b2) in
+        return b1.key.count > b2.key.count
+      }) {
+        switch el.value {
+        case .cst(let c):
+          res = res.replacingOccurrences(of: "\(el.key)", with: "\(c)")
+        default:
+          continue
+        }
+      }
+      return .exp(res)
     }
-    return res
   }
 
   /// Internal helper to process preconditions and postconditions.
@@ -355,14 +392,34 @@ where PlaceType: Place, PlaceType.Content == Multiset<String>, TransitionType: T
     }
   }
   
-  func eval(_ s: Value) -> Value {
-    let context = interpreter.saveContext()
-    let value = try! "\(interpreter.eval(string: s))"
-    interpreter.reloadContext(context: context)
-    if value.contains("func") {
-      return s
+  /// Eval an inscription language expression to a value
+  func eval(_ s: ILang) -> Val {
+    switch s {
+    case .val(let val):
+      return val
+    case .exp(let e):
+      let context = interpreter.saveContext()
+      let value = try! "\(interpreter.eval(string: e))"
+      interpreter.reloadContext(context: context)
+      if value.contains("func") {
+        return .cst(value)
+      }
+      return .cst(value)
+    case .var(_):
+      fatalError("Try to evaluate a variable which has not been bound.")
     }
-    return value
+  }
+  
+  /// Does the expression contains the string ?
+  func contains(exp: ILang, s: String) -> Bool {
+    switch exp {
+    case .var(let v):
+      return v.contains(s)
+    case .exp(let e):
+      return e.contains(s)
+    default:
+      return false
+    }
   }
 
 }

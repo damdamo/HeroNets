@@ -7,10 +7,10 @@ extension HeroNet {
     public typealias DD = HeroMFDD
     
     /// The guard to evaluate
-    public let condition: Pair<Value, Value>
+    public let condition: Guard
     
     /// Key of the condition
-    public let keyCond: [KeyMFDDLabel]
+    public let keyCond: [KeyMFDDVar]
 
     /// The factory that creates the nodes handled by this morphism.
     public unowned let factory: HeroMFDDFactory
@@ -21,18 +21,18 @@ extension HeroNet {
     /// The morphism's cache.
     private var cache: [HeroMFDD.Pointer: HeroMFDD.Pointer] = [:]
 
-    init(condition: Pair<Value, Value>, keyCond: [KeyMFDDLabel], factory: HeroMFDDFactory, heroNet: HeroNet) {
+    init(condition: Guard, keyCond: [KeyMFDDVar], factory: HeroMFDDFactory, heroNet: HeroNet) {
       self.condition = condition
       self.keyCond = keyCond
       self.factory = factory
       self.heroNet = heroNet
     }
     
-    public func apply(on pointer: HeroMFDD.Pointer, with substitution: [KeyMFDDLabel: Value], keyCondOrdered: [KeyMFDDLabel]) -> HeroMFDD.Pointer {
+    public func apply(on pointer: HeroMFDD.Pointer, with substitution: [KeyMFDDVar: Val], keyCondOrdered: [KeyMFDDVar]) -> HeroMFDD.Pointer {
       
       if substitution.count == keyCond.count {
         // Transform: [KeyMFDDLabel: Value] -> [Label: Value]
-        let s = substitution.reduce([:]) { (partialResult: [Label: Value], tuple: (key: KeyMFDDLabel, value: Value)) in
+        let s = substitution.reduce([:]) { (partialResult: [Var: Val], tuple: (key: KeyMFDDVar, value: Val)) in
           var result = partialResult
           result[tuple.key.label] = tuple.value
           return result
@@ -76,7 +76,7 @@ extension HeroNet {
     }
 
     public func apply(on pointer: HeroMFDD.Pointer) -> HeroMFDD.Pointer {
-      let substitution: [KeyMFDDLabel: Value] = [:]
+      let substitution: [KeyMFDDVar: Val] = [:]
       return apply(on: pointer, with: substitution, keyCondOrdered: keyCond.sorted(by: { a, b in a < b }))
     }
 
@@ -94,9 +94,9 @@ extension HeroNet {
   }
   
   public func guardFilter(
-    condition: Pair<Value, Value>,
-    keyCond: [KeyMFDDLabel],
-    factory: MFDDFactory<KeyMFDDLabel,Value>,
+    condition: Guard,
+    keyCond: [KeyMFDDVar],
+    factory: MFDDFactory<KeyMFDDVar, Val>,
     heroNet: HeroNet
   ) -> GuardFilter
   {
