@@ -348,12 +348,12 @@ extension HeroNet {
       for cond in conds {
         switch (cond.l, cond.r) {
         case (.var(let v), .val(let val)):
-          guard let _ = constantLabels[v] else {
+          if let _ = constantLabels[v] {
             fatalError("A constant is assigned more than two times to the same variable")
           }
           constantLabels[v] = val
         case (.val(let val), .var(let v)):
-          guard let _ = constantLabels[v] else {
+          if let _ = constantLabels[v] {
             fatalError("A constant is assigned more than two times to the same variable")
           }
           constantLabels[v] = val

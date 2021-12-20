@@ -16,3 +16,37 @@ public enum Val: Hashable {
     return res
   }
 }
+
+extension Val: ExpressibleByStringLiteral {
+  public init(stringLiteral value: String) {
+    if value == "btk" {
+      self = .btk
+    } else {
+      self = .cst(value)
+    }
+  }
+}
+
+extension ILang: CustomStringConvertible {
+  public var description: String {
+    switch self {
+    case .var(let v):
+      return v
+    case .exp(let e):
+      return e
+    case .val(let val):
+      return val.description
+    }
+  }
+}
+
+extension Val: CustomStringConvertible {
+  public var description: String {
+    switch self {
+    case .cst(let c):
+      return c
+    case .btk:
+      return "⚫️"
+    }
+  }
+}

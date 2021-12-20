@@ -260,7 +260,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
             switch valOutput {
             case .cst(let c):
               if c.contains("function") {
-                multiset.insert(.cst(c))
+                switch exprSubs {
+                case .exp(let e):
+                  multiset.insert(.cst(e))
+                default:
+                  fatalError("Not possible")
+                }
               } else {
                 multiset.insert(.cst(c))
               }
