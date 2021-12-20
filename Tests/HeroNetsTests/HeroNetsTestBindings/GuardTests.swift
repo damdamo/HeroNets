@@ -14,7 +14,7 @@ final class GuardTests: XCTestCase {
   typealias Var = String
   typealias KeyMFDDVar = KeyMFDD<Var>
   typealias ValueMFDD = Val
-  public typealias Guard = Pair<ILang, ILang>
+  typealias Guard = Pair<ILang, ILang>
   
   enum P: Place, Equatable {
     typealias Content = Multiset<Val>

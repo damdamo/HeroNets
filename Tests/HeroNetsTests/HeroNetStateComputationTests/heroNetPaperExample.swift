@@ -5,8 +5,13 @@ import DDKit
 
 final class Calculator: XCTestCase {
   
+  let x = ILang.var("$x")
+  let f = ILang.var("$f")
+  
+  typealias Guard = Pair<ILang, ILang>
+  
   enum P: Place, Hashable, Comparable {
-    typealias Content = Multiset<String>
+    typealias Content = Multiset<Val>
     
     case s0,s1,op,s2,num
   }
@@ -17,8 +22,8 @@ final class Calculator: XCTestCase {
   
   typealias KeyMarking = P
   typealias ValueMarking = Pair<P.Content.Key, Int>
-  typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
-  typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
+//  typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
+//  typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
 //  typealias Label = String
 //  typealias KeyMFDDLabel = KeyMFDD<String>
 //  typealias ValueMFDD = String
@@ -51,8 +56,8 @@ final class Calculator: XCTestCase {
   
   
   func testCalculator0() {
-    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
-    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+//    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+//    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
     
     let module: String = """
     func add(_ x: Int) -> (Int) -> Int ::
@@ -83,36 +88,38 @@ final class Calculator: XCTestCase {
     
     let model = HeroNet<P, T>(
       // Transition t0
-      .pre(from: .s0, to: .t0, labeled: ["1"]),
-      .pre(from: .num, to: .t0, labeled: ["$x"]),
-      .post(from: .t0, to: .s1, labeled: ["$x"]),
-//      .post(from: .t0, to: .num, labeled: ["$x"]),
+      .pre(from: .s0, to: .t0, labeled: [.val("1")]),
+      .pre(from: .num, to: .t0, labeled: [x]),
+      .post(from: .t0, to: .s1, labeled: [x]),
+//      .post(from: .t0, to: .num, labeled: [x]),
       // Transition c
-      .pre(from: .s1, to: .c, labeled: ["$x"]),
-      .post(from: .c, to: .s0, labeled: ["1"]),
+      .pre(from: .s1, to: .c, labeled: [x]),
+      .post(from: .c, to: .s0, labeled: [.val("1")]),
       // Transition t1
-      .pre(from: .s1, to: .t1, labeled: ["$x"]),
-      .pre(from: .op, to: .t1, labeled: ["$f"]),
-      .post(from: .t1, to: .s2, labeled: ["$f($x)"]),
-      .post(from: .t1, to: .op, labeled: ["$f"]),
+      .pre(from: .s1, to: .t1, labeled: [x]),
+      .pre(from: .op, to: .t1, labeled: [f]),
+      .post(from: .t1, to: .s2, labeled: [.exp("$f($x)")]),
+      .post(from: .t1, to: .op, labeled: [f]),
       // Transition tapply
-      .pre(from: .s2, to: .tapply, labeled: ["$f"]),
-      .pre(from: .num, to: .tapply, labeled: ["$x"]),
-      .post(from: .tapply, to: .s1, labeled: ["$f($x)"]),
-//      .post(from: .tapply, to: .num, labeled: ["$x"]),
+      .pre(from: .s2, to: .tapply, labeled: [f]),
+      .pre(from: .num, to: .tapply, labeled: [x]),
+      .post(from: .tapply, to: .s1, labeled: [.exp("$f($x)")]),
+//      .post(from: .tapply, to: .num, labeled: [x]),
       guards: [.t0: nil, .t1: nil, .c: nil, .tapply: nil],
       interpreter: interpreter
     )
     
     var marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["0","1"], .op: ["add","sub"]])
-    var markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
-
+//    var markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+    var markings = model.computeStateSpaceAlternative(from: marking)
+    
     XCTAssertEqual(markings.count, 19)
 
     marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["2","3","4","5"], .op: ["sub","mul","add","div"]])
     
     let s = Stopwatch()
-    markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+//    markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+    markings = model.computeStateSpaceAlternative(from: marking)
     print(s.elapsed.humanFormat)
     print(markings.count)
     
@@ -120,8 +127,8 @@ final class Calculator: XCTestCase {
   }
   
   func testCalculator1() {
-    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
-    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+//    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+//    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
     
     let module: String = """
     func add(_ x: Int) -> (Int) -> Int ::
@@ -152,33 +159,33 @@ final class Calculator: XCTestCase {
     
     let model = HeroNet<P, T>(
       // Transition t0
-      .pre(from: .s0, to: .t0, labeled: ["1"]),
-      .pre(from: .num, to: .t0, labeled: ["$x"]),
-      .post(from: .t0, to: .s1, labeled: ["$x"]),
-//      .post(from: .t0, to: .num, labeled: ["$x"]),
+      .pre(from: .s0, to: .t0, labeled: [.val("1")]),
+      .pre(from: .num, to: .t0, labeled: [x]),
+      .post(from: .t0, to: .s1, labeled: [x]),
+//      .post(from: .t0, to: .num, labeled: [x]),
       // Transition c
-      .pre(from: .s1, to: .c, labeled: ["$x"]),
-      .post(from: .c, to: .s0, labeled: ["1"]),
+      .pre(from: .s1, to: .c, labeled: [x]),
+      .post(from: .c, to: .s0, labeled: [.val("1")]),
       // Transition t1
-      .pre(from: .s1, to: .t1, labeled: ["$x"]),
-      .pre(from: .op, to: .t1, labeled: ["$f"]),
-      .post(from: .t1, to: .s2, labeled: ["$f($x)"]),
-      .post(from: .t1, to: .op, labeled: ["$f"]),
+      .pre(from: .s1, to: .t1, labeled: [x]),
+      .pre(from: .op, to: .t1, labeled: [f]),
+      .post(from: .t1, to: .s2, labeled: [.exp("$f($x)")]),
+      .post(from: .t1, to: .op, labeled: [f]),
       // Transition tapply
-      .pre(from: .s2, to: .tapply, labeled: ["$f"]),
-      .pre(from: .num, to: .tapply, labeled: ["$x"]),
-      .post(from: .tapply, to: .s1, labeled: ["$f($x)"]),
-//      .post(from: .tapply, to: .num, labeled: ["$x"]),
+      .pre(from: .s2, to: .tapply, labeled: [f]),
+      .pre(from: .num, to: .tapply, labeled: [x]),
+      .post(from: .tapply, to: .s1, labeled: [.exp("$f($x)")]),
+//      .post(from: .tapply, to: .num, labeled: [x]),
       guards: [.t0: nil, .t1: nil, .c: nil, .tapply: nil],
       interpreter: interpreter
     )
     
-    var i: Multiset<String> = []
-    for el in 0 ..< 6 {
-      i.insert("\(el)")
+    var l: Multiset<Val> = []
+    for i in 0 ..< 6 {
+      l.insert(Val(stringLiteral: String(i)))
     }
     
-    let marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: i, .op: ["sub","mul","add"]])
+    let marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: l, .op: ["sub","mul","add"]])
     
     let s = Stopwatch()
 //    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
