@@ -22,10 +22,10 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     let staticOptimizedNet = heroNet.computeStaticOptimizedNet()
     
     if let (netWithoutConstant, newMarking) = staticOptimizedNet.consumeConstantOnArcs(transition: transition, marking: marking) {
-      
       // From old name to new name
       let originalLabels = netWithoutConstant.createSetOfVariableLabel(transition: transition)
       let newNetWithUniqueLabel = setUniqueVariableForATransition(transition: transition, net: netWithoutConstant)
+      
       return fireableBindingsBF(transition: transition, marking: newMarking, net: newNetWithUniqueLabel, originalLabels: originalLabels)
     }
     
@@ -159,6 +159,8 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
         }).reduce([], {(cur, new) in
           cur.union(new)
         })
+        
+        labels = []
       }
     }
     

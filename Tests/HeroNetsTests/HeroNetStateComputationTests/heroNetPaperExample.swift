@@ -88,13 +88,13 @@ final class Calculator: XCTestCase {
     
     let model = HeroNet<P, T>(
       // Transition t0
-      .pre(from: .s0, to: .t0, labeled: [.val("1")]),
+      .pre(from: .s0, to: .t0, labeled: [.val(.btk)]),
       .pre(from: .num, to: .t0, labeled: [x]),
       .post(from: .t0, to: .s1, labeled: [x]),
 //      .post(from: .t0, to: .num, labeled: [x]),
       // Transition c
       .pre(from: .s1, to: .c, labeled: [x]),
-      .post(from: .c, to: .s0, labeled: [.val("1")]),
+      .post(from: .c, to: .s0, labeled: [.val(.btk)]),
       // Transition t1
       .pre(from: .s1, to: .t1, labeled: [x]),
       .pre(from: .op, to: .t1, labeled: [f]),
@@ -109,13 +109,13 @@ final class Calculator: XCTestCase {
       interpreter: interpreter
     )
     
-    var marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["0","1"], .op: ["add","sub"]])
+    var marking = Marking<P>([.s0: [.btk], .s1: [], .s2: [], .num: ["0","1"], .op: ["add","sub"]])
 //    var markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
     var markings = model.computeStateSpaceAlternative(from: marking)
     
     XCTAssertEqual(markings.count, 19)
 
-    marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: ["2","3","4","5"], .op: ["sub","mul","add","div"]])
+    marking = Marking<P>([.s0: [.btk], .s1: [], .s2: [], .num: ["2","3","4","5"], .op: ["sub","mul","add","div"]])
     
     let s = Stopwatch()
 //    markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
@@ -159,13 +159,13 @@ final class Calculator: XCTestCase {
     
     let model = HeroNet<P, T>(
       // Transition t0
-      .pre(from: .s0, to: .t0, labeled: [.val("1")]),
+      .pre(from: .s0, to: .t0, labeled: [.val(.btk)]),
       .pre(from: .num, to: .t0, labeled: [x]),
       .post(from: .t0, to: .s1, labeled: [x]),
 //      .post(from: .t0, to: .num, labeled: [x]),
       // Transition c
       .pre(from: .s1, to: .c, labeled: [x]),
-      .post(from: .c, to: .s0, labeled: [.val("1")]),
+      .post(from: .c, to: .s0, labeled: [.val(.btk)]),
       // Transition t1
       .pre(from: .s1, to: .t1, labeled: [x]),
       .pre(from: .op, to: .t1, labeled: [f]),
@@ -185,7 +185,7 @@ final class Calculator: XCTestCase {
       l.insert(Val(stringLiteral: String(i)))
     }
     
-    let marking = Marking<P>([.s0: ["1"], .s1: [], .s2: [], .num: l, .op: ["sub","mul","add"]])
+    let marking = Marking<P>([.s0: [.btk], .s1: [], .s2: [], .num: l, .op: ["sub","mul","add"]])
     
     let s = Stopwatch()
 //    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
