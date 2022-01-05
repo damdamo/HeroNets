@@ -48,7 +48,7 @@ extension HeroNet where PlaceType: Comparable {
     var markingToCheck: Set<Marking<PlaceType>> = [m0]
     var markingAlreadyChecked: Set<Marking<PlaceType>> = [m0]
     let netStaticOptimized = computeStaticOptimizedNet()
-    let heroMFDDFactory = HeroMFDDFactory()
+    let heroMFDDFactory = BindingMFDDFactory()
     
     while !markingToCheck.isEmpty {
       for marking in markingToCheck {
@@ -98,7 +98,7 @@ extension HeroNet where PlaceType: Comparable {
   private func fireForAllBindingsAlternative(
     transition: TransitionType,
     from marking: Marking<PlaceType>,
-    heroMFDDFactory: HeroMFDDFactory
+    heroMFDDFactory: BindingMFDDFactory
   )
   -> Set<Marking<PlaceType>> {
             

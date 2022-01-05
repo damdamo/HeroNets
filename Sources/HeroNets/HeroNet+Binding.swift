@@ -5,62 +5,61 @@ import Interpreter
 extension HeroNet {
     
   public typealias KeyMFDDVar = KeyMFDD<Var>
-  public typealias HeroMFDD = MFDD<KeyMFDDVar, Val>
-  public typealias HeroMFDDFactory = MFDDFactory<KeyMFDDVar, Val>
+  public typealias BindingMFDD = MFDD<KeyMFDDVar, Val>
+  public typealias BindingMFDDFactory = MFDDFactory<KeyMFDDVar, Val>
     
-  /// Compute the whole binding for a transition and a marking. The binding represents all possibilities of values for each variable that satisfied the conditions of the net (i.e.: Guards, same label name multiple times). It creates a MFDD (Map family decision diagram) which is a compact implicit representation based on the theory on DD (Decision diagrams).
-  /// A factory has to be created outside the scope that allows to manage the DD efficiently. (e.g.: `let factory = MFDDFactory<KeyMFDDLabel,ValueMFDD>()`
-  /// To reduce the complexity of the net, multiple steps are processed before the creation of the MFDD.
-  /// There are two main steps of optimizations.
-  /// - Static optimization: Based on the structure of the net, it does not depend on the marking. It will compute a new net based on it.
-  /// - Dynamic optimization: Based on structure and/or the marking, it modifies the structure and the current marking.
-  /// Once time it is done, the computation of the MFDD can start. MFDD takes advantage of homorphisms to apply operations directly on the compact representation, instead of working on a naive representation with sets.
+  /// Compute the enabled bindings for a transition and a marking. The enable bindings represent all possible maping for each variable of a transition, which are fireable. Instead oof keeping the enabled transitions as a set, we use a MFDD structure (Map family decision diagram) which is an implicit and compact representation based on the theory on DD (Decision diagrams).
+  /// A factory has to be created outside the scope that allows to manage the DD efficiently. (e.g.: `let factory = MFDDFactory<KeyMFDDVar,ValueMFDD>()`
+  /// The factory manages references and ensures the unicity of each value inside a MFDD. It keeps in memory previous operations to avoid to recompute the same operation many times. The factory can be passed between different computations that manipulate the same transitions or marking.
+  /// In an effort to enhance the computation, two optimizations have been created:
+  /// - Static optimization: Based on the structure of the net, it does not depend on the marking. It will compute a new net based on it. (e.g.: Constant propagation)
+  /// - Dynamic optimization: Based on structure and/or the marking, it modifies the structure and the current marking. (e.g.: Reduce constant on arcs)
+  /// When optimizations are applied, the computation of the MFDD can start. MFDD takes advantage of homorphisms to apply operations directly on the compact representation, instead of working on a naive representation with sets.
   /// - Parameters:
   ///   - for transition: The transition to compute bindings
   ///   - with marking: The marking to use
   ///   - factory: The factory needed to work on MFDD
   /// - Returns:
-  ///   Returns all bindings for a specific transition and a marking
-  public func fireableBindings(for transition: TransitionType, with marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
-    
+  ///   Returns all enabled bindings for a specific transition and a specific marking
+  public func fireableBindings(
+    for transition: TransitionType,
+    with marking: Marking<PlaceType>,
+    factory: BindingMFDDFactory)
+  -> BindingMFDD {
     // Static optimization, only depends on the structure of the net
     let staticOptimizedNet = computeStaticOptimizedNet()
-    
     // Dynamic optimization, depends on the structure of the net and the marking
     let tupleDynamicOptimizedNetAndnewMarking = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
-    
     if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
-      return dynamicOptimizedNet.fireableBindings(for: transition, marking: newMarking, factory: factory)
+      return dynamicOptimizedNet.computeEnabledBindings(for: transition, marking: newMarking, factory: factory)
     }
-    
     return factory.zero
   }
   
   /// Same method as fireableBindings, however there is no static optimization  here.
   /// When the state space computation is performed, the static optimization is realized before to avoid unecessary computations.
-  func fireableBindingsForCSS(for transition: TransitionType, with marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
-    
+  func fireableBindingsForCSS(
+    for transition: TransitionType,
+    with marking: Marking<PlaceType>,
+    factory: BindingMFDDFactory)
+  -> BindingMFDD {
     // Dynamic optimization, depends on the structure of the net and the marking
     let tupleDynamicOptimizedNetAndnewMarking = self.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
-    
     if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
-      return dynamicOptimizedNet.fireableBindings(for: transition, marking: newMarking, factory: factory)
+      return dynamicOptimizedNet.computeEnabledBindings(for: transition, marking: newMarking, factory: factory)
     }
-    
     return factory.zero
   }
 
-  
-  
   // --------------------------------------------------------------------------------- //
   // ----------------------- Functions for static optimization ----------------------  //
   // --------------------------------------------------------------------------------- //
   
-  
-  /// Takes the input net and optimizes it to get an optimize version if possible. It uses the information on guard to shift certain conditions such as equality variable or a constant expression equal to a variable on the structure and removes the condition.
-  /// This is a purely static optimization that is applied on the structure, it does not depend on the marking.
+  /// Takes the input net and optimizes. Current static optimizations are based on constant and variable propagation.
+  /// In other words, if a guard checks that a variable is equal to another variable, or a variable is equal to a constant, the guard is removed and all variables are substituted by the corresponding new variable or value.
+  /// This optimization is purely static and is only based on the structure of the net. The marking is not taken into account.
   /// - Returns:
-  ///   Returns an optimized net
+  ///   Returns a static optimized net
   public func computeStaticOptimizedNet() -> HeroNet {
     
     var netOptimized = self
@@ -71,39 +70,28 @@ extension HeroNet {
     return netOptimized
   }
   
-  /// The constant propagation optimization uses guard of the form "x = constant expression" to replace all occurences of x by the constant expression in every possible expressions (e.g.: arcs, guards)
-  /// - Parameters:
-  ///   - net:The net that is optimized
-  ///   - transition: The current transition
-  /// - Returns:
-  ///  Returns a new net where constant propagation is applied
-  private func constantPropagationValue(transition: TransitionType) -> HeroNet {
-    
-    let labelSet = createSetOfVariableLabel(transition: transition)
-    
+  /// The constant propagation optimization uses guard of the form "x = constant expression" to replace all occurences of x by the constant expression in every possible expressions (e.g.: arcs, guards). It returns a net where all occurences of a variable is substituted by the value.
+  private func constantPropagationValue(
+    transition: TransitionType)
+  -> HeroNet {
     if let conditions = guards[transition] {
       // Isolate condition with a unique variable
-      let (constantLabels, condRest) = getConstantLabels(labelSet: labelSet, conditions: conditions)
-      
-
+      let (constantLabels, condRest) = getConstantLabels(conditions: conditions)
       // We do not keep condition with a unique label in the future net !
       var guardsTemp = guards
       guardsTemp[transition] = condRest
       let netTemp = HeroNet(input: input, output: output, guards: guardsTemp, interpreter: interpreter)
       return replaceVarsForATransition(varToValue: constantLabels, transition: transition, net: netTemp)
-      
     }
     return self
   }
   
-  /// A general function to replace all occurence of a label by a certain **value**. It looks at every arcs and guards.
-  /// - Parameters:
-  ///   - labelToValue: A dictionnary that binds every labels to their new value (or variable)
-  ///   - transition: The current transition
-  ///   - net:The net that is optimized
-  /// - Returns:
-  ///  Returns a new net where label has been replaced by new values
-  public func replaceVarsForATransition(varToValue: [Var: Val], transition: TransitionType, net: HeroNet) -> HeroNet {
+  /// Replace all occurence of a list of variables by their corresponding value, for a specific transition.
+  func replaceVarsForATransition(
+    varToValue: [Var: Val],
+    transition: TransitionType,
+    net: HeroNet)
+  -> HeroNet {
     var newInput = net.input
     var newOutput = net.output
     var newGuards = net.guards
@@ -199,14 +187,12 @@ extension HeroNet {
     return HeroNet(input: newInput, output: newOutput, guards: newGuards, interpreter: interpreter)
   }
   
-  /// A general function to replace all occurence of a label by a certain **variable**. It looks at every arcs and guards.
-  /// - Parameters:
-  ///   - labelToValue: A dictionnary that binds every labels to their new value (or variable)
-  ///   - transition: The current transition
-  ///   - net:The net that is optimized
-  /// - Returns:
-  ///  Returns a new net where label has been replaced by new values
-  public func replaceVarsForATransition(varToVar: [Var: Var], transition: TransitionType, net: HeroNet) -> HeroNet {
+  /// Replace all occurence of a list of variables by their new corresponding variable name, for a specific transition.
+  func replaceVarsForATransition(
+    varToVar: [Var: Var],
+    transition: TransitionType,
+    net: HeroNet)
+  -> HeroNet {
     var newInput = net.input
     var newOutput = net.output
     var newGuards = net.guards
@@ -296,28 +282,22 @@ extension HeroNet {
   
   
   /// Optimization function that takes conditions of the form "x = y" and replaces each occurence of x by y in the net. Then, it removes the condition.
-  /// - Parameters:
-  ///   - transition: The transition that is looking at
-  /// - Returns:
-  ///  Returns a new net where the equality in guard optimization is applied
-  private func constantPropagationVariable(transition: TransitionType) -> HeroNet {
+  private func constantPropagationVariable(
+    transition: TransitionType)
+  -> HeroNet {
     // Equality guards
-    let equivalentVariables  = createDicOfEquivalentLabel(transition: transition)
-    
+    let equivalentVariables = createDicOfEquivalentLabel(transition: transition)
     return replaceVarsForATransition(varToVar: equivalentVariables, transition: transition, net: self)
   }
   
   /// Creates a dictionnary from the equivalent label that binds a label to its new name. It means that if we have a condition of the form " x = y", a new entry will be added in the dictionnary (e.g.: [x:y]). At the end this dictionnary will  be used to know which labels has to be replaced.
-  /// - Parameters:
-  ///   - transition: The transition that is looking at
-  /// - Returns:
-  ///  Returns a dictionnary of label to label where the key is the old name of the label and the value its new name
-  private func createDicOfEquivalentLabel(transition: TransitionType) -> [Var: Var] {
+  private func createDicOfEquivalentLabel(
+    transition: TransitionType)
+  -> [Var: Var] {
     
     guard let _ = guards[transition] else { return [:] }
     
     var res: [Var: Var] = [:]
-    
     if let conditions = guards[transition] {
       for condition in conditions {
         switch (condition.l, condition.r) {
@@ -328,17 +308,12 @@ extension HeroNet {
         }
       }
     }
-    
     return res
   }
   
-  /// Isolate conditions with a unique label (only one)
-  /// - Parameters:
-  ///   - LabelSet: An array containing a list of keys binds to their possible expressions
-  ///   - conditions: List of condition for a specific transition
-  /// - Returns:
-  ///   Return a dictionnary that binds label to their conditions where the label is the only to appear
-  private func getConstantLabels(labelSet: Set<Var>, conditions: [Guard]?)
+  /// Isolate conditions of the form: someVar = someVal.
+  private func getConstantLabels(
+    conditions: [Guard]?)
   -> (constantLabels: [Var: Val], restGuards: [Guard]) {
 
     var constantLabels: [Var: Val] = [:]
@@ -383,8 +358,8 @@ extension HeroNet {
   ///   Returns a new net modify with the optimizations and a dictionnary that contains for each place, possible values for labels
   public func computeDynamicOptimizedNet(
     transition: TransitionType,
-    marking: Marking<PlaceType>) -> (HeroNet, Marking<PlaceType>)?
-  {
+    marking: Marking<PlaceType>)
+  -> (HeroNet, Marking<PlaceType>)? {
     // Optimizations on constant on arcs, removing it from the net and from the marking in  the place
     if let (netWithoutConstant, markingWithoutConstant) = consumeConstantOnArcs(transition: transition, marking: marking) {
       return (netWithoutConstant, markingWithoutConstant)
@@ -392,11 +367,11 @@ extension HeroNet {
     return nil
   }
   
-  /// During the firing, consume directly the constant into the marking before starting the computation
-  public func consumeConstantOnArcs(
+  /// During the firing, consume directly the arc constants from the marking before starting the computation
+  func consumeConstantOnArcs(
     transition: TransitionType,
-    marking: Marking<PlaceType>) -> (HeroNet, Marking<PlaceType>)?
-  {
+    marking: Marking<PlaceType>)
+  -> (HeroNet, Marking<PlaceType>)? {
     var newMarking = marking
     var newInput = input
     
@@ -426,36 +401,6 @@ extension HeroNet {
     
   }
   
-  
-  /// Compute possible values for labels of each place
-  /// - Parameters:
-  ///   - transition: The current transition
-  ///   - marking: The current marking
-  /// - Returns:
-  ///   Returns a dictionnary that binds each  place to its labels and their possible values
-  private func computeValuesForLabel(transition: TransitionType, marking: Marking<PlaceType>)
-  -> [PlaceType: [Var: MultisetVal]]
-  {
-    var placeToLabelToValues: [PlaceType: [Var: MultisetVal]] = [:]
-    
-    if let pre = input[transition] {
-      for (place, labels) in pre {
-        placeToLabelToValues[place] = [:]
-        for label in labels {
-          switch label {
-          case .var(let v):
-            placeToLabelToValues[place]![v] = marking[place]
-          default:
-            continue
-          }
-        }
-      }
-    }
-    
-    return placeToLabelToValues
-  }
-  
-  
   // --------------------------------------------------------------------------------- //
   // ------------------- End of functions for dynamic optimization ------------------- //
   // --------------------------------------------------------------------------------- //
@@ -464,18 +409,19 @@ extension HeroNet {
   // ----------------------------- Functions for MFDD -------------------------------- //
   // --------------------------------------------------------------------------------- //
   
-  private func fireableBindings(for transition: TransitionType, marking: Marking<PlaceType>, factory: HeroMFDDFactory) -> HeroMFDD {
-    
+  /// Compute enabled bindings for a transition and a marking. Use a MFDD to do the computation.
+  private func computeEnabledBindings(
+    for transition: TransitionType,
+    marking: Marking<PlaceType>,
+    factory: BindingMFDDFactory)
+  -> BindingMFDD {
     let variableSet = createSetOfVariableLabel(transition: transition)
-    
     // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
     let (labelWeights, conditionWeights) = computeScoreOrder(
       variableSet: variableSet,
       conditions: guards[transition]
     )
-    
-    let placeToLabelToValues = bindLabelVariablesToValues(transition: transition, marking: marking)
-    
+    let placeToLabelToValues = bindVariablesToValues(transition: transition, marking: marking)
     // Check that each labels has at least one possibility
     for (place, dicLabelToValues) in placeToLabelToValues {
       for (label, _) in dicLabelToValues {
@@ -484,13 +430,10 @@ extension HeroNet {
         }
       }
     }
-    
-    
     // Return the precedent placeToLabelToValues value to the same one where label are now key
     let placeToKeyToValues = fromVariableToKey(variableSet: variableSet, variableWeights: labelWeights, placeToVariableToValues: placeToLabelToValues)
-
+    // Isolate dependent and independent keys
     let (dependentPlaceToKeyToValues, independentKeyToValues) = computeDependentAndIndependentKeys(placeToKeyToValues: placeToKeyToValues, transition: transition)
-    
     var mfddPointer = constructMFDD(placeToKeyToValues: dependentPlaceToKeyToValues, transition:transition, factory: factory)
     
     // If there are conditions, we have to apply them on the MFDD
@@ -511,15 +454,13 @@ extension HeroNet {
         )
       }
     }
-    
     // Add independent labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
     mfddPointer = addIndependentLabel(mfddPointer: mfddPointer, independentKeyToValues: independentKeyToValues, factory: factory)
-    
     return MFDD(pointer: mfddPointer, factory: factory)
-
   }
   
-  private func bindLabelVariablesToValues(
+  /// Bind each variable on arcs to all possible values from the marking.
+  private func bindVariablesToValues(
     transition: TransitionType,
     marking: Marking<PlaceType>
   ) -> [PlaceType: [Var: MultisetVal]] {
@@ -542,11 +483,12 @@ extension HeroNet {
     return [:]
   }
   
-  /// Transform labels into key in the place to label to values structure.
+  /// Transform variables into keys in the original type: [PlaceType: [Var: MultisetVal]].
+  /// In addition, it uses the weights of variables to create the key order (to give a total order).
   /// - Parameters:
-  ///   - labelSet: A set containing each label of the net
-  ///   - labelWeights: Label weights
-  ///   - placeToLabelToValues: The structure to change to pass from label to key
+  ///   - variableSet: A set containing each label of the net
+  ///   - variableWeights: Label weights
+  ///   - placeToVariableToValues: The structure to change to pass from label to key
   /// - Returns:
   ///   Returns a dictionnary that binds each place to its key with their corresponding values
   private func fromVariableToKey (
@@ -577,12 +519,14 @@ extension HeroNet {
     return placeToKeyToValues
   }
   
-  /// Create a dictionnary that keeping information about dependent keys for a  specific transition. A dependent key is a label that appears in a condition or an arc that contains multiple label. For both, we add an entry to dependent keys. The information about the place is kept in the case of a dependent keym which is not the case for a independent key. It is explained by the fact that an independent key appears alone on a single arc and do not altere anything in the binding computation.
+  /// Dependent keys are keys where the corresponding variable is either in a condition, or in an arc with multiple variable.
+  /// Independent keys are the rest.
+  /// The dissociation is important cause independent keys can be just added in the MFDD, because every values for the following key can be chosen without any impact on the firing. Every values will be valid.
   /// - Parameters:
   ///   - placeToKeyToValues: Places that are bound to key which are bound to values
   ///   - transition: The current  transition
   /// - Returns:
-  ///   Returns a tuple of two dictionnary, where the first one is for independent keys and the second one for dependent keys.
+  ///   Returns a tuple of two dictionnary, where the first one is for dependent keys and the second one for independent keys.
   private func computeDependentAndIndependentKeys(
     placeToKeyToValues: [PlaceType: [KeyMFDDVar: MultisetVal]],
     transition: TransitionType)
@@ -646,20 +590,17 @@ extension HeroNet {
         }
       }
     }
-
     return (placeToDependentKeysToValues, independentKeysToValues)
   }
   
-  
-  /// Takes the current MFDD and adds values for independent keys. It allows to construct the first mfdd with conditions only on variables that can be affected by it, then just adding like a simple concatenation for the rest of values.
-  /// Do not need to evaluate anything !
+  /// Takes each independent keys and construct their own MFDD. Each MFDD can be simply added in the current MFDD.
   /// - Parameters:
   ///   - mfddPointer:Current mfdd pointer
   ///   - independentKeyToValues: List of keys with their expressions with no influenced between keys in the net.
   ///   - factory: Current factory
   /// - Returns:
   ///   Returns a new mfdd pointer where values of the independent keys have been added.
-  private func addIndependentLabel(mfddPointer: HeroMFDD.Pointer, independentKeyToValues: [KeyMFDDVar: MultisetVal], factory: HeroMFDDFactory) -> HeroMFDD.Pointer {
+  private func addIndependentLabel(mfddPointer: BindingMFDD.Pointer, independentKeyToValues: [KeyMFDDVar: MultisetVal], factory: BindingMFDDFactory) -> BindingMFDD.Pointer {
     if independentKeyToValues.count > 0 {
       let mfddPointerForIndependentKeys = constructMFDDIndependentKeys(keyToExprs: independentKeyToValues, factory: factory)
       return factory.concatAndFilterInclude(mfddPointer, mfddPointerForIndependentKeys)
@@ -675,15 +616,15 @@ extension HeroNet {
   ///   Returns the MFDD that represents all independent keys with their corresponding values
   private func constructMFDDIndependentKeys(
     keyToExprs: [KeyMFDDVar: MultisetVal],
-    factory: HeroMFDDFactory
-  ) -> HeroMFDD.Pointer {
+    factory: BindingMFDDFactory
+  ) -> BindingMFDD.Pointer {
     
     if keyToExprs.count == 0 {
       return factory.one.pointer
     }
     
     if let (key, values) = keyToExprs.sorted(by: {$0.key < $1.key}).first {
-      var take: [Val: HeroMFDD.Pointer] = [:]
+      var take: [Val: BindingMFDD.Pointer] = [:]
       var keyToExprsFirstDrop = keyToExprs
       keyToExprsFirstDrop.removeValue(forKey: key)
       
@@ -709,11 +650,11 @@ extension HeroNet {
   /// - Returns:
   ///   Returns the new mfdd that have applied the condition.
   private func applyCondition(
-    mfddPointer: HeroMFDD.Pointer,
+    mfddPointer: BindingMFDD.Pointer,
     condition: Guard,
     keySet: Set<KeyMFDDVar>,
-    factory: HeroMFDDFactory
-  ) -> HeroMFDD.Pointer {
+    factory: BindingMFDDFactory
+  ) -> BindingMFDD.Pointer {
     
     var morphisms: MFDDMorphismFactory<KeyMFDDVar, Val> { factory.morphisms }
     let keyCond = keySet.filter({(key) in
@@ -726,7 +667,12 @@ extension HeroNet {
     
   }
   
-  private func countKeyForAnArc(transition: TransitionType, place: PlaceType, keySet: Set<KeyMFDDVar>) -> [KeyMFDDVar: Int] {
+  /// Count the occurence of each key in an arc
+  private func countKeyForAnArc(
+    transition: TransitionType,
+    place: PlaceType,
+    keySet: Set<KeyMFDDVar>)
+  -> [KeyMFDDVar: Int] {
    
     var variableOccurences: [Var: Int] = [:]
     var keyOccurences: [KeyMFDDVar: Int] = [:]
@@ -753,10 +699,11 @@ extension HeroNet {
     return keyOccurences
   }
   
+  /// Construct a first MFDD which represents all enabled bindings without conditions.
   private func constructMFDD(
     placeToKeyToValues: [PlaceType: [KeyMFDDVar: MultisetVal]],
     transition: TransitionType,
-    factory: HeroMFDDFactory) -> HeroMFDD.Pointer
+    factory: BindingMFDDFactory) -> BindingMFDD.Pointer
   {
     var mfddPointer = factory.zero.pointer
     var keySet: Set<KeyMFDDVar> = []
@@ -768,43 +715,37 @@ extension HeroNet {
     }
     
     for (place, keyToValues) in placeToKeyToValues {
-      
       let keyOccurences = countKeyForAnArc(transition: transition, place: place, keySet: keySet)
-      
       var keyToValuesWithKeyOccurence: [KeyMFDDVar: (MultisetVal, Int)] = [:]
       keyToValuesWithKeyOccurence = keyToValues.reduce(into: [:], {(res, couple) in
         res[couple.key] = (couple.value, keyOccurences[couple.key]!)
       })
-            
       let mfddTemp = constructMFDD(keyToValuesAndOccurences: keyToValuesWithKeyOccurence, factory: factory)
       // Apply the homomorphism
       mfddPointer = factory.concatAndFilterInclude(mfddPointer, mfddTemp)
-      
     }
-    
     return mfddPointer
   }
   
   
   /// Creates a MFDD pointer that represents all possibilities for a place without guards
   /// The MFDD is specific for a place.
-  ///
   /// - Parameters:
-  ///   - keyToValuesAndOccurences: A dictionnary that binds a key to its possible values
+  ///   - keyToValuesAndOccurences: A dictionnary that binds a key to a tuple where the first argument is possible values, and the secondis the occurence of the key variable on the arc.
   ///   - factory: The factory to construct the MFDD
   /// - Returns:
   ///   A MFDD pointer that contains every possibilities for the given args for a place.
   private func constructMFDD(
     keyToValuesAndOccurences: [KeyMFDDVar: (MultisetVal, Int)],
-    factory: HeroMFDDFactory
-  ) -> HeroMFDD.Pointer {
+    factory: BindingMFDDFactory
+  ) -> BindingMFDD.Pointer {
     
     if keyToValuesAndOccurences.count == 0 {
       return factory.one.pointer
     }
     
     if let (key, (values, n)) = keyToValuesAndOccurences.sorted(by: {$0.key < $1.key}).first {
-      var take: [Val: HeroMFDD.Pointer] = [:]
+      var take: [Val: BindingMFDD.Pointer] = [:]
       var keyToExprsFirstDrop = keyToValuesAndOccurences
       keyToExprsFirstDrop.removeValue(forKey: key)
       
@@ -827,10 +768,9 @@ extension HeroNet {
   }
 
   
-  /// Compute a score for each variable using the guards, and the score of priority for each conditions. The score is used to determine the order to apply conditions
-  ///
+  /// Compute a score for each variable using the guards, and a priority score for each conditions. The score is used to determine an order to apply conditions.
   /// - Parameters:
-  ///   - labelSet: Set of labels
+  ///   - variableSet: Set of variables
   ///   - conditions: List of condition for a specific transition
   /// - Returns:
   ///   Return a tuple with its first element a dictionnary that binds a label to its weight and second element a dictionnary that binds condition to a score !
@@ -932,8 +872,10 @@ extension HeroNet {
   // ------------------------------ General functions -------------------------------- //
   // --------------------------------------------------------------------------------- //
   
-  // TODO: CARE if it's not
-  public func createSetOfVariableLabel(transition: TransitionType) -> Set<Var> {
+  /// Create a set of all variables that are implied in a transition
+  public func createSetOfVariableLabel(
+    transition: TransitionType)
+  -> Set<Var> {
     var labelSet: Set<Var> = []
     
     // Construct labelList by looking at on arcs

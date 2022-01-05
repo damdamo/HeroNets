@@ -4,7 +4,7 @@ extension HeroNet {
 
   public final class GuardFilter: Morphism {
     
-    public typealias DD = HeroMFDD
+    public typealias DD = BindingMFDD
     
     /// The guard to evaluate
     public let condition: Guard
@@ -13,22 +13,22 @@ extension HeroNet {
     public let keyCond: [KeyMFDDVar]
 
     /// The factory that creates the nodes handled by this morphism.
-    public unowned let factory: HeroMFDDFactory
+    public unowned let factory: BindingMFDDFactory
     
     /// Current heroNet
     let heroNet: HeroNet
 
     /// The morphism's cache.
-    private var cache: [HeroMFDD.Pointer: HeroMFDD.Pointer] = [:]
+    private var cache: [BindingMFDD.Pointer: BindingMFDD.Pointer] = [:]
 
-    init(condition: Guard, keyCond: [KeyMFDDVar], factory: HeroMFDDFactory, heroNet: HeroNet) {
+    init(condition: Guard, keyCond: [KeyMFDDVar], factory: BindingMFDDFactory, heroNet: HeroNet) {
       self.condition = condition
       self.keyCond = keyCond
       self.factory = factory
       self.heroNet = heroNet
     }
     
-    public func apply(on pointer: HeroMFDD.Pointer, with substitution: [KeyMFDDVar: Val], keyCondOrdered: [KeyMFDDVar]) -> HeroMFDD.Pointer {
+    public func apply(on pointer: BindingMFDD.Pointer, with substitution: [KeyMFDDVar: Val], keyCondOrdered: [KeyMFDDVar]) -> BindingMFDD.Pointer {
       
       if substitution.count == keyCond.count {
         // Transform: [KeyMFDDLabel: Value] -> [Label: Value]
@@ -49,7 +49,7 @@ extension HeroNet {
         else { return pointer }
 
       // Apply the morphism.
-      let result: HeroMFDD.Pointer
+      let result: BindingMFDD.Pointer
       if pointer.pointee.key < keyCondOrdered[0] {
         let take = Dictionary(
           uniqueKeysWithValues: pointer.pointee.take.map({ (value, pointer) in
@@ -75,7 +75,7 @@ extension HeroNet {
       return result
     }
 
-    public func apply(on pointer: HeroMFDD.Pointer) -> HeroMFDD.Pointer {
+    public func apply(on pointer: BindingMFDD.Pointer) -> BindingMFDD.Pointer {
       let substitution: [KeyMFDDVar: Val] = [:]
       return apply(on: pointer, with: substitution, keyCondOrdered: keyCond.sorted(by: { a, b in a < b }))
     }
