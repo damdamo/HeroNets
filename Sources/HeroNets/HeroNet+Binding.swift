@@ -854,7 +854,7 @@ extension HeroNet {
   
   // createOrder creates a list of pair from a list of string
   // to represent a total order relation. Pair(l,r) => l < r
-  func createTotalOrder(variables: [Var]) -> [Pair<Var, Var>] {
+  private func createTotalOrder(variables: [Var]) -> [Pair<Var, Var>] {
       var r: [Pair<Var, Var>] = []
       for i in 0 ..< variables.count {
         for j in i+1 ..< variables.count {
@@ -873,7 +873,7 @@ extension HeroNet {
   // --------------------------------------------------------------------------------- //
   
   /// Create a set of all variables that are implied in a transition
-  public func createSetOfVariableLabel(
+  func createSetOfVariableLabel(
     transition: TransitionType)
   -> Set<Var> {
     var labelSet: Set<Var> = []
