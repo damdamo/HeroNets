@@ -5,6 +5,7 @@ import Interpreter
 /// `HeroNet` is a generic type, accepting two types representing the set of places and the set
 /// of transitions that structurally compose the model. Both should conform to `CaseIterable`,
 /// which guarantees that the set of places (resp. transitions) is bounded, and known statically.
+/// It must conform to `Hashable` to be used as a key in dictionnary.
 /// The following example illustrates how to declare the places and transition of a simple Petri
 /// net representing an on/off switch:
 ///
@@ -50,7 +51,7 @@ import Interpreter
 ///
 ///     let marking = Marking<P>([.p1: ["1", "2", "2", "3"], .p2: []])
 ///
-///     if let marking = model.fire(transition: .t1, from: marking, with: ["x": "2", "y": "2"]) {
+///     if let marking = model.fire(transition: .t1, from: marking, with: ["$x": "2", "$y": "2"]) {
 ///       print(marking)
 ///     }
 ///     // Prints "[.p1: ["1", "3"], .p2: ["4"]]"
@@ -58,15 +59,14 @@ import Interpreter
 public struct HeroNet<PlaceType, TransitionType>
 where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Transition
 {
-
-//  public typealias Label = String
+  
+  /// How variables are represented (e.g.: Using String)
   public typealias Var = String
+  /// A multiset of value, typically content inside a place
   public typealias MultisetVal = Multiset<Val>
-
-  // The content inside the multiset (e.g.: String)
-//  public typealias Value = PlaceType.Content.Key
-//  public typealias Value = String
+  /// Content on an arc, multiset of the inscription language
   public typealias ArcLabel = Multiset<ILang>
+  /// A Pair of the inscription language
   public typealias Guard = Pair<ILang, ILang>
   
   /// The description of an arc.
@@ -161,9 +161,6 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     self.output = post
     self.guards = TotalMap(guards)
     
-    // A trick is needed with the Alpine interpreter, cause the first time a module is called it loads built-in operations. Thus, we want to keep them for the rest of operations.
-    // Otherwise, built-in operations are created the first time the interpreter is called for an operation. It works the first time, however, each time we call the interpreter, we save and reload the context
-    // So, the interpreter is reset at a time where it does not know built-it operations. Moreover, it does not reload built-in operations. It leads to an error in specific cases where the user does not create its own module.
     var interpreter = interpreter
     let module = """
       func id(_ x: Int) -> Int ::
@@ -199,13 +196,16 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
   ///
   /// - Parameters:
   ///   - transition: The transition to fire.
-  ///   - marking: The marking from which the given transition should be fired.
-  ///   - binding: Bind values on the arcs
+  ///   - from: The marking that is used to fire the transition
+  ///   - with: The binding that bound variables on the arcs
   /// - Returns:
-  ///   The marking that results from the firing of the given transition if it is fireable and guards check, or
-  ///   `nil` otherwise.
-  public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Var: Val])
-    -> Marking<PlaceType>? {
+  ///   The marking that results from the firing of the given transition, or
+  ///   `nil` if it is not fireable.
+  public func fire(
+    transition: TransitionType,
+    from marking: Marking<PlaceType>,
+    with binding: [Var: Val])
+  -> Marking<PlaceType>? {
     
     guard isFireable(transition: transition, from: marking, with: binding) else {
       return nil
@@ -285,8 +285,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     
   }
   
-  // Check the fireability of a transition
-  public func isFireable(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Var: Val]) -> Bool {
+  /// Check the fireability of a transition for a given marking
+  public func isFireable(
+    transition: TransitionType,
+    from marking: Marking<PlaceType>,
+    with binding: [Var: Val])
+  -> Bool {
     
     var multiset: Multiset<Val>
     if let pre = input[transition] {
@@ -318,7 +322,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     return false
   }
   
-  // Check guards of a transition
+  /// Check guards for a given binding and a given transition
   private func checkGuards(transition: TransitionType, with binding: [Var: Val]) -> Bool {
     if let conditions = guards[transition] {
       return checkGuards(conditions: conditions, with: binding)
@@ -326,7 +330,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     return true
   }
   
-  // Check guards for a list of conditions
+  /// Check guards for a given binding and a given list of conditions
   func checkGuards(conditions: [Guard], with binding: [Var: Val]) -> Bool {
     for condition in conditions {
       if !checkGuard(condition: condition, with: binding) {
@@ -336,7 +340,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     return true
   }
   
-  // Check a guard
+  /// Check a guard for a given binding and a given condition
   func checkGuard(condition: Guard, with binding: [Var: Val]) -> Bool {
     switch (condition.l, condition.r) {
     case (.var(let x), .var(let y)):
@@ -356,9 +360,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     }
   }
   
-  /// Substitute variables inside a string by corresponding binding
+  /// Substitute variables inside an expression of the inscription language by the corresponding binding.
   /// Care, variables in the string must begin by a $. (e.g.: "$x + 1")
-  func bindVariables(expr: ILang, binding: [Var: Val]) -> ILang {
+  func bindVariables(
+    expr: ILang,
+    binding: [Var: Val])
+  -> ILang {
     switch expr {
     case .val(_):
       return expr
@@ -415,8 +422,11 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     }
   }
   
-  /// Does the expression contains the string ?
-  func contains(exp: ILang, s: String) -> Bool {
+  /// Does the expression of the inscription language contains a given string ?
+  func contains(
+    exp: ILang,
+    s: String)
+  -> Bool {
     switch exp {
     case .var(let v):
       return v.contains(s)
