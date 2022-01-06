@@ -11,36 +11,40 @@ extension MFDDFactory {
   /// For instance: cfi([["y": 2, "z": 3], ["y": 3, "z": 3]], [["x": 2, "z": 3], ["x": 2, "z": 4]]) => [["x": 2, "y": 2, "z": 3], ["x": 2, "y": 3, "z": 3]]
   ///
   /// - Parameters:
-  ///   - variableSet: An array containing a list of keys binds to their possible expressions
-  ///   - conditions: List of condition for a specific transition
+  ///   - lhs: The first MFDD
+  ///   - rhs: The second MFDD
   /// - Returns:
-  ///   A tuple where the first element is the label name binds to a list of condition where the label name is the only variable. The second element is the list of conditions minus conditions that are valid for the first part of the tuple.
+  ///   The resulting MFDD with the application of the homomorphism.
   public func concatAndFilterInclude(
     _ lhs: MFDD<Key, Value>.Pointer,
+    _ rhs: MFDD<Key, Value>.Pointer)
+  -> MFDD<Key, Value>.Pointer {
+    var cache: [[MFDD<Key, Value>.Pointer]: MFDD<Key, Value>.Pointer] = [:]
+    return concatAndFilterInclude(lhs, rhs, cache: &cache)
+  }
+  
+  /// Apply the operation using a cache. The cache memoizes operations that have been already computed, to avoid re-computation. If the same computation is applied twice, we get the result directly from the cache.
+  private func concatAndFilterInclude(
+    _ lhs: MFDD<Key, Value>.Pointer,
     _ rhs: MFDD<Key, Value>.Pointer,
-    cache: inout [[MFDD<Key,Value>.Pointer]: MFDD<Key,Value>.Pointer]
-  ) -> MFDD<Key, Value>.Pointer
-  {
+    cache: inout [[MFDD<Key,Value>.Pointer]: MFDD<Key,Value>.Pointer])
+  -> MFDD<Key, Value>.Pointer {
 
     let zeroPointer = self.zero.pointer
     let onePointer = self.one.pointer
-
     // Check for trivial cases.
     if lhs == zeroPointer {
       return rhs
     } else if rhs == zeroPointer {
       return lhs
     }
-    
     // Query the cache.
     let cacheKey = lhs < rhs ? [lhs, rhs] : [rhs, lhs]
     if let pointer = cache[cacheKey] {
       return pointer
     }
-
     // Compute the intersection of `lhs` with `rhs`.
     let result: MFDD<Key, Value>.Pointer
-    
     if lhs == onePointer {
       result = rhs
     } else if rhs == onePointer {
@@ -79,15 +83,6 @@ extension MFDDFactory {
 
     cache[cacheKey] = result
     return result
-  }
-  
-  
-  public func concatAndFilterInclude(
-    _ lhs: MFDD<Key, Value>.Pointer,
-    _ rhs: MFDD<Key, Value>.Pointer
-  ) -> MFDD<Key, Value>.Pointer {
-    var cache: [[MFDD<Key, Value>.Pointer]: MFDD<Key, Value>.Pointer] = [:]
-    return concatAndFilterInclude(lhs, rhs, cache: &cache)
   }
 
 }

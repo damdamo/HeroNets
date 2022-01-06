@@ -8,41 +8,14 @@ extension HeroNet where PlaceType: Comparable {
   public typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
   public typealias MarkingMFDDMorphismFactory = MFDDMorphismFactory<KeyMarking, ValueMarking>
   
-//  public func computeStateSpace(
-//    from m0: Marking<PlaceType>,
-//    markingMFDDFactory: MarkingMFDDFactory)
-//  -> Set<MarkingMFDD> {
-//
-//    let m0MFDD = m0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
-//    let heroMFDDFactory = HeroMFDDFactory()
-//    var markingToCheck: Set<MarkingMFDD> = [m0MFDD]
-//    var markingAlreadyChecked: Set<MarkingMFDD> = [m0MFDD]
-//    let netStaticOptimized = computeStaticOptimizedNet()
-//
-//    while !markingToCheck.isEmpty {
-//      for marking in markingToCheck {
-//        for transition in TransitionType.allCases {
-//          let markingsForAllBindings = netStaticOptimized.fireForAllBindings(
-//            transition: transition,
-//            from: m0.mfddToMarking(markingMFDD: marking, markingMFDDFactory: markingMFDDFactory),
-//            markingMFDDFactory: markingMFDDFactory, heroMFDDFactory: heroMFDDFactory)
-//
-//          for newMarking in markingsForAllBindings {
-//            if !markingAlreadyChecked.contains(newMarking) {
-//              markingToCheck.insert(newMarking)
-//              markingAlreadyChecked.insert(newMarking)
-//            }
-//          }
-//        }
-//        markingToCheck.remove(marking)
-//      }
-//    }
-//
-//    return markingAlreadyChecked
-//
-//  }
   
-  public func computeStateSpaceAlternative(from m0: Marking<PlaceType>)
+  /// Compute the state space of a net from a given marking in a brute force (BF) way.
+  /// The enabled bindings are computed using our method with MFDD
+  /// - Parameters:
+  ///   - from m0: From the initial marking
+  /// - Returns:
+  ///   Returns the whole state space, i.e. all states that are reachable from an initial marking
+  public func computeStateSpaceBF(from m0: Marking<PlaceType>)
   -> Set<Marking<PlaceType>> {
     
     var markingToCheck: Set<Marking<PlaceType>> = [m0]
@@ -53,7 +26,7 @@ extension HeroNet where PlaceType: Comparable {
     while !markingToCheck.isEmpty {
       for marking in markingToCheck {
         for transition in TransitionType.allCases {
-          let markingsForAllBindings = netStaticOptimized.fireForAllBindingsAlternative(
+          let markingsForAllBindings = netStaticOptimized.fireAllEnabledBindingsSimple(
             transition: transition,
             from: marking,
             heroMFDDFactory: heroMFDDFactory
@@ -73,29 +46,8 @@ extension HeroNet where PlaceType: Comparable {
     
   }
   
-//  private func fireForAllBindings(
-//    transition: TransitionType,
-//    from marking: Marking<PlaceType>,
-//    markingMFDDFactory: MarkingMFDDFactory,
-//    heroMFDDFactory: HeroMFDDFactory
-//  )
-//  -> Set<MarkingMFDD> {
-//
-//    let allBindings = self.fireableBindingsForCSS(for: transition, with: marking, factory: heroMFDDFactory)
-//    var res: Set<MarkingMFDD> = []
-//    for binding in allBindings {
-//      let bindingWithLabel = Dictionary(
-//        uniqueKeysWithValues: binding.map {
-//          (key, value) in
-//            (key.label, value)
-//        })
-//      res.insert(self.fire(transition: transition, from: marking, with: bindingWithLabel, markingMFDDFactory: markingMFDDFactory))
-//    }
-//
-//    return res
-//  }
-  
-  private func fireForAllBindingsAlternative(
+  /// Fire all bindings for a given transition and a given marking. The simple version uses a set of marking, and not a MFDD.
+  private func fireAllEnabledBindingsSimple(
     transition: TransitionType,
     from marking: Marking<PlaceType>,
     heroMFDDFactory: BindingMFDDFactory
@@ -118,6 +70,61 @@ extension HeroNet where PlaceType: Comparable {
     return res
   }
   
+  //  public func computeStateSpace(
+  //    from m0: Marking<PlaceType>,
+  //    markingMFDDFactory: MarkingMFDDFactory)
+  //  -> Set<MarkingMFDD> {
+  //
+  //    let m0MFDD = m0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
+  //    let heroMFDDFactory = HeroMFDDFactory()
+  //    var markingToCheck: Set<MarkingMFDD> = [m0MFDD]
+  //    var markingAlreadyChecked: Set<MarkingMFDD> = [m0MFDD]
+  //    let netStaticOptimized = computeStaticOptimizedNet()
+  //
+  //    while !markingToCheck.isEmpty {
+  //      for marking in markingToCheck {
+  //        for transition in TransitionType.allCases {
+  //          let markingsForAllBindings = netStaticOptimized.fireForAllBindings(
+  //            transition: transition,
+  //            from: m0.mfddToMarking(markingMFDD: marking, markingMFDDFactory: markingMFDDFactory),
+  //            markingMFDDFactory: markingMFDDFactory, heroMFDDFactory: heroMFDDFactory)
+  //
+  //          for newMarking in markingsForAllBindings {
+  //            if !markingAlreadyChecked.contains(newMarking) {
+  //              markingToCheck.insert(newMarking)
+  //              markingAlreadyChecked.insert(newMarking)
+  //            }
+  //          }
+  //        }
+  //        markingToCheck.remove(marking)
+  //      }
+  //    }
+  //
+  //    return markingAlreadyChecked
+  //
+  //  }
+  
+//  private func fireForAllBindings(
+//    transition: TransitionType,
+//    from marking: Marking<PlaceType>,
+//    markingMFDDFactory: MarkingMFDDFactory,
+//    heroMFDDFactory: HeroMFDDFactory
+//  )
+//  -> Set<MarkingMFDD> {
+//
+//    let allBindings = self.fireableBindingsForCSS(for: transition, with: marking, factory: heroMFDDFactory)
+//    var res: Set<MarkingMFDD> = []
+//    for binding in allBindings {
+//      let bindingWithLabel = Dictionary(
+//        uniqueKeysWithValues: binding.map {
+//          (key, value) in
+//            (key.label, value)
+//        })
+//      res.insert(self.fire(transition: transition, from: marking, with: bindingWithLabel, markingMFDDFactory: markingMFDDFactory))
+//    }
+//
+//    return res
+//  }
   
   /// Fire a transition using MFDD. It transforms a marking into a MFDD, then compute a homorphism for pre and post arcs.
   /// Eventually, it computes the final result using a composition of both homorphism on the marking.
