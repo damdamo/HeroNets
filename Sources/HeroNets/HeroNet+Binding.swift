@@ -127,9 +127,9 @@ extension HeroNet {
               newOutput[transition]![place]!
                 .remove(label)
             }
-          case .exp(let e):
-            newOutput[transition]![place]!
-              .insert(bindVariables(expr: .exp(e), binding: varToValue))
+//          case .exp(let e):
+//            newOutput[transition]![place]!
+//              .insert(bindVariables(expr: .exp(e), binding: varToValue))
           default:
             continue
           }
@@ -422,7 +422,6 @@ extension HeroNet {
       variableSet: variableSet,
       conditions: guards[transition]
     )
-    print(varWeights)
     let placeToLabelToValues = bindVariablesToValues(transition: transition, marking: marking)
     // Check that each labels has at least one possibility
     for (place, dicLabelToValues) in placeToLabelToValues {
