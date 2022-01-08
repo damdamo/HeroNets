@@ -1,5 +1,6 @@
 import DDKit
 import Interpreter
+import Foundation
 
 /// A Hero net binding computes all the possibles marking for a given  transition
 extension HeroNet {
@@ -417,10 +418,11 @@ extension HeroNet {
   -> BindingMFDD {
     let variableSet = createSetOfVariableLabel(transition: transition)
     // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
-    let (labelWeights, conditionWeights) = computeScoreOrder(
+    let varWeights = computeWeightScores(
       variableSet: variableSet,
       conditions: guards[transition]
     )
+    print(varWeights)
     let placeToLabelToValues = bindVariablesToValues(transition: transition, marking: marking)
     // Check that each labels has at least one possibility
     for (place, dicLabelToValues) in placeToLabelToValues {
@@ -431,7 +433,7 @@ extension HeroNet {
       }
     }
     // Return the precedent placeToLabelToValues value to the same one where label are now key
-    let placeToKeyToValues = fromVariableToKey(variableSet: variableSet, variableWeights: labelWeights, placeToVariableToValues: placeToLabelToValues)
+    let placeToKeyToValues = fromVariableToKey(variableSet: variableSet, variableWeights: varWeights, placeToVariableToValues: placeToLabelToValues)
     // Isolate dependent and independent keys
     let (dependentPlaceToKeyToValues, independentKeyToValues) = computeDependentAndIndependentKeys(placeToKeyToValues: placeToKeyToValues, transition: transition)
     var mfddPointer = constructMFDD(placeToKeyToValues: dependentPlaceToKeyToValues, transition:transition, factory: factory)
@@ -444,15 +446,31 @@ extension HeroNet {
           keySet.insert(key)
         }
       }
-      for condition in conditions.sorted(by: {conditionWeights![$0]! > conditionWeights![$1]!}) {
-        // Apply guards
-        mfddPointer = applyCondition(
-          mfddPointer: mfddPointer,
-          condition: condition,
-          keySet: keySet,
-          factory: factory
-        )
+      var keysToGuards: [Set<KeyMFDDVar>: Set<Guard>] = [:]
+      var keys: Set<KeyMFDDVar>
+      for cond in conditions {
+        keys = []
+        for key in keySet {
+          if contains(exp: cond.l, s: key.label) || contains(exp: cond.r, s: key.label) {
+              keys.insert(key)
+          }
+        }
+        if !keys.isEmpty {
+          if let _ = keysToGuards[keys] {
+            keysToGuards[keys]!.insert(cond)
+          } else {
+            keysToGuards[keys] = [cond]
+          }
+        }
       }
+      // Apply guards
+      mfddPointer = applyCondition(
+        mfddPointer: mfddPointer,
+        guards: conditions,
+        keysToGuards: keysToGuards,
+        keySet: keySet,
+        factory: factory
+      )
     }
     // Add independent labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
     mfddPointer = addIndependentLabel(mfddPointer: mfddPointer, independentKeyToValues: independentKeyToValues, factory: factory)
@@ -502,7 +520,7 @@ extension HeroNet {
     
     if let lw = variableWeights {
       totalOrder = createTotalOrder(variables: variableSet.sorted(by: {(label1, label2) -> Bool in
-        lw[label1]! > lw[label2]!
+        lw[label1]! < lw[label2]!
       }))
     } else {
       totalOrder = createTotalOrder(variables: Array(variableSet))
@@ -651,20 +669,19 @@ extension HeroNet {
   ///   Returns the new mfdd that have applied the condition.
   private func applyCondition(
     mfddPointer: BindingMFDD.Pointer,
-    condition: Guard,
+    guards: [Guard],
+    keysToGuards: [Set<KeyMFDDVar>: Set<Guard>],
     keySet: Set<KeyMFDDVar>,
     factory: BindingMFDDFactory
   ) -> BindingMFDD.Pointer {
-    
     var morphisms: MFDDMorphismFactory<KeyMFDDVar, Val> { factory.morphisms }
-    let keyCond = keySet.filter({(key) in
-      return contains(exp: condition.l, s: key.label) || contains(exp: condition.r, s: key.label)
-    })
-    
-    let morphism = guardFilter(condition: condition, keyCond: Array(keyCond), factory: factory, heroNet: self)
-    
+    let morphism = guardFilter(
+      keys: keySet,
+      guards: guards,
+      keysToGuards: keysToGuards,
+      factory: factory,
+      heroNet: self)
     return morphism.apply(on: mfddPointer)
-    
   }
   
   /// Count the occurence of each key in an arc
@@ -673,10 +690,8 @@ extension HeroNet {
     place: PlaceType,
     keySet: Set<KeyMFDDVar>)
   -> [KeyMFDDVar: Int] {
-   
     var variableOccurences: [Var: Int] = [:]
     var keyOccurences: [KeyMFDDVar: Int] = [:]
-    
     if let labels = input[transition]?[place] {
         for label in labels {
           switch label {
@@ -691,11 +706,9 @@ extension HeroNet {
           }
         }
     }
-    
     for key in keySet {
       keyOccurences[key] = variableOccurences[key.label]
     }
-    
     return keyOccurences
   }
   
@@ -768,35 +781,37 @@ extension HeroNet {
   }
 
   
-  /// Compute a score for each variable using the guards, and a priority score for each conditions. The score is used to determine an order to apply conditions.
+  /// Compute a weight for each variable using the guards. The higher a weight is, stronger the dependencies are.
+  /// In Decision diagram, the key ordering is a real issue and can dramatically change the performance of the construction of a decision diagram.
+  /// The problem is know to be NP-Complete. We use a handmade formula where the goal is to penalize guards where there are a lot of variables.
+  /// The more variable there are in a guard, the more the variable inside the guard are impacted. The higher the weight is, the less we are interested in the variable.
+  /// Here the formula:
+  /// ∀ x ∈ Var, score(x) = ∑_{t ∈ Transition} 2^{nbVar(t) - 1} !
+  ///
   /// - Parameters:
   ///   - variableSet: Set of variables
   ///   - conditions: List of condition for a specific transition
   /// - Returns:
-  ///   Return a tuple with its first element a dictionnary that binds a label to its weight and second element a dictionnary that binds condition to a score !
-  private func computeScoreOrder(
+  ///   Return a dictionnary that binds each variable to its weight
+  private func computeWeightScores(
     variableSet: Set<Var>,
     conditions: [Guard]?)
-  -> ([Var: Int]?, [Guard: Int]?) {
+  -> [Var: Int]? {
     
     // If there is no conditions
     guard let _ = conditions else {
-      return (nil, nil)
+      return nil
     }
     var variableWeights: [Var: Int] = [:]
-    var conditionWeights: [Guard: Int] = [:]
-    var variableForACond: [Set<Var>] = []
+    var variableForACond: [Guard: Set<Var>] = [:]
     var variableInACond: Set<Var> = []
     
     // Initialize the score to 100 for each variable
     // To avoid that a same variable has the same score, we increment its n value, allowing to distingue them
     for variable in variableSet {
-      variableWeights[variable] = 100
+      variableWeights[variable] = 0
     }
     
-    for condition in conditions! {
-      conditionWeights[condition] = 100
-    }
     
     // To know condition variables
     for condition in conditions! {
@@ -823,33 +838,22 @@ extension HeroNet {
         }
       }
       
-      // Compute condition weights
-      if variableInACond.count != 0 {
-        conditionWeights[condition]! *= 2/variableInACond.count
-      } else {
-        conditionWeights[condition]! = 0
-      }
-      
-      variableForACond.append(variableInACond)
+      variableForACond[condition] = variableInACond
       variableInACond = []
     }
     
-    // To compute a score
-    // If a condition contains the same variable, it earns 50 points
-    // If a condition contains a variable with other variables, every variables earn 10 points
-    for (variable, _) in variableWeights {
-      for cond in variableForACond {
-        if cond.contains(variable) {
-          if cond.count == 1  {
-            variableWeights[variable]! += 100
-          } else {
-            variableWeights[variable]! += 10
-          }
-        }
+    // ∀ x ∈ Var, score(x) = ∑_{t ∈ Transition} 2^{nbVar(t) - 1}
+    //    let x = 2 << 0    // 2
+    //    let y = 2 << 1    // 4
+    //    let z = 2 << 7    // 256
+    for (_, vars) in variableForACond {
+      let nbVar = vars.count
+      for v in vars {
+        variableWeights[v]! += 2 << nbVar - 1
       }
     }
     
-    return (variableWeights, conditionWeights)
+    return variableWeights
   }
   
   // createOrder creates a list of pair from a list of string
