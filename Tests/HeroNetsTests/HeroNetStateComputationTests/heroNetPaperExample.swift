@@ -111,7 +111,7 @@ final class Calculator: XCTestCase {
     
     var marking = Marking<P>([.s0: [.btk], .s1: [], .s2: [], .num: ["0","1"], .op: ["add","sub"]])
 //    var markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
-    var markings = model.computeStateSpaceAlternative(from: marking)
+    var markings = model.computeStateSpaceBF(from: marking)
     
     XCTAssertEqual(markings.count, 19)
 
@@ -119,7 +119,7 @@ final class Calculator: XCTestCase {
     
     let s = Stopwatch()
 //    markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
-    markings = model.computeStateSpaceAlternative(from: marking)
+    markings = model.computeStateSpaceBF(from: marking)
     print(s.elapsed.humanFormat)
     print(markings.count)
     
@@ -189,7 +189,7 @@ final class Calculator: XCTestCase {
     
     let s = Stopwatch()
 //    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
-    let markings = model.computeStateSpaceAlternative(from: marking)
+    let markings = model.computeStateSpaceBF(from: marking)
     print(s.elapsed.humanFormat)
     print(markings.count)
   }

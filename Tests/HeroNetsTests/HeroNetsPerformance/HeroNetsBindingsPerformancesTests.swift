@@ -82,7 +82,7 @@
 //      print("Try nb: \(i)")
 //      s.reset()
 ////      let x = heroNet.computeStateSpace(from: marking, markingMFDDFactory: factory)
-//      let x = heroNet.computeStateSpaceAlternative(from: marking)
+//      let x = heroNet.computeStateSpaceBF(from: marking)
 ////      let x = lol.CSSBruteForceWithOptimizedNet(marking: marking)
 //      times.append(s.elapsed.s)
 //      print(s.elapsed.humanFormat)

@@ -76,7 +76,7 @@ final class ComputeStateSpaceTests0: XCTestCase {
 
     let marking = Marking<P>([.p1: ["1"], .p2: ["3", "4"], .p3: []])
 //    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
-    let markings = model.computeStateSpaceAlternative(from: marking)
+    let markings = model.computeStateSpaceBF(from: marking)
     
     XCTAssertEqual(markings.count, 8)
 //    for m in markings {
@@ -109,7 +109,7 @@ final class ComputeStateSpaceTests0: XCTestCase {
     var s: Stopwatch = Stopwatch()
 
     let marking = Marking<P>([.p1: l, .p2: l, .p3: []])
-    let markings = model.computeStateSpaceAlternative(from: marking)
+    let markings = model.computeStateSpaceBF(from: marking)
 //    let markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
     
     print(s.elapsed.humanFormat)
