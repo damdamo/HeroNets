@@ -1,5 +1,6 @@
 import Dispatch
 
+// A simple structure to compute the time that takes the execution of a process.
 public struct Stopwatch {
   // Lifecycle
 
