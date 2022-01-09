@@ -198,17 +198,21 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
   ///   - transition: The transition to fire.
   ///   - from: The marking that is used to fire the transition
   ///   - with: The binding that bound variables on the arcs
+  ///   - isStateSpaceComputation: If we call the state space function, enabled bindings are already checked before. Thus, we do not check if the binding is fireable again.
   /// - Returns:
   ///   The marking that results from the firing of the given transition, or
   ///   `nil` if it is not fireable.
   public func fire(
     transition: TransitionType,
     from marking: Marking<PlaceType>,
-    with binding: [Var: Val])
+    with binding: [Var: Val],
+    isStateSpaceComputation: Bool = false)
   -> Marking<PlaceType>? {
     
-    guard isFireable(transition: transition, from: marking, with: binding) else {
-      return nil
+    if !isStateSpaceComputation {
+      guard isFireable(transition: transition, from: marking, with: binding) else {
+        return nil
+      }
     }
     
     var inputMarking: [PlaceType: PlaceType.Content] = [:]

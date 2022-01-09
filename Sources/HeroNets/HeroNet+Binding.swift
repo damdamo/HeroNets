@@ -25,32 +25,22 @@ extension HeroNet {
   public func fireableBindings(
     for transition: TransitionType,
     with marking: Marking<PlaceType>,
-    factory: BindingMFDDFactory)
+    factory: BindingMFDDFactory,
+    isStateSpaceComputation: Bool = false)
   -> BindingMFDD {
+    var net: HeroNet = self
     // Static optimization, only depends on the structure of the net
-    let staticOptimizedNet = computeStaticOptimizedNet()
+    if !isStateSpaceComputation {
+      net = computeStaticOptimizedNet()
+    }
     // Dynamic optimization, depends on the structure of the net and the marking
-    let tupleDynamicOptimizedNetAndnewMarking = staticOptimizedNet.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
+    let tupleDynamicOptimizedNetAndnewMarking = net.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
     if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
       return dynamicOptimizedNet.computeEnabledBindings(for: transition, marking: newMarking, factory: factory)
     }
     return factory.zero
   }
-  
-  /// Same method as fireableBindings, however there is no static optimization  here.
-  /// When the state space computation is performed, the static optimization is realized before to avoid unecessary computations.
-  func fireableBindingsForCSS(
-    for transition: TransitionType,
-    with marking: Marking<PlaceType>,
-    factory: BindingMFDDFactory)
-  -> BindingMFDD {
-    // Dynamic optimization, depends on the structure of the net and the marking
-    let tupleDynamicOptimizedNetAndnewMarking = self.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
-    if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
-      return dynamicOptimizedNet.computeEnabledBindings(for: transition, marking: newMarking, factory: factory)
-    }
-    return factory.zero
-  }
+
 
   // --------------------------------------------------------------------------------- //
   // ----------------------- Functions for static optimization ----------------------  //

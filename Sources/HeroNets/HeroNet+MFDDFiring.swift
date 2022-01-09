@@ -54,7 +54,7 @@ extension HeroNet where PlaceType: Comparable {
   )
   -> Set<Marking<PlaceType>> {
             
-    let allBindings = fireableBindingsForCSS(for: transition, with: marking, factory: heroMFDDFactory)
+    let allBindings = fireableBindings(for: transition, with: marking, factory: heroMFDDFactory, isStateSpaceComputation: true)
     var res: Set<Marking<PlaceType>> = []
     for binding in allBindings {
       let bindingWithLabel = Dictionary(
