@@ -62,7 +62,7 @@ extension HeroNet where PlaceType: Comparable {
           (key, value) in
             (key.label, value)
         })
-      if let r = fire(transition: transition, from: marking, with: bindingWithLabel) {
+      if let r = fire(transition: transition, from: marking, with: bindingWithLabel, isStateSpaceComputation: true) {
         res.insert(r)
       }
     }
