@@ -172,7 +172,18 @@ extension Marking: AdditiveArithmetic where PlaceType.Content: AdditiveArithmeti
 extension Marking: CustomStringConvertible {
 
   public var description: String {
-    return String(describing: storage)
+    if self.storage.isEmpty {
+      return "[]"
+    }
+    
+    var res = "["
+    for (place, values) in storage {
+      res.append("\(place): \(values), ")
+    }
+    res.removeLast()
+    res.removeLast()
+    res.append(contentsOf: "]")
+    return res
   }
 
 }

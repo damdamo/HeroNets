@@ -315,8 +315,8 @@ final class HeroNetsBindingsTests: XCTestCase {
       .post(from: .thinkToEat, to: .eat, labeled: [p]),
       .pre(from: .eat, to: .eatToThink, labeled: [p]),
       .post(from: .eatToThink, to: .think, labeled: [p]),
-      .post(from: .eatToThink, to: .fork, labeled: [f1,f2]),
-      guards: [.thinkToEat: conditions, .eatToThink: conditions],
+      .post(from: .eatToThink, to: .fork, labeled: [p, .exp("mod($p+1,\(len))")]),
+      guards: [.thinkToEat: conditions, .eatToThink: nil],
       interpreter: interpreter
     )
     seq = []
@@ -328,6 +328,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     let res = model.fireableBindings(for: .thinkToEat, with: marking, factory: factory)
     XCTAssertEqual(simplifyBinding(bindings: res), expectedRes)
     
+    XCTAssertEqual(model.computeStateSpaceBF(from: marking).count, 4)
   }
   
 }
