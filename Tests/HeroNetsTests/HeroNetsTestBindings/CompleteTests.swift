@@ -262,5 +262,73 @@ final class HeroNetsBindingsTests: XCTestCase {
     XCTAssertEqual(simplifyBinding(bindings: mfdd), expectedRes)
     
   }
+  
+  func testDiningPhilosopher() {
+    enum P: Place, Comparable {
+      typealias Content = Multiset<Val>
+      case think, eat, fork
+    }
+    enum T: Transition {
+      case thinkToEat, eatToThink
+    }
+    
+    var interpreter = Interpreter()
+    let module = """
+    func mod(_ x: Int, _ y: Int) -> Int ::
+      if x < y then x else mod(x-y,y)
+    """
+    try! interpreter.loadModule(fromString: module)
+    let p = ILang.var("$p")
+    let f1 = ILang.var("$f1")
+    let f2 = ILang.var("$f2")
+    var len = 1
+    var conditions: [Pair<ILang,ILang>]? = [Pair(f1,p), Pair(f2, .exp("mod($p+1%, \(len))"))]
+    var model = HeroNet<P, T>(
+      .pre(from: .think, to: .thinkToEat, labeled: [p]),
+      .pre(from: .fork, to: .thinkToEat, labeled: [f1, f2]),
+      .post(from: .thinkToEat, to: .eat, labeled: [p]),
+      .pre(from: .eat, to: .eatToThink, labeled: [p]),
+      .post(from: .eatToThink, to: .think, labeled: [p]),
+      .post(from: .eatToThink, to: .fork, labeled: [f1,f2]),
+      guards: [.thinkToEat: conditions, .eatToThink: conditions],
+      interpreter: interpreter
+    )
+    
+    // CSS
+//    let factory = MFDDFactory<P, Pair<P.Content.Key, Int>>()
+    // Binding
+    let factory = MFDDFactory<KeyMFDD<String>,Val>()
+    var marking: Marking<P>
+    var seq: Multiset<Val>  = []
+   
+    for i in 0 ..< len {
+      seq.insert(Val.init(stringLiteral: i.description))
+    }
+    marking = Marking([.think: seq, .eat: [], .fork: seq])
+    XCTAssertEqual(factory.zero, model.fireableBindings(for: .thinkToEat, with: marking, factory: factory))
+    
+    len = 3
+    conditions = [Pair(f1,p), Pair(f2, .exp("mod($p+1,\(len))"))]
+    model = HeroNet<P, T>(
+      .pre(from: .think, to: .thinkToEat, labeled: [p]),
+      .pre(from: .fork, to: .thinkToEat, labeled: [f1, f2]),
+      .post(from: .thinkToEat, to: .eat, labeled: [p]),
+      .pre(from: .eat, to: .eatToThink, labeled: [p]),
+      .post(from: .eatToThink, to: .think, labeled: [p]),
+      .post(from: .eatToThink, to: .fork, labeled: [f1,f2]),
+      guards: [.thinkToEat: conditions, .eatToThink: conditions],
+      interpreter: interpreter
+    )
+    seq = []
+    for i in 0 ..< len {
+      seq.insert(Val.init(stringLiteral: i.description))
+    }
+    marking = Marking([.think: seq, .eat: [], .fork: seq])
+    let expectedRes = Set([["$p": "0", "$f2": "1"], ["$p": "1", "$f2": "2"], ["$p": "2", "$f2": "0"]])
+    let res = model.fireableBindings(for: .thinkToEat, with: marking, factory: factory)
+    XCTAssertEqual(simplifyBinding(bindings: res), expectedRes)
+    
+  }
+  
 }
 

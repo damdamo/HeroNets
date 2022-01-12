@@ -33,10 +33,8 @@ extension MFDDFactory {
     let zeroPointer = self.zero.pointer
     let onePointer = self.one.pointer
     // Check for trivial cases.
-    if lhs == zeroPointer {
-      return rhs
-    } else if rhs == zeroPointer {
-      return lhs
+    if lhs == zeroPointer || rhs == zeroPointer {
+      return zeroPointer
     }
     // Query the cache.
     let cacheKey = lhs < rhs ? [lhs, rhs] : [rhs, lhs]

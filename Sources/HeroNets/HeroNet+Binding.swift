@@ -707,7 +707,7 @@ extension HeroNet {
     transition: TransitionType,
     factory: BindingMFDDFactory) -> BindingMFDD.Pointer
   {
-    var mfddPointer = factory.zero.pointer
+    var mfddPointer = factory.one.pointer
     var keySet: Set<KeyMFDDVar> = []
     
     for (_, keyToValues) in placeToKeyToValues {
