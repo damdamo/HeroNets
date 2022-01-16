@@ -3,7 +3,7 @@ import DDKit
 extension HeroNet where PlaceType: Comparable {
   
   public typealias KeyMarking = PlaceType
-  public typealias ValueMarking = Pair<PlaceType.Content.Key, Int>
+  public typealias ValueMarking = PlaceType.Content
   public typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
   public typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
   public typealias MarkingMFDDMorphismFactory = MFDDMorphismFactory<KeyMarking, ValueMarking>
@@ -134,19 +134,44 @@ extension HeroNet where PlaceType: Comparable {
   ///   - binding: The binding to use for the firing
   ///   - markingMFDDFactory: A factory that keeps in memory the operations
   /// - Returns: The new marking as a MFDD
-//  public func fire(transition: TransitionType, from marking: Marking<PlaceType>, with binding: [Label: Value], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD {
-//
-//    var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
-//    let markingMFDD = marking.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
-//    let preHomomorphism = computePreHomomorphism(binding: binding, transition: transition, morphisms: morphisms)
-//
-//    if let _ = output[transition] {
-//      let postHomomorphism = computePostHomomorphism(binding: binding, transition: transition, morphisms: morphisms)
-//      let compositionHomomorphism = morphisms.composition(of: preHomomorphism, with: postHomomorphism)
-//      return compositionHomomorphism.apply(on: markingMFDD)
-//    }
-//    return preHomomorphism.apply(on: markingMFDD)
-//  }
+  func fire(transition: TransitionType, markingMFDD: MarkingMFDD, binding: [Var: Val], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD {
+
+    var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
+    
+    var markingToFilter: [(key: KeyMarking, value: ValueMarking)] = []
+    var markingToInsert: [(key: KeyMarking, value: ValueMarking)] = []
+    var marking: ValueMarking = []
+    
+    if let i = input[transition] {
+      for (p, vars) in i.sorted(by: {$0.key < $1.key}) {
+        for v in vars {
+          switch v {
+          case .var(let name):
+            marking.insert(binding[name]!)
+          default:
+            continue
+          }
+        }
+        markingToFilter.append((key: p, value: marking))
+        marking = []
+      }
+    }
+    
+    if let o = output[transition] {
+      for (p, vars) in o.sorted(by: {$0.key < $1.key}) {
+        for v in vars {
+          marking.insert(eval(bindVariables(expr: v, binding: binding)))
+        }
+        markingToInsert.append((key: p, value: marking))
+        marking = []
+      }
+    }
+    
+    let preHomomorphism = morphisms.filterMarking(excluding: markingToFilter)
+    let postHomomorphism = morphisms.insertMarking(insert: markingToInsert)
+    let compositionHomomorphism = morphisms.composition(of: preHomomorphism, with: postHomomorphism)
+    return compositionHomomorphism.apply(on: markingMFDD)
+  }
   
   
   /// Compute the homomorphism for post arcs. It transforms the binding into a specific format to create the homorphism.

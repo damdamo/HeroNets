@@ -6,30 +6,36 @@ import DDKit
 
 final class MarkingHomomorphismTests: XCTestCase {
   
-    enum P: Place, Hashable, Comparable, CustomStringConvertible {
-      typealias Content = Multiset<Val>
-      case p1,p2,p3
-  
-      public var description: String {
-        switch self {
-        case .p1:
-          return "p1"
-        case .p2:
-          return "p2"
-        case .p3:
-          return "p3"
-        }
+  enum P: Place, Hashable, Comparable, CustomStringConvertible {
+    typealias Content = Multiset<Val>
+    case p1,p2,p3
+
+    public var description: String {
+      switch self {
+      case .p1:
+        return "p1"
+      case .p2:
+        return "p2"
+      case .p3:
+        return "p3"
       }
     }
+  }
+
+  enum T: Transition {
+    case t1//, t2
+  }
+
+  typealias KeyMarking = P
+  typealias ValueMarking = P.Content
+  typealias MarkingMFDD = MFDD<KeyMarking, ValueMarking>
+  typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
   
-    enum T: Transition {
-      case t1, t2
-    }
-  
-    typealias KeyMarking = P
-    typealias ValueMarking = P.Content
-    typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
-    typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
+  let f = ILang.var("$f")
+  let g = ILang.var("$g")
+  let x = ILang.var("$x")
+  let y = ILang.var("$y")
+  let z = ILang.var("$z")
   
   // Transform mfdd into a marking, i.e. a dictionnary with all values for each place.
   func computeUnfoldMarking(_ markingMFDD: MarkingMFDD) -> [[KeyMarking: ValueMarking]] {
@@ -108,6 +114,33 @@ final class MarkingHomomorphismTests: XCTestCase {
     expectedRes = [[.p1: ["1", "1", "2","3", "42"], .p2: ["1", "1", "2"], .p3: ["42"]]]
     XCTAssertEqual(computeUnfoldMarking(insertMarking.apply(on: markingMFDD)), expectedRes)
         
+  }
+  
+  func testFire() {
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
+
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+    
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: [x,y]),
+      .pre(from: .p2, to: .t1, labeled: [z]),
+      .post(from: .t1, to: .p3, labeled: [.exp("$x+$y")]),
+      guards: [.t1: nil],
+//      guards: [.t1: [Pair(x,z), Pair(x, .exp("$y-1"))]],
+      interpreter: interpreter
+    )
+    
+    let markingMFDDFactory = MarkingMFDDFactory()
+    let marking = Marking<P>([.p1: ["1", "1", "2","3"], .p2: ["1", "1", "2"], .p3: []])
+    let markingMFDD = marking.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
+
+    let binding: [String: Val] = ["$x": "1", "$y": "1", "$z": "2"]
+    print(model.fire(transition: .t1, markingMFDD: markingMFDD, binding: binding, markingMFDDFactory: markingMFDDFactory))
+    
   }
 
 }
