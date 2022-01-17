@@ -121,8 +121,6 @@ where Key: Place, Value == Multiset<Val> {
     }
 
     public func apply(on pointer: MFDD.Pointer) -> MFDD.Pointer {
-      print(assignments)
-      print(pointer.pointee.key)
       // Check for trivial cases.
       if factory.isTerminal(pointer) {
         return pointer

@@ -282,15 +282,15 @@ final class HeroNetsBindingsTests: XCTestCase {
     let f1 = ILang.var("$f1")
     let f2 = ILang.var("$f2")
     var len = 1
-    var conditions: [Pair<ILang,ILang>]? = [Pair(f1,p), Pair(f2, .exp("mod($p+1%, \(len))"))]
+    var conditions: [Pair<ILang,ILang>]? = [Pair(f1,p), Pair(f2, .exp("mod($p+1, \(len))"))]
     var model = HeroNet<P, T>(
       .pre(from: .think, to: .thinkToEat, labeled: [p]),
       .pre(from: .fork, to: .thinkToEat, labeled: [f1, f2]),
       .post(from: .thinkToEat, to: .eat, labeled: [p]),
       .pre(from: .eat, to: .eatToThink, labeled: [p]),
       .post(from: .eatToThink, to: .think, labeled: [p]),
-      .post(from: .eatToThink, to: .fork, labeled: [f1,f2]),
-      guards: [.thinkToEat: conditions, .eatToThink: conditions],
+      .post(from: .eatToThink, to: .fork, labeled: [p, .exp("mod($p+1,\(len))")]),
+      guards: [.thinkToEat: conditions, .eatToThink: nil],
       interpreter: interpreter
     )
     
@@ -329,6 +329,54 @@ final class HeroNetsBindingsTests: XCTestCase {
     XCTAssertEqual(simplifyBinding(bindings: res), expectedRes)
     
     XCTAssertEqual(model.computeStateSpaceBF(from: marking).count, 4)
+  }
+  
+  func testDiningPhilosopherPerf() {
+    enum P: Place, Comparable {
+      typealias Content = Multiset<Val>
+      case think, eat, fork
+    }
+    enum T: Transition {
+      case thinkToEat, eatToThink
+    }
+    
+    var interpreter = Interpreter()
+    let module = """
+    func mod(_ x: Int, _ y: Int) -> Int ::
+      if x < y then x else mod(x-y,y)
+    """
+    try! interpreter.loadModule(fromString: module)
+    let p = ILang.var("$p")
+    let f1 = ILang.var("$f1")
+    let f2 = ILang.var("$f2")
+    let len = 9
+    let conditions: [Pair<ILang,ILang>]? = [Pair(f1,p), Pair(f2, .exp("mod($p+1, \(len))"))]
+    let model = HeroNet<P, T>(
+      .pre(from: .think, to: .thinkToEat, labeled: [p]),
+      .pre(from: .fork, to: .thinkToEat, labeled: [f1, f2]),
+      .post(from: .thinkToEat, to: .eat, labeled: [p]),
+      .pre(from: .eat, to: .eatToThink, labeled: [p]),
+      .post(from: .eatToThink, to: .think, labeled: [p]),
+      .post(from: .eatToThink, to: .fork, labeled: [p, .exp("mod($p+1,\(len))")]),
+      guards: [.thinkToEat: conditions, .eatToThink: nil],
+      interpreter: interpreter
+    )
+    
+    // CSS
+//    let factory = MFDDFactory<P, Pair<P.Content.Key, Int>>()
+    // Binding
+//    let factory = MFDDFactory<KeyMFDD<String>,Val>()
+    var marking: Marking<P>
+    var seq: Multiset<Val>  = []
+   
+    for i in 0 ..< len {
+      seq.insert(Val.init(stringLiteral: i.description))
+    }
+    marking = Marking([.think: seq, .eat: [], .fork: seq])
+//    XCTAssertEqual(factory.zero, model.fireableBindings(for: .thinkToEat, with: marking, factory: factory))
+    let s: Stopwatch = Stopwatch()
+    model.computeStateSpaceBF(from: marking)
+    print(s.elapsed.humanFormat)
   }
   
 }

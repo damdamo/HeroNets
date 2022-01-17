@@ -47,7 +47,7 @@ extension HeroNet where PlaceType: Comparable {
   }
   
   /// Fire all bindings for a given transition and a given marking. The simple version uses a set of marking, and not a MFDD.
-  private func fireAllEnabledBindingsSimple(
+  func fireAllEnabledBindingsSimple(
     transition: TransitionType,
     from marking: Marking<PlaceType>,
     heroMFDDFactory: BindingMFDDFactory
@@ -70,61 +70,84 @@ extension HeroNet where PlaceType: Comparable {
     return res
   }
   
-  //  public func computeStateSpace(
-  //    from m0: Marking<PlaceType>,
-  //    markingMFDDFactory: MarkingMFDDFactory)
-  //  -> Set<MarkingMFDD> {
-  //
-  //    let m0MFDD = m0.markingToMFDD(markingMFDDFactory: markingMFDDFactory)
-  //    let heroMFDDFactory = HeroMFDDFactory()
-  //    var markingToCheck: Set<MarkingMFDD> = [m0MFDD]
-  //    var markingAlreadyChecked: Set<MarkingMFDD> = [m0MFDD]
-  //    let netStaticOptimized = computeStaticOptimizedNet()
-  //
-  //    while !markingToCheck.isEmpty {
-  //      for marking in markingToCheck {
-  //        for transition in TransitionType.allCases {
-  //          let markingsForAllBindings = netStaticOptimized.fireForAllBindings(
-  //            transition: transition,
-  //            from: m0.mfddToMarking(markingMFDD: marking, markingMFDDFactory: markingMFDDFactory),
-  //            markingMFDDFactory: markingMFDDFactory, heroMFDDFactory: heroMFDDFactory)
-  //
-  //          for newMarking in markingsForAllBindings {
-  //            if !markingAlreadyChecked.contains(newMarking) {
-  //              markingToCheck.insert(newMarking)
-  //              markingAlreadyChecked.insert(newMarking)
-  //            }
-  //          }
-  //        }
-  //        markingToCheck.remove(marking)
-  //      }
-  //    }
-  //
-  //    return markingAlreadyChecked
-  //
-  //  }
+  // ------------------------------------------------------------------------- //
+  // ------------------------------------------------------------------------- //
+  // ------------------------------------------------------------------------- //
+
+  public func computeStateSpace(
+    from m0: Marking<PlaceType>,
+    markingMFDDFactory: MarkingMFDDFactory)
+  -> MarkingMFDD {
+    
+    var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
+    let bindingMFDDFactory = BindingMFDDFactory()
+    let netStaticOptimized = computeStaticOptimizedNet()
+    var res = m0.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
+    var resTemp = res
+    var resFixPoint = res
+    var resTemp2 = res
+    repeat {
+      print(res.count)
+      res = resFixPoint
+      for m in resTemp2 {
+        let marking = Marking<PlaceType>(m)
+        let markingMFDD = marking.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
+        resTemp = resTemp.union(netStaticOptimized.fireAllTransitionsHom(from: marking, markingMFDDFactory: markingMFDDFactory, bindingMFDDFactory: bindingMFDDFactory).apply(on: markingMFDD))
+      }
+      resTemp2 = resTemp
+      resFixPoint = resFixPoint.union(resTemp)
+      resTemp = markingMFDDFactory.zero
+//      res = resTemp
+//      for m in res {
+//        let marking = Marking<PlaceType>(m)
+//        let markingMFDD = marking.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
+//        resTemp = resTemp.union(
+//          netStaticOptimized.fireAllTransitionsHom(from: marking, markingMFDDFactory: markingMFDDFactory, bindingMFDDFactory: bindingMFDDFactory).apply(on: markingMFDD)
+//        )
+//      }
+    } while res != resFixPoint
+//    res = netStaticOptimized.fireAllTransitionsHom(from: m0, markingMFDDFactory: markingMFDDFactory, bindingMFDDFactory: bindingMFDDFactory).apply(on: resTemp)
+    return res
+  }
   
-//  private func fireForAllBindings(
-//    transition: TransitionType,
-//    from marking: Marking<PlaceType>,
-//    markingMFDDFactory: MarkingMFDDFactory,
-//    heroMFDDFactory: HeroMFDDFactory
-//  )
-//  -> Set<MarkingMFDD> {
-//
-//    let allBindings = self.fireableBindingsForCSS(for: transition, with: marking, factory: heroMFDDFactory)
-//    var res: Set<MarkingMFDD> = []
-//    for binding in allBindings {
-//      let bindingWithLabel = Dictionary(
-//        uniqueKeysWithValues: binding.map {
-//          (key, value) in
-//            (key.label, value)
-//        })
-//      res.insert(self.fire(transition: transition, from: marking, with: bindingWithLabel, markingMFDDFactory: markingMFDDFactory))
-//    }
-//
-//    return res
-//  }
+  
+  func fireAllTransitionsHom(
+    from marking: Marking<PlaceType>,
+    markingMFDDFactory: MarkingMFDDFactory,
+    bindingMFDDFactory: BindingMFDDFactory)
+  -> NaryUnion<NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking>>> {
+    
+    var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
+    var transitionMorphisms: [NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking>>] = []
+    for t in TransitionType.allCases {
+      transitionMorphisms.append(fireAllBindingsHom(transition: t, from: marking, markingMFDDFactory: markingMFDDFactory, bindingMFDDFactory: bindingMFDDFactory))
+    }
+    
+    return morphisms.union(of: transitionMorphisms)
+  }
+    
+
+  func fireAllBindingsHom(
+    transition: TransitionType,
+    from marking: Marking<PlaceType>,
+    markingMFDDFactory: MarkingMFDDFactory,
+    bindingMFDDFactory: BindingMFDDFactory)
+  -> NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking>> {
+
+    var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
+    var firingMorphisms: [BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking>] = []
+    for binding in fireableBindings(for: transition, with: marking, factory: bindingMFDDFactory, isStateSpaceComputation: true) {
+      let bindingWithLabel = Dictionary(
+        uniqueKeysWithValues: binding.map {
+          (key, value) in
+            (key.label, value)
+        })
+      firingMorphisms.append(
+        fireHom(transition: transition, binding: bindingWithLabel, markingMFDDFactory: markingMFDDFactory))
+    }
+    return morphisms.union(of: firingMorphisms)
+  }
+  
   
   /// Fire a transition using MFDD. It transforms a marking into a MFDD, then compute a homorphism for pre and post arcs.
   /// Eventually, it computes the final result using a composition of both homorphism on the marking.
@@ -133,165 +156,58 @@ extension HeroNet where PlaceType: Comparable {
   ///   - marking: Current marking
   ///   - binding: The binding to use for the firing
   ///   - markingMFDDFactory: A factory that keeps in memory the operations
-  /// - Returns: The new marking as a MFDD
-  func fire(transition: TransitionType, markingMFDD: MarkingMFDD, binding: [Var: Val], markingMFDDFactory: MarkingMFDDFactory) -> MarkingMFDD {
+  /// - Returns: The homomorphism to compute the firing effect
+  func fireHom(
+    transition: TransitionType,
+    binding: [Var: Val],
+    markingMFDDFactory: MarkingMFDDFactory)
+  -> BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking> {
 
     var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
     
     var markingToFilter: [(key: KeyMarking, value: ValueMarking)] = []
     var markingToInsert: [(key: KeyMarking, value: ValueMarking)] = []
-    var marking: ValueMarking = []
     
-    if let i = input[transition] {
-      for (p, vars) in i.sorted(by: {$0.key < $1.key}) {
-        for v in vars {
-          switch v {
-          case .var(let name):
-            marking.insert(binding[name]!)
-          default:
-            continue
-          }
-        }
-        markingToFilter.append((key: p, value: marking))
-        marking = []
-      }
+    for (p, values) in pre(binding: binding, transition: transition).sorted(by: {$0.key < $1.key}) {
+      markingToFilter.append((key: p, value: values))
     }
     
-    if let o = output[transition] {
-      for (p, vars) in o.sorted(by: {$0.key < $1.key}) {
-        for v in vars {
-          marking.insert(eval(bindVariables(expr: v, binding: binding)))
-        }
-        markingToInsert.append((key: p, value: marking))
-        marking = []
-      }
+    for (p, values) in post(binding: binding, transition: transition).sorted(by: {$0.key < $1.key}) {
+      markingToInsert.append((key: p, value: values))
     }
     
+    //    if let i = input[transition] {
+    //      for (p, labels) in i.sorted(by: {$0.key < $1.key}) {
+    //        for label in labels {
+    //          switch label {
+    //          case .var(let name):
+    //            multiset.insert(binding[name]!)
+    //          default:
+    //            continue
+    //          }
+    //        }
+    //        markingToFilter.append((key: p, value: multiset))
+    //        multiset = []
+    //      }
+    //    }
+    
+    //    if let o = output[transition] {
+    //      for (p, labels) in o.sorted(by: {$0.key < $1.key}) {
+    //        for label in labels {
+    //          print(label)
+    //          multiset.insert(eval(bindVariables(expr: label, binding: binding)))
+    //        }
+    //        markingToInsert.append((key: p, value: multiset))
+    //        multiset = []
+    //      }
+    //    }
+        
     let preHomomorphism = morphisms.filterMarking(excluding: markingToFilter)
     let postHomomorphism = morphisms.insertMarking(insert: markingToInsert)
     let compositionHomomorphism = morphisms.composition(of: preHomomorphism, with: postHomomorphism)
-    return compositionHomomorphism.apply(on: markingMFDD)
+    return compositionHomomorphism
   }
   
-  
-  /// Compute the homomorphism for post arcs. It transforms the binding into a specific format to create the homorphism.
-//  private func computePostHomomorphism(
-//    binding: [Label: Value],
-//    transition: TransitionType,
-//    morphisms: MarkingMFDDMorphismFactory)
-//  -> MFDD<KeyMarking, ValueMarking>.InsertValueInMarking
-//  {
-//
-//    var elementsToAdd: [PlaceType: [Value: Int]] = [:]
-//    var elementsToAddWithPair: [(key: PlaceType, values: [ValueMarking])] = []
-//
-//    var exprSubs: String = ""
-//    var valOutput: Value = ""
-//    if let post = output[transition] {
-//      for (place, expressions) in post {
-//        elementsToAdd[place] = [:]
-//        for expr in expressions {
-//          exprSubs = bindVariables(expr: expr, binding: binding)
-//          valOutput = eval(exprSubs)
-//          if let _ = elementsToAdd[place]![valOutput] {
-//            elementsToAdd[place]![valOutput]! += 1
-//          } else {
-//            elementsToAdd[place]![valOutput] = 1
-//          }
-//
-//        }
-//
-//      }
-//
-//      for (key, values) in elementsToAdd {
-//        elementsToAddWithPair.append(
-//          (
-//            key: key,
-//            values: values.map({(value, occurence) in
-//              return Pair(value, occurence)
-//            })
-//          )
-//        )
-//      }
-//
-//    }
-//
-//    return morphisms.insertValueInMarking(
-//      insert: elementsToAddWithPair
-//    )
-//
-//  }
-  
-  /// Compute the homomorphism for pre arcs. It transforms the binding into a specific format to create the homorphism.
-//  private func computePreHomomorphism(
-//    binding: [Label: Value],
-//    transition: TransitionType,
-//    morphisms: MarkingMFDDMorphismFactory)
-//  -> MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking
-//  {
-//    var elementsToFilter: [(key: PlaceType, values: [ValueMarking])] = []
-//    
-//    if let pre = input[transition] {
-//      for (place, labels) in pre {
-//        
-//        // Get the list of values using list of variables for each place
-//        let listeValues = labels.map({(label) -> Value in
-//          if let val = binding[label] {
-//            return val
-//          }
-//          return label
-//        })
-// 
-//        // Using the listValues, we transform it into a dictionnary that
-//        let dicValues = listeValues.reduce([:], {(currentDic, newValue) -> [Value: Int] in
-//          var dicTemp = currentDic
-//          if let _ = currentDic[newValue] {
-//            dicTemp[newValue]! += 1
-//          } else {
-//            dicTemp[newValue] = 1
-//          }
-//          
-//          return dicTemp
-//        })
-//        
-//        elementsToFilter.append((
-//          key: place,
-//          values: dicValues.map({(value, occurence) in
-//            Pair(value, occurence)
-//          })
-//        ))
-//        
-//      }
-//    }
-//    return morphisms.filterMarking(excluding: elementsToFilter)
-//  }
-  
-//  public func generateAllFiring(for transition: TransitionType, with marking: Marking<PlaceType>)
-//  -> Set<Marking<PlaceType>>
-//  {
-//
-//    let factory = HeroMFDDFactory()
-//    let netStaticOptimized = computeStaticOptimizedNet(transition: transition)
-//
-//    if let netStaticOptimized = netStaticOptimized {
-//      let allBindings = netStaticOptimized.fireableBindings(for: transition, with: marking, factory: factory)
-//      var res: Set<Marking<PlaceType>> = [marking]
-//
-//      for binding in allBindings {
-//        let bindingWithLabel = Dictionary(
-//          uniqueKeysWithValues: binding.map {
-//            (key, value) in
-//              (key.label, value)
-//          })
-//
-//        res.insert(netStaticOptimized.fire(transition: transition, from: marking, with: bindingWithLabel)!)
-//      }
-//
-//      return res
-//    }
-//
-//    return []
-//  }
 }
 
 

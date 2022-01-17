@@ -21,7 +21,9 @@ final class Calculator: XCTestCase {
   }
   
   typealias KeyMarking = P
-  typealias ValueMarking = Pair<P.Content.Key, Int>
+  typealias ValueMarking = Multiset<Val>
+  typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
+
 //  typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
 //  typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
 //  typealias Label = String
@@ -56,7 +58,7 @@ final class Calculator: XCTestCase {
   
   
   func testCalculator0() {
-//    let markingMFDDFactory = MFDDFactory<P, Pair<String, Int>>()
+    let markingMFDDFactory = MarkingMFDDFactory()
 //    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
     
     let module: String = """
@@ -118,10 +120,11 @@ final class Calculator: XCTestCase {
     marking = Marking<P>([.s0: [.btk], .s1: [], .s2: [], .num: ["2","3","4","5"], .op: ["sub","mul","add","div"]])
     
     let s = Stopwatch()
-//    markings = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
+//    let markingMFDD = model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory)
     markings = model.computeStateSpaceBF(from: marking)
     print(s.elapsed.humanFormat)
-    print(markings.count)
+//    print(markings.count)
+//    print("Count mfdd marking: \(markingMFDD.count)")
     
     XCTAssertEqual(markings.count, 1186)
   }

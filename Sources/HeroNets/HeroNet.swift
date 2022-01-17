@@ -215,14 +215,16 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
       }
     }
     
+    // Return final result
+    return marking - Marking<PlaceType>(pre(binding: binding, transition: transition)) + Marking<PlaceType>(post(binding: binding, transition: transition))
+    
+  }
+  
+  public func pre(binding: [Var: Val], transition: TransitionType) -> [PlaceType: PlaceType.Content] {
     var inputMarking: [PlaceType: PlaceType.Content] = [:]
-    var outputMarking: [PlaceType: PlaceType.Content] = [:]
-      
     for place in PlaceType.allCases {
       inputMarking[place] = [:]
-      outputMarking[place] = [:]
     }
-    
     // Compute input marking
     if let pre = input[transition] {
       var multiset: MultisetVal = [:]
@@ -242,6 +244,15 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
         inputMarking[place] = multiset
         multiset = [:]
       }
+    }
+    
+    return inputMarking
+  }
+  
+  public func post(binding: [Var: Val], transition: TransitionType) -> [PlaceType: PlaceType.Content] {
+    var outputMarking: [PlaceType: PlaceType.Content] = [:]
+    for place in PlaceType.allCases {
+      outputMarking[place] = [:]
     }
     // Interpreter evaluate terms which are expressed by String
     var valOutput: Val
@@ -283,10 +294,7 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
         multiset = [:]
       }
     }
-    
-    // Return final result
-    return marking - Marking<PlaceType>(inputMarking) + Marking<PlaceType>(outputMarking)
-    
+    return outputMarking
   }
   
   /// Check the fireability of a transition for a given marking
