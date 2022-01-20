@@ -87,7 +87,6 @@ extension HeroNet where PlaceType: Comparable {
     var resFixPoint = res
     var resTemp2 = res
     repeat {
-      print(res.count)
       res = resFixPoint
       for m in resTemp2 {
         let marking = Marking<PlaceType>(m)
@@ -97,16 +96,7 @@ extension HeroNet where PlaceType: Comparable {
       resTemp2 = resTemp
       resFixPoint = resFixPoint.union(resTemp)
       resTemp = markingMFDDFactory.zero
-//      res = resTemp
-//      for m in res {
-//        let marking = Marking<PlaceType>(m)
-//        let markingMFDD = marking.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
-//        resTemp = resTemp.union(
-//          netStaticOptimized.fireAllTransitionsHom(from: marking, markingMFDDFactory: markingMFDDFactory, bindingMFDDFactory: bindingMFDDFactory).apply(on: markingMFDD)
-//        )
-//      }
     } while res != resFixPoint
-//    res = netStaticOptimized.fireAllTransitionsHom(from: m0, markingMFDDFactory: markingMFDDFactory, bindingMFDDFactory: bindingMFDDFactory).apply(on: resTemp)
     return res
   }
   
@@ -176,32 +166,6 @@ extension HeroNet where PlaceType: Comparable {
       markingToInsert.append((key: p, value: values))
     }
     
-    //    if let i = input[transition] {
-    //      for (p, labels) in i.sorted(by: {$0.key < $1.key}) {
-    //        for label in labels {
-    //          switch label {
-    //          case .var(let name):
-    //            multiset.insert(binding[name]!)
-    //          default:
-    //            continue
-    //          }
-    //        }
-    //        markingToFilter.append((key: p, value: multiset))
-    //        multiset = []
-    //      }
-    //    }
-    
-    //    if let o = output[transition] {
-    //      for (p, labels) in o.sorted(by: {$0.key < $1.key}) {
-    //        for label in labels {
-    //          print(label)
-    //          multiset.insert(eval(bindVariables(expr: label, binding: binding)))
-    //        }
-    //        markingToInsert.append((key: p, value: multiset))
-    //        multiset = []
-    //      }
-    //    }
-        
     let preHomomorphism = morphisms.filterMarking(excluding: markingToFilter)
     let postHomomorphism = morphisms.insertMarking(insert: markingToInsert)
     let compositionHomomorphism = morphisms.composition(of: preHomomorphism, with: postHomomorphism)
