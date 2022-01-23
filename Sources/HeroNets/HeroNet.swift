@@ -135,6 +135,9 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
   /// Interpreter needed to evaluate Hero terms.
   public var interpreter: Interpreter
   
+  public var cachePreBinding: [TransitionType: [[Var: Val]: Marking<PlaceType>]]
+  public var cachePostBinding: [TransitionType: [[Var: Val]: Marking<PlaceType>]]
+  
   /// Code for the interpreter
 //  public let module: String
 
@@ -168,6 +171,13 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     """
     try! interpreter.loadModule(fromString: module)
     self.interpreter = interpreter
+    
+    self.cachePreBinding = [:]
+    self.cachePostBinding = [:]
+    for t in TransitionType.allCases {
+      cachePreBinding[t] = [:]
+      cachePostBinding[t] = [:]
+    }
   }
 
   /// Initializes a Petri net with descriptions of its preconditions and postconditions.
@@ -189,6 +199,12 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     self.output = output
     self.guards = guards
     self.interpreter = interpreter
+    self.cachePreBinding = [:]
+    self.cachePostBinding = [:]
+    for t in TransitionType.allCases {
+      cachePreBinding[t] = [:]
+      cachePostBinding[t] = [:]
+    }
   }
 
   /// Computes the marking resulting from the firing of the given transition, from the given
@@ -217,6 +233,41 @@ where PlaceType: Place, PlaceType.Content == Multiset<Val>, TransitionType: Tran
     
     // Return final result
     return marking - Marking<PlaceType>(pre(binding: binding, transition: transition)) + Marking<PlaceType>(post(binding: binding, transition: transition))
+    
+  }
+  
+  mutating public func fireWithCache(
+    transition: TransitionType,
+    from marking: Marking<PlaceType>,
+    with binding: [Var: Val],
+    isStateSpaceComputation: Bool = false)
+  -> Marking<PlaceType>? {
+    
+    if !isStateSpaceComputation {
+      guard isFireable(transition: transition, from: marking, with: binding) else {
+        return nil
+      }
+    }
+    
+    var markingPre: Marking<PlaceType>
+    var markingPost: Marking<PlaceType>
+    
+    if let pre = cachePreBinding[transition]?[binding] {
+      markingPre = pre
+    } else {
+      markingPre = Marking<PlaceType>(pre(binding: binding, transition: transition))
+      cachePreBinding[transition]![binding] = markingPre
+    }
+    
+    if let post = cachePostBinding[transition]?[binding] {
+      markingPost = post
+    } else {
+      markingPost = Marking<PlaceType>(post(binding: binding, transition: transition))
+      cachePostBinding[transition]![binding] = markingPost
+    }
+    
+    // Return final result
+    return marking - markingPre + markingPost
     
   }
   
