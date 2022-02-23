@@ -129,7 +129,7 @@ final class MarkingHomomorphismTests: XCTestCase {
     var interpreter = Interpreter()
     try! interpreter.loadModule(fromString: module)
     
-    let model = HeroNet<P, T>(
+    var model = HeroNet<P, T>(
       .pre(from: .p1, to: .t1, labeled: [x,y]),
       .pre(from: .p2, to: .t1, labeled: [z]),
       .post(from: .t1, to: .p3, labeled: [.exp("$x+$y")]),
@@ -151,57 +151,6 @@ final class MarkingHomomorphismTests: XCTestCase {
     let expectedAllBindings = model.fireAllEnabledBindingsSimple(transition: .t1, from: marking, heroMFDDFactory: bindingMFDDFactory)
     XCTAssertEqual(allBindings.count, expectedAllBindings.count)
     
-  }
-  
-  func testToto() {
-    
-    enum T: Transition {
-      case t1, t2
-    }
-    
-    let module: String = """
-    func add(_ x: Int, _ y: Int) -> Int ::
-      x + y
-    """
-
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
-    
-    let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: [x,y]),
-      .pre(from: .p2, to: .t1, labeled: [z]),
-      .post(from: .t1, to: .p3, labeled: [.exp("$x+$y")]),
-      .pre(from: .p3, to: .t2, labeled: [x]),
-      .post(from: .t2, to: .p2, labeled: [x]),
-      guards: [.t1: nil, .t2: nil],
-//      guards: [.t1: [Pair(x,z), Pair(x, .exp("$y-1"))]],
-      interpreter: interpreter
-    )
-    
-    let bindingMFDDFactory = BindingMFDDFactory()
-    let markingMFDDFactory = MarkingMFDDFactory()
-    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
-
-    let marking = Marking<P>([.p1: ["1", "2", "3", "1"], .p2: ["5"], .p3: ["42"]])
-    let markingMFDD = marking.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
-    
-
-    let ms: Multiset<Val> = ["1"]
-    let insertMarking1 = morphisms.insertMarking(insert: [(key: .p1, value: ms)])
-    let insertMarking2 = morphisms.insertMarking(insert: [(key: .p3, value: ms)])
-    let u = morphisms.union(insertMarking1, insertMarking2)
-    
-//    print(insertMarking1.apply(on: markingMFDD))
-//    print("----------------------------")
-//    print(u.apply(on: markingMFDD))
-//    print(model.fireAllTransitionsHom(from: marking, markingMFDDFactory: markingMFDDFactory, bindingMFDDFactory: bindingMFDDFactory).apply(on: markingMFDD))
-//    
-//    print(model.computeStateSpaceBF(from: marking).count)
-//    print(model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory).count)
-
-    
-//    var expectedRes: [[KeyMarking: ValueMarking]] = [[.p1: ["1", "1", "1", "2", "3"], .p2: ["1", "1", "2"], .p3: []]]
-//    XCTAssertEqual(computeUnfoldMarking(insertMarking.apply(on: markingMFDD)), expectedRes)
   }
 
 }

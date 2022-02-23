@@ -21,7 +21,8 @@ final class ComputeStateSpaceTests0: XCTestCase {
   }
 
   typealias KeyMarking = P
-  typealias ValueMarking = Pair<P.Content.Key, Int>
+  typealias ValueMarking = Multiset<Val>
+
 //  typealias MarkingMFDD = MFDD<KeyMarking,ValueMarking>
 //  typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
 
@@ -106,7 +107,7 @@ final class ComputeStateSpaceTests0: XCTestCase {
       l.insert(Val(stringLiteral: String(i)))
     }
 
-    var s: Stopwatch = Stopwatch()
+    let s: Stopwatch = Stopwatch()
 
     let marking = Marking<P>([.p1: l, .p2: l, .p3: []])
     let markings = model.computeStateSpaceBF(from: marking)
@@ -119,6 +120,40 @@ final class ComputeStateSpaceTests0: XCTestCase {
 //    for m in markings {
 //      print(simplifyMarking(marking: m))
 //    }
+  }
+  
+  func testComputeStateSpace2() {
+    enum P: Place, Hashable, Comparable {
+      typealias Content = Multiset<Val>
+
+      case p1,p2,p3,p4
+    }
+
+    enum T: Transition {
+      case t1,t2
+    }
+
+    typealias KeyMarking = P
+    typealias ValueMarking = Multiset<Val>
+    typealias MarkingMFDD = MFDD<KeyMarking, ValueMarking>
+    typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
+    
+    let interpreter = Interpreter()
+//    try! interpreter.loadModule(fromString: "")
+
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: [x]),
+      .pre(from: .p3, to: .t2, labeled: [x]),
+      .post(from: .t1, to: .p2, labeled: [x]),
+      .post(from: .t2, to: .p4, labeled: [x]),
+      guards: [.t1: nil, .t2: nil],
+      interpreter: interpreter
+    )
+    
+    let markingMFDDFactory = MarkingMFDDFactory()
+    let marking = Marking<P>([.p1: ["1", "2", "3"], .p2: [], .p3: ["1", "2", "3"], .p4: []])
+    
+    XCTAssertEqual(64, model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory).count)
   }
 
   static var allTests = [

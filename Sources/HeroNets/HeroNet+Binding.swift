@@ -4,7 +4,7 @@ import Foundation
 
 /// A Hero net binding computes all the possibles marking for a given  transition
 extension HeroNet {
-    
+  
   public typealias KeyMFDDVar = KeyMFDD<Var>
   public typealias BindingMFDD = MFDD<KeyMFDDVar, Val>
   public typealias BindingMFDDFactory = MFDDFactory<KeyMFDDVar, Val>
@@ -37,6 +37,26 @@ extension HeroNet {
     let tupleDynamicOptimizedNetAndnewMarking = net.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
     if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
       return dynamicOptimizedNet.computeEnabledBindings(for: transition, marking: newMarking, factory: factory)
+    }
+    return factory.zero
+  }
+  
+  // The fireable binding function for SSC.
+  func fireableBindingsForSSC(
+    for transition: TransitionType,
+    with marking: Marking<PlaceType>,
+    keySet: Set<KeyMFDDVar>,
+    dependentKeys: Set<KeyMFDDVar>,
+    keysToGuards: [Set<KeyMFDDVar>: Set<Guard>],
+    factory: BindingMFDDFactory)
+  -> BindingMFDD {
+    let net: HeroNet = self
+    // Static optimization, only depends on the structure of the net
+//    net = computeStaticOptimizedNet()
+    // Dynamic optimization, depends on the structure of the net and the marking
+    let tupleDynamicOptimizedNetAndnewMarking = net.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
+    if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
+      return dynamicOptimizedNet.computeEnabledBindings(for: transition, marking: newMarking, keySet: keySet, dependentKeys: dependentKeys, keysToGuards: keysToGuards, factory: factory)
     }
     return factory.zero
   }
@@ -117,9 +137,6 @@ extension HeroNet {
               newOutput[transition]![place]!
                 .remove(label)
             }
-//          case .exp(let e):
-//            newOutput[transition]![place]!
-//              .insert(bindVariables(expr: .exp(e), binding: varToValue))
           default:
             continue
           }
@@ -406,37 +423,68 @@ extension HeroNet {
     marking: Marking<PlaceType>,
     factory: BindingMFDDFactory)
   -> BindingMFDD {
-    let variableSet = createSetOfVariableLabel(transition: transition)
-    // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
-    let varWeights = computeWeightScores(
-      variableSet: variableSet,
-      conditions: guards[transition]
-    )
-    let placeToLabelToValues = bindVariablesToValues(transition: transition, marking: marking)
-    // Check that each labels has at least one possibility
-    for (place, dicLabelToValues) in placeToLabelToValues {
-      for (label, _) in dicLabelToValues {
-        if placeToLabelToValues[place]![label]!.isEmpty {
-          return factory.zero
-        }
-      }
-    }
-    // Return the precedent placeToLabelToValues value to the same one where label are now key
-    let placeToKeyToValues = fromVariableToKey(variableSet: variableSet, variableWeights: varWeights, placeToVariableToValues: placeToLabelToValues)
-    // Isolate dependent and independent keys
-    let (dependentPlaceToKeyToValues, independentKeyToValues) = computeDependentAndIndependentKeys(placeToKeyToValues: placeToKeyToValues, transition: transition)
-    var mfddPointer = constructMFDD(placeToKeyToValues: dependentPlaceToKeyToValues, transition:transition, factory: factory)
     
+    let keySet = createKeys(transition: transition)
+    let dependentKeys = computeDependentKeys(transition: transition, keySet: keySet)
+
+    let (dependentPlaceToKeyToValues, independentKeyToValues) = computeDependentAndIndependentKeyValues(keySet: keySet, dependentKeys: dependentKeys, marking: marking, transition: transition)
+
+    var mfddPointer = constructMFDD(placeToKeyToValues: dependentPlaceToKeyToValues, transition:transition, factory: factory)
+
     // If there are conditions, we have to apply them on the MFDD
     if let conditions = guards[transition] {
-      var keySet: Set<KeyMFDDVar> = []
-      for (_, keyToValues) in dependentPlaceToKeyToValues {
-        for (key, _) in keyToValues {
-          keySet.insert(key)
-        }
-      }
-      var keysToGuards: [Set<KeyMFDDVar>: Set<Guard>] = [:]
-      var keys: Set<KeyMFDDVar>
+      let keysToGuards = createKeysToGuards(transition: transition, keySet: keySet)
+      // Apply guards
+      mfddPointer = applyCondition(
+        mfddPointer: mfddPointer,
+        guards: conditions,
+        keysToGuards: keysToGuards,
+        dependentKeys: dependentKeys,
+        factory: factory
+      )
+    }
+
+    // Add independent labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
+    mfddPointer = addIndependentLabel(mfddPointer: mfddPointer, independentKeyToValues: independentKeyToValues, factory: factory)
+    return MFDD(pointer: mfddPointer, factory: factory)
+  }
+  
+  /// Compute enabled bindings for a transition and a marking. This version is used for state space computation. It computes some information statically to avoid to recompute it each time.
+  private func computeEnabledBindings(
+    for transition: TransitionType,
+    marking: Marking<PlaceType>,
+    keySet: Set<KeyMFDDVar>,
+    dependentKeys: Set<KeyMFDDVar>,
+    keysToGuards: [Set<KeyMFDDVar>: Set<Guard>],
+    factory: BindingMFDDFactory)
+  -> BindingMFDD {
+
+    let (dependentPlaceToKeyToValues, independentKeyToValues) = computeDependentAndIndependentKeyValues(keySet: keySet, dependentKeys: dependentKeys, marking: marking, transition: transition)
+    
+    var mfddPointer = constructMFDD(placeToKeyToValues: dependentPlaceToKeyToValues, transition:transition, factory: factory)
+        
+    // If there are conditions, we have to apply them on the MFDD
+    if let conditions = guards[transition] {
+      // Apply guards
+      mfddPointer = applyCondition(
+        mfddPointer: mfddPointer,
+        guards: conditions,
+        keysToGuards: keysToGuards,
+        dependentKeys: dependentKeys,
+        factory: factory
+      )
+    }
+    // Add independent labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
+    mfddPointer = addIndependentLabel(mfddPointer: mfddPointer, independentKeyToValues: independentKeyToValues, factory: factory)
+    return MFDD(pointer: mfddPointer, factory: factory)
+  }
+  
+  func createKeysToGuards(transition: TransitionType, keySet: Set<KeyMFDDVar>) -> [Set<KeyMFDDVar>: Set<Guard>] {
+    
+    var keysToGuards: [Set<KeyMFDDVar>: Set<Guard>] = [:]
+    var keys: Set<KeyMFDDVar>
+    
+    if let conditions = guards[transition] {
       for cond in conditions {
         keys = []
         for key in keySet {
@@ -452,62 +500,25 @@ extension HeroNet {
           }
         }
       }
-      // Apply guards
-      mfddPointer = applyCondition(
-        mfddPointer: mfddPointer,
-        guards: conditions,
-        keysToGuards: keysToGuards,
-        keySet: keySet,
-        factory: factory
-      )
     }
-    // Add independent labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
-    mfddPointer = addIndependentLabel(mfddPointer: mfddPointer, independentKeyToValues: independentKeyToValues, factory: factory)
-    return MFDD(pointer: mfddPointer, factory: factory)
+    
+    return keysToGuards
   }
   
-  /// Bind each variable on arcs to all possible values from the marking.
-  private func bindVariablesToValues(
-    transition: TransitionType,
-    marking: Marking<PlaceType>
-  ) -> [PlaceType: [Var: MultisetVal]] {
+  func createKeys(transition: TransitionType) -> Set<KeyMFDDVar> {
     
-    var res: [PlaceType: [Var: MultisetVal]] = [:]
-    if let dicPlaceToLabel = input[transition] {
-      for (place, labels) in dicPlaceToLabel {
-        res[place] = [:]
-        for label in labels {
-          switch label {
-          case .var(let v):
-            res[place]![v] = marking[place]
-          default:
-            continue
-          }
-        }
-      }
-      return res
-    }
-    return [:]
-  }
-  
-  /// Transform variables into keys in the original type: [PlaceType: [Var: MultisetVal]].
-  /// In addition, it uses the weights of variables to create the key order (to give a total order).
-  /// - Parameters:
-  ///   - variableSet: A set containing each label of the net
-  ///   - variableWeights: Label weights
-  ///   - placeToVariableToValues: The structure to change to pass from label to key
-  /// - Returns:
-  ///   Returns a dictionnary that binds each place to its key with their corresponding values
-  private func fromVariableToKey (
-    variableSet: Set<Var>,
-    variableWeights: [Var: Int]?,
-    placeToVariableToValues: [PlaceType: [Var: MultisetVal]]
-  ) -> [PlaceType: [KeyMFDDVar: MultisetVal]] {
-
-    let totalOrder: [Pair<Var, Var>]
-    var placeToKeyToValues: [PlaceType: [KeyMFDDVar: MultisetVal]] = [:]
+    var totalOrder: [Pair<Var, Var>] = []
+    var keySet: Set<KeyMFDDVar> = []
     
-    if let lw = variableWeights {
+    let variableSet = createSetOfVariableLabel(transition: transition)
+    // Compute a score for label and conditions. It takes only conditions that are relevant, i.e. conditions which are not with a single label or an equality between two label.
+    let varWeights = computeWeightScores(
+      variableSet: variableSet,
+      conditions: guards[transition]
+    )
+          
+    // Compute a total order for the labels of a transition
+    if let lw = varWeights {
       totalOrder = createTotalOrder(variables: variableSet.sorted(by: {(label1, label2) -> Bool in
         lw[label1]! < lw[label2]!
       }))
@@ -515,61 +526,101 @@ extension HeroNet {
       totalOrder = createTotalOrder(variables: Array(variableSet))
     }
     
-    for (place, labelToValues) in placeToVariableToValues {
-      placeToKeyToValues[place] = [:]
-      for (label, values) in labelToValues {
-        let key = KeyMFDDVar(label: label, couple: totalOrder)
-        placeToKeyToValues[place]![key] = values
-      }
+    // Prepare set of keys for the transition
+    for v in variableSet {
+      keySet.insert(KeyMFDDVar(label: v, couple: totalOrder))
     }
-
-    return placeToKeyToValues
+    
+    return keySet
   }
   
-  /// Dependent keys are keys where the corresponding variable is either in a condition, or in an arc with multiple variable.
-  /// Independent keys are the rest.
-  /// The dissociation is important cause independent keys can be just added in the MFDD, because every values for the following key can be chosen without any impact on the firing. Every values will be valid.
-  /// - Parameters:
-  ///   - placeToKeyToValues: Places that are bound to key which are bound to values
-  ///   - transition: The current  transition
-  /// - Returns:
-  ///   Returns a tuple of two dictionnary, where the first one is for dependent keys and the second one for independent keys.
-  private func computeDependentAndIndependentKeys(
-    placeToKeyToValues: [PlaceType: [KeyMFDDVar: MultisetVal]],
+  
+  
+  // Compute dependent and independent keys of a transition
+  // Suppose that the net has been already optimized
+  func computeDependentKeys(
+    transition: TransitionType,
+    keySet: Set<KeyMFDDVar>
+  ) -> Set<KeyMFDDVar> {
+
+    var dependentKeys: Set<KeyMFDDVar> = []
+    
+    // Variable in guards are dependent
+    if let conditions = guards[transition] {
+      for condition in conditions {
+        for key in keySet {
+          if contains(exp: condition.l, s: key.label) || contains(exp: condition.r, s: key.label) {
+            dependentKeys.insert(key)
+          }
+        }
+      }
+    }
+    
+    // If there are multiple variable on the same arc, keys are dependent
+    var occurenceOfVar: [Var: Int] = [:]
+    if let placeToLabels = input[transition] {
+      for (_, labels) in placeToLabels {
+        if labels.count > 1 {
+          for label in labels {
+            switch label {
+            case .var(let v):
+              dependentKeys.insert(keySet.first(where: {$0.label == v})!)
+            default:
+              continue
+            }
+          }
+        } else {
+          if let label = labels.first {
+            switch label {
+            case .var(let v):
+              if let _ = occurenceOfVar[v] {
+                occurenceOfVar[v]! += 1
+              } else {
+                occurenceOfVar[v] = 1
+              }
+            default:
+              continue
+            }
+          }
+        }
+      }
+    }
+    
+    // If a same variable appears on different arcs
+    for (v, occ) in occurenceOfVar {
+      if occ > 1 {
+        dependentKeys.insert(keySet.first(where: {$0.label == v})!)
+      }
+    }
+    
+    return dependentKeys
+  }
+  
+  func computeDependentAndIndependentKeyValues(
+    keySet: Set<KeyMFDDVar>,
+    dependentKeys: Set<KeyMFDDVar>,
+    marking: Marking<PlaceType>,
     transition: TransitionType)
   -> ([PlaceType: [KeyMFDDVar: MultisetVal]], [KeyMFDDVar: MultisetVal]) {
 
     var independentKeysToValues: [KeyMFDDVar: MultisetVal] = [:]
     var placeToDependentKeysToValues: [PlaceType: [KeyMFDDVar: MultisetVal]] = [:]
-    var setKeys: Set<KeyMFDDVar> = []
-    var dependentKeys: Set<KeyMFDDVar> = []
+    var varToKey: [Var: KeyMFDDVar] = [:]
     
-    // Construct set of keys
-    for (_, keyToValues) in placeToKeyToValues {
-      for (key, _) in keyToValues {
-        setKeys.insert(key)
-      }
+    for key in keySet {
+      varToKey[key.label] = key
     }
     
-    if let conditions = guards[transition] {
-      for condition in conditions {
-        for key in setKeys {
-          switch (condition.l, condition.r) {
-          case (.var(let v), _):
-            if key.label == v {
-              dependentKeys.insert(key)
-            }
-          case (_, .var(let v)):
-            if key.label == v {
-              dependentKeys.insert(key)
-            }
-          case (.exp(let e), _):
-            if e.contains(key.label) {
-              dependentKeys.insert(key)
-            }
-          case (_, .exp(let e)):
-            if e.contains(key.label) {
-              dependentKeys.insert(key)
+    if let placeToLabels = input[transition] {
+      for (place, labels) in placeToLabels {
+        placeToDependentKeysToValues[place] = [:]
+        for label in labels.distinctMembers {
+          switch label {
+          case .var(let v):
+            if dependentKeys.contains(varToKey[v]!) {
+              placeToDependentKeysToValues[place]![varToKey[v]!] = marking[place]
+            } else {
+              independentKeysToValues[varToKey[v]!] = marking[place]
             }
           default:
             continue
@@ -578,25 +629,6 @@ extension HeroNet {
       }
     }
     
-    for (place, keyToValues) in placeToKeyToValues {
-      if keyToValues.count >= 1 {
-        placeToDependentKeysToValues[place] = [:]
-        for (key, values) in keyToValues {
-          placeToDependentKeysToValues[place]![key] = values
-        }
-      } else {
-        for (key, values) in keyToValues {
-          if dependentKeys.contains(key) {
-            if placeToDependentKeysToValues[place] == nil {
-              placeToDependentKeysToValues[place] = [:]
-            }
-            placeToDependentKeysToValues[place]![key] = values
-          } else {
-            independentKeysToValues[key] = values
-          }
-        }
-      }
-    }
     return (placeToDependentKeysToValues, independentKeysToValues)
   }
   
@@ -660,12 +692,12 @@ extension HeroNet {
     mfddPointer: BindingMFDD.Pointer,
     guards: [Guard],
     keysToGuards: [Set<KeyMFDDVar>: Set<Guard>],
-    keySet: Set<KeyMFDDVar>,
+    dependentKeys: Set<KeyMFDDVar>,
     factory: BindingMFDDFactory
   ) -> BindingMFDD.Pointer {
     var morphisms: MFDDMorphismFactory<KeyMFDDVar, Val> { factory.morphisms }
     let morphism = guardFilter(
-      keys: keySet,
+      keys: dependentKeys,
       guards: guards,
       keysToGuards: keysToGuards,
       factory: factory,
@@ -782,7 +814,7 @@ extension HeroNet {
   ///   - conditions: List of condition for a specific transition
   /// - Returns:
   ///   Return a dictionnary that binds each variable to its weight
-  private func computeWeightScores(
+  func computeWeightScores(
     variableSet: Set<Var>,
     conditions: [Guard]?)
   -> [Var: Int]? {
@@ -847,7 +879,7 @@ extension HeroNet {
   
   // createOrder creates a list of pair from a list of string
   // to represent a total order relation. Pair(l,r) => l < r
-  private func createTotalOrder(variables: [Var]) -> [Pair<Var, Var>] {
+  func createTotalOrder(variables: [Var]) -> [Pair<Var, Var>] {
       var r: [Pair<Var, Var>] = []
       for i in 0 ..< variables.count {
         for j in i+1 ..< variables.count {

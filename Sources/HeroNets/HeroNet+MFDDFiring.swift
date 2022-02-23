@@ -20,9 +20,9 @@ extension HeroNet where PlaceType: Comparable {
     
     var markingToCheck: Set<Marking<PlaceType>> = [m0]
     var markingAlreadyChecked: Set<Marking<PlaceType>> = [m0]
-    let netStaticOptimized = computeStaticOptimizedNet()
+    var netStaticOptimized = computeStaticOptimizedNet()
     let heroMFDDFactory = BindingMFDDFactory()
-    
+        
     while !markingToCheck.isEmpty {
       for marking in markingToCheck {
         for transition in TransitionType.allCases {
@@ -47,7 +47,7 @@ extension HeroNet where PlaceType: Comparable {
   }
   
   /// Fire all bindings for a given transition and a given marking. The simple version uses a set of marking, and not a MFDD.
-  func fireAllEnabledBindingsSimple(
+  mutating func fireAllEnabledBindingsSimple(
     transition: TransitionType,
     from marking: Marking<PlaceType>,
     heroMFDDFactory: BindingMFDDFactory
@@ -62,7 +62,7 @@ extension HeroNet where PlaceType: Comparable {
           (key, value) in
             (key.label, value)
         })
-      if let r = fire(transition: transition, from: marking, with: bindingWithLabel, isStateSpaceComputation: true) {
+      if let r = fireWithCache(transition: transition, from: marking, with: bindingWithLabel, isStateSpaceComputation: true) {
         res.insert(r)
       }
     }

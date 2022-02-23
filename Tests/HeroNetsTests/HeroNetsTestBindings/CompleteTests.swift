@@ -18,7 +18,12 @@ final class HeroNetsBindingsTests: XCTestCase {
   typealias ValueMFDD = Val
   typealias Guard = Pair<ILang, ILang>
   
-  enum P: Place, Equatable {
+  typealias KeyMarking = P
+  typealias ValueMarking = P.Content
+  typealias MarkingMFDD = MFDD<KeyMarking, ValueMarking>
+  typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
+  
+  enum P: Place, Equatable, Comparable {
     typealias Content = Multiset<Val>
     
     case p1,p2,p3
@@ -45,67 +50,6 @@ final class HeroNetsBindingsTests: XCTestCase {
     return bindingSimplify
   }
   
-  func testBinding0() {
-
-    let module: String = """
-    func add(_ x: Int, _ y: Int) -> Int ::
-      x + y
-    """
-    
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
-
-    let conditionList = [Pair(x, .val("1")), Pair(x, z)]
-
-    let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: [x, y]),
-//      .pre(from: .p2, to: .t1, labeled: [x, "2"]),
-      .pre(from: .p2, to: .t1, labeled: [x, z]),
-      .post(from: .t1, to: .p3, labeled: [.exp("$x+$y")]),
-      guards: [.t1: conditionList, .t2: nil],
-      interpreter: interpreter
-    )
-    
-    let marking1 = Marking<P>([.p1: ["1", "1", "2"], .p2: ["1", "1", "2"], .p3: []])
-    
-    let factory = MFDDFactory<KeyMFDDVar,ValueMFDD>()
-
-    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-
-   }
-
-  func testBinding01() {
-
-    let module: String = """
-    func add(_ x: Int, _ y: Int) -> Int ::
-      x + y
-    """
-
-    var interpreter = Interpreter()
-    try! interpreter.loadModule(fromString: module)
-
-//    let conditionList = [Pair(y,"1"), Pair(x, z)]
-    let conditionList: [Guard] = [Pair(x, .val("1"))]
-
-    let model = HeroNet<P, T>(
-      .pre(from: .p1, to: .t1, labeled: [x, x]),
-      .pre(from: .p2, to: .t1, labeled: [x, .val("2")]),
-//      .pre(from: .p2, to: .t1, labeled: [x]),
-      .post(from: .t1, to: .p3, labeled: [x]),
-      guards: [.t1: conditionList, .t2: nil],
-      interpreter: interpreter
-    )
-
-    let marking1 = Marking<P>([.p1: ["1", "1", "2", "4"], .p2: ["1", "2", "3"], .p3: []])
-
-    print("----------------------------")
-
-    let factory = MFDDFactory<KeyMFDDVar,ValueMFDD>()
-
-    let mfdd = model.fireableBindings(for: .t1, with: marking1, factory: factory)
-    
-    print(mfdd)
-   }
   
   // Test with guards and a constant on an arc
   func testBinding1() {
@@ -332,13 +276,18 @@ final class HeroNetsBindingsTests: XCTestCase {
   }
   
   func testDiningPhilosopherPerf() {
-    enum P: Place, Comparable {
+    enum P: Place, Comparable, Hashable {
       typealias Content = Multiset<Val>
       case think, eat, fork
     }
     enum T: Transition {
       case thinkToEat, eatToThink
     }
+    
+    typealias KeyMarking = P
+    typealias ValueMarking = P.Content
+    typealias MarkingMFDD = MFDD<KeyMarking, ValueMarking>
+    typealias MarkingMFDDFactory = MFDDFactory<KeyMarking, ValueMarking>
     
     var interpreter = Interpreter()
     let module = """
@@ -349,7 +298,7 @@ final class HeroNetsBindingsTests: XCTestCase {
     let p = ILang.var("$p")
     let f1 = ILang.var("$f1")
     let f2 = ILang.var("$f2")
-    let len = 9
+    let len = 10
     let conditions: [Pair<ILang,ILang>]? = [Pair(f1,p), Pair(f2, .exp("mod($p+1, \(len))"))]
     let model = HeroNet<P, T>(
       .pre(from: .think, to: .thinkToEat, labeled: [p]),
@@ -368,6 +317,7 @@ final class HeroNetsBindingsTests: XCTestCase {
 //    let factory = MFDDFactory<KeyMFDD<String>,Val>()
     var marking: Marking<P>
     var seq: Multiset<Val>  = []
+    let markingMFDDFactory = MarkingMFDDFactory()
    
     for i in 0 ..< len {
       seq.insert(Val.init(stringLiteral: i.description))
@@ -375,8 +325,38 @@ final class HeroNetsBindingsTests: XCTestCase {
     marking = Marking([.think: seq, .eat: [], .fork: seq])
 //    XCTAssertEqual(factory.zero, model.fireableBindings(for: .thinkToEat, with: marking, factory: factory))
     let s: Stopwatch = Stopwatch()
-    model.computeStateSpaceBF(from: marking)
+//    print(model.computeStateSpaceBF(from: marking).count)
+    print(model.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory).count)
+//      print(ssc.computeStateSpace(from: marking, markingMFDDFactory: markingMFDDFactory).count)
+//    print(ssc.computeStateSpaceBF(from: marking).count)
     print(s.elapsed.humanFormat)
+  }
+  
+  // Conditions + same variables + constant + independant variable + constant propagation
+  func testo() {
+
+    let module: String = """
+    func add(_ x: Int, _ y: Int) -> Int ::
+      x + y
+    """
+    
+    var interpreter = Interpreter()
+    try! interpreter.loadModule(fromString: module)
+
+//    let conditionList: [Guard] = [Pair(x,.exp("$y-1")), Pair(y, z), Pair(a, .val("1"))]
+
+    let model = HeroNet<P, T>(
+      .pre(from: .p1, to: .t1, labeled: [x, y]),
+      .pre(from: .p2, to: .t1, labeled: [x]),
+      guards: [.t1: nil, .t2: nil],
+      interpreter: interpreter
+    )
+    
+    let marking1 = Marking<P>([.p1: ["1", "2", "3"], .p2: ["1", "2", "3"], .p3: ["1", "2", "3"]])
+    let markingMFDDFactory = MarkingMFDDFactory()
+
+    print(model.computeStateSpace(from: marking1, markingMFDDFactory: markingMFDDFactory))
+    
   }
   
 }
