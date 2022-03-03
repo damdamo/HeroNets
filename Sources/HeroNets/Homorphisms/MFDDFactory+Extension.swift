@@ -1,5 +1,6 @@
 import DDKit
   
+// TODO: Add constraint on the MFDD types for the application
 extension MFDDFactory {
   
   /// `concatAndFilterInclude` (abreviate by `cfi`) is a homorphism that takes two MFDD and returns a new one.

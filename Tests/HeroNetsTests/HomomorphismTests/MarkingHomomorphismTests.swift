@@ -62,7 +62,7 @@ final class MarkingHomomorphismTests: XCTestCase {
     
   }
   
-  func testExcludingFilter() {
+  func testRemoveValuesInMarking() {
     
     let markingMFDDFactory = MarkingMFDDFactory()
     var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
@@ -71,27 +71,27 @@ final class MarkingHomomorphismTests: XCTestCase {
     var markingMFDD = marking.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
     
     var ms: Multiset<Val> = ["1"]
-    var excludeFilter = morphisms.filterMarking(excluding: [(key: .p1, value: ms)])
+    var excludeFilter = morphisms.removeValuesInMarking(excluding: [(key: .p1, value: ms)])
     var expectedRes: [[KeyMarking: ValueMarking]] = [[.p1: ["1", "2","3"], .p2: ["1", "1", "2"], .p3: []]]
     XCTAssertEqual(computeUnfoldMarking(excludeFilter.apply(on: markingMFDD)), expectedRes)
     
-    excludeFilter = morphisms.filterMarking(excluding: [(key: .p1, value: ms), (key: .p2, value: ms)])
+    excludeFilter = morphisms.removeValuesInMarking(excluding: [(key: .p1, value: ms), (key: .p2, value: ms)])
     expectedRes = [[.p1: ["1", "2","3"], .p2: ["1", "2"], .p3: []]]
     XCTAssertEqual(computeUnfoldMarking(excludeFilter.apply(on: markingMFDD)), expectedRes)
     
     ms = ["1", "1", "2","3"]
-    excludeFilter = morphisms.filterMarking(excluding: [(key: .p1, value: ms)])
+    excludeFilter = morphisms.removeValuesInMarking(excluding: [(key: .p1, value: ms)])
     expectedRes = [[.p1: [], .p2: ["1", "1", "2"], .p3: []]]
     XCTAssertEqual(computeUnfoldMarking(excludeFilter.apply(on: markingMFDD)), expectedRes)
 
     ms = ["42"]
-    excludeFilter = morphisms.filterMarking(excluding: [(key: .p1, value: ms)])
+    excludeFilter = morphisms.removeValuesInMarking(excluding: [(key: .p1, value: ms)])
     XCTAssertEqual(computeUnfoldMarking(excludeFilter.apply(on: markingMFDD)), computeUnfoldMarking(markingMFDD))
     
     marking = Marking<P>([.p1: [], .p2: [], .p3: ["42"]])
     markingMFDD = marking.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
     ms = ["42"]
-    excludeFilter = morphisms.filterMarking(excluding: [(key: .p3, value: ms)])
+    excludeFilter = morphisms.removeValuesInMarking(excluding: [(key: .p3, value: ms)])
     expectedRes = [[.p1: [], .p2: [], .p3: []]]
     XCTAssertEqual(computeUnfoldMarking(excludeFilter.apply(on: markingMFDD)), expectedRes)
   }
@@ -105,18 +105,18 @@ final class MarkingHomomorphismTests: XCTestCase {
     let markingMFDD = marking.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
     
     var ms: Multiset<Val> = ["1"]
-    var insertMarking = morphisms.insertMarking(insert: [(key: .p1, value: ms)])
+    var insertValuesInMarking = morphisms.insertValuesInMarking(insert: [(key: .p1, value: ms)])
     var expectedRes: [[KeyMarking: ValueMarking]] = [[.p1: ["1", "1", "1", "2", "3"], .p2: ["1", "1", "2"], .p3: []]]
-    XCTAssertEqual(computeUnfoldMarking(insertMarking.apply(on: markingMFDD)), expectedRes)
+    XCTAssertEqual(computeUnfoldMarking(insertValuesInMarking.apply(on: markingMFDD)), expectedRes)
     
-    insertMarking = morphisms.insertMarking(insert: [(key: .p1, value: ms), (key: .p2, value: ms)])
+    insertValuesInMarking = morphisms.insertValuesInMarking(insert: [(key: .p1, value: ms), (key: .p2, value: ms)])
     expectedRes = [[.p1: ["1", "1", "1", "2","3"], .p2: ["1", "1", "1", "2"], .p3: []]]
-    XCTAssertEqual(computeUnfoldMarking(insertMarking.apply(on: markingMFDD)), expectedRes)
+    XCTAssertEqual(computeUnfoldMarking(insertValuesInMarking.apply(on: markingMFDD)), expectedRes)
 
     ms = ["42"]
-    insertMarking = morphisms.insertMarking(insert: [(key: .p1, value: ms), (key: .p3, value: ms)])
+    insertValuesInMarking = morphisms.insertValuesInMarking(insert: [(key: .p1, value: ms), (key: .p3, value: ms)])
     expectedRes = [[.p1: ["1", "1", "2","3", "42"], .p2: ["1", "1", "2"], .p3: ["42"]]]
-    XCTAssertEqual(computeUnfoldMarking(insertMarking.apply(on: markingMFDD)), expectedRes)
+    XCTAssertEqual(computeUnfoldMarking(insertValuesInMarking.apply(on: markingMFDD)), expectedRes)
         
   }
   
@@ -151,6 +151,27 @@ final class MarkingHomomorphismTests: XCTestCase {
     let expectedAllBindings = model.fireAllEnabledBindingsSimple(transition: .t1, from: marking, heroMFDDFactory: bindingMFDDFactory)
     XCTAssertEqual(allBindings.count, expectedAllBindings.count)
     
+  }
+  
+  func testRemoveValueInMarking() {
+    let markingMFDDFactory = MarkingMFDDFactory()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+
+    var marking1 = Marking<P>([.p1: ["1","2"], .p2: ["3", "4"], .p3: []])
+    var marking2 = Marking<P>([.p1: ["1","5"], .p2: ["6", "7"], .p3: []])
+    
+    var markingMFDD = marking1.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
+    markingMFDD = markingMFDD.union(marking2.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory))
+
+    let valueToRemove: Val = .cst("1")
+    let removeFilter = morphisms.removeValueInMarking(assignment: (key: .p1, value: valueToRemove))
+    
+    marking1 = Marking<P>([.p1: ["2"], .p2: ["3", "4"], .p3: []])
+    marking2 = Marking<P>([.p1: ["5"], .p2: ["6", "7"], .p3: []])
+    
+    let expectedRes = marking1.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory).union(marking2.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory))
+    
+    XCTAssertEqual(removeFilter.apply(on: markingMFDD), expectedRes)
   }
 
 }

@@ -105,10 +105,10 @@ extension HeroNet where PlaceType: Comparable {
     from marking: Marking<PlaceType>,
     markingMFDDFactory: MarkingMFDDFactory,
     bindingMFDDFactory: BindingMFDDFactory)
-  -> NaryUnion<NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking>>> {
+  -> NaryUnion<NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.RemoveValuesInMarking, MFDD<KeyMarking, ValueMarking>.InsertValuesInMarking>>> {
     
     var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
-    var transitionMorphisms: [NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking>>] = []
+    var transitionMorphisms: [NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.RemoveValuesInMarking, MFDD<KeyMarking, ValueMarking>.InsertValuesInMarking>>] = []
     for t in TransitionType.allCases {
       transitionMorphisms.append(fireAllBindingsHom(transition: t, from: marking, markingMFDDFactory: markingMFDDFactory, bindingMFDDFactory: bindingMFDDFactory))
     }
@@ -122,10 +122,10 @@ extension HeroNet where PlaceType: Comparable {
     from marking: Marking<PlaceType>,
     markingMFDDFactory: MarkingMFDDFactory,
     bindingMFDDFactory: BindingMFDDFactory)
-  -> NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking>> {
+  -> NaryUnion<BinaryComposition<MFDD<KeyMarking, ValueMarking>.RemoveValuesInMarking, MFDD<KeyMarking, ValueMarking>.InsertValuesInMarking>> {
 
     var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
-    var firingMorphisms: [BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking>] = []
+    var firingMorphisms: [BinaryComposition<MFDD<KeyMarking, ValueMarking>.RemoveValuesInMarking, MFDD<KeyMarking, ValueMarking>.InsertValuesInMarking>] = []
     for binding in fireableBindings(for: transition, with: marking, factory: bindingMFDDFactory, isStateSpaceComputation: true) {
       let bindingWithLabel = Dictionary(
         uniqueKeysWithValues: binding.map {
@@ -151,7 +151,7 @@ extension HeroNet where PlaceType: Comparable {
     transition: TransitionType,
     binding: [Var: Val],
     markingMFDDFactory: MarkingMFDDFactory)
-  -> BinaryComposition<MFDD<KeyMarking, ValueMarking>.ExclusiveFilterMarking, MFDD<KeyMarking, ValueMarking>.InsertMarking> {
+  -> BinaryComposition<MFDD<KeyMarking, ValueMarking>.RemoveValuesInMarking, MFDD<KeyMarking, ValueMarking>.InsertValuesInMarking> {
 
     var morphisms: MarkingMFDDMorphismFactory { markingMFDDFactory.morphisms }
     
@@ -166,8 +166,8 @@ extension HeroNet where PlaceType: Comparable {
       markingToInsert.append((key: p, value: values))
     }
     
-    let preHomomorphism = morphisms.filterMarking(excluding: markingToFilter)
-    let postHomomorphism = morphisms.insertMarking(insert: markingToInsert)
+    let preHomomorphism = morphisms.removeValuesInMarking(excluding: markingToFilter)
+    let postHomomorphism = morphisms.insertValuesInMarking(insert: markingToInsert)
     let compositionHomomorphism = morphisms.composition(of: preHomomorphism, with: postHomomorphism)
     return compositionHomomorphism
   }
