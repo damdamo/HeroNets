@@ -195,5 +195,31 @@ final class MarkingHomomorphismTests: XCTestCase {
     
     XCTAssertEqual(insertFilter.apply(on: markingMFDD), expectedRes)
   }
+  
+  func testFilterMarking() {
+    let markingMFDDFactory = MarkingMFDDFactory()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+
+    let marking1 = Marking<P>([.p1: ["1","2"], .p2: ["3", "4"], .p3: []])
+    let marking2 = Marking<P>([.p1: ["1","5"], .p2: ["6", "7"], .p3: []])
+    
+    var markingMFDD = marking1.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
+    markingMFDD = markingMFDD.union(marking2.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory))
+
+    var valueToFilter: Val = .cst("1")
+    var filterMorphism = morphisms.filterMarking(include: (key: .p1, value: valueToFilter))
+    
+    XCTAssertEqual(filterMorphism.apply(on: markingMFDD), markingMFDD)
+    
+    valueToFilter = .cst("2")
+    filterMorphism = morphisms.filterMarking(include: (key: .p1, value: valueToFilter))
+    
+    XCTAssertEqual(filterMorphism.apply(on: markingMFDD), marking1.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory))
+    
+    valueToFilter = .cst("3")
+    filterMorphism = morphisms.filterMarking(include: (key: .p1, value: valueToFilter))
+    
+    XCTAssertEqual(filterMorphism.apply(on: markingMFDD), markingMFDDFactory.zero)
+  }
 
 }

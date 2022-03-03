@@ -67,7 +67,7 @@ where Key: Place, Value == Multiset<Val> {
           take: next != nil ? take.mapValues(next!.apply(on:)) : take,
           skip: factory.zero.pointer)
       } else {
-        fatalError("The key to filter is lower in the MFDD. Thus, the value could never be filtered.")
+        fatalError("One of the key/values to remove is too lower in the MFDD. Thus, one of the values could never be removed.")
       }
       
       cache[pointer] = result
@@ -151,7 +151,7 @@ where Key: Place, Value == Multiset<Val> {
           take: next != nil ? take.mapValues(next!.apply(on:)) : take,
           skip: factory.zero.pointer)
       } else {
-        fatalError("The key to filter is lower in the MFDD. Thus, the value could never be added.")
+        fatalError("One of the key/values to insert is too lower in the MFDD. Thus, one of the values could never be inserted.")
       }
       
       cache[pointer] = result
@@ -172,7 +172,7 @@ where Key: Place, Value == Multiset<Val> {
   }
 
 
-  /// Remove a value from all multisets
+  /// Remove a value from all multisets for a specific place
   public final class RemoveValueInMarking: Morphism, MFDDSaturable {
 
     public typealias DD = MFDD
@@ -226,7 +226,7 @@ where Key: Place, Value == Multiset<Val> {
           take: take,
           skip: factory.zero.pointer)
       } else {
-        fatalError("The key to filter is lower in the MFDD. Thus, the value could never be filtered.")
+        fatalError("The key/value to remove is too lower in the MFDD. Thus, the value could never be removed.")
       }
       
       cache[pointer] = result
@@ -244,7 +244,7 @@ where Key: Place, Value == Multiset<Val> {
 
   }
   
-  
+  /// Add a value in all multiset for a specific place
   public final class InsertValueInMarking: Morphism, MFDDSaturable {
 
     public typealias DD = MFDD
@@ -297,7 +297,7 @@ where Key: Place, Value == Multiset<Val> {
           take: take,
           skip: factory.zero.pointer)
       } else {
-        fatalError("The key to filter is lower in the MFDD. Thus, the value could never be added.")
+        fatalError("The key/value to insert is too lower in the MFDD. Thus, the value could never be inserted.")
       }
       
       cache[pointer] = result
@@ -310,6 +310,75 @@ where Key: Place, Value == Multiset<Val> {
     }
 
     public static func == (lhs: InsertValueInMarking, rhs: InsertValueInMarking) -> Bool {
+      lhs === rhs
+    }
+  }
+  
+  /// Keep marking where a place contains a specific value in the multiset
+  public final class filterMarking: Morphism, MFDDSaturable {
+
+    public typealias DD = MFDD
+
+    /// The assignments inserted by this morphism.
+    public let assignment: (key: Key, value: Value.Key)
+
+    /// The factory that creates the nodes handled by this morphism.
+    public unowned let factory: MFDDFactory<Key, Value>
+
+    /// The morphism's cache.
+    private var cache: [MFDD.Pointer: MFDD.Pointer] = [:]
+
+    public var lowestRelevantKey: Key { assignment.key }
+
+    init(assignment: (key: Key, value: Value.Key), factory: MFDDFactory<Key, Value>) {
+      self.assignment = assignment
+      self.factory = factory
+    }
+
+    public func apply(on pointer: MFDD.Pointer) -> MFDD.Pointer {
+      // Check for trivial cases.
+      if factory.isTerminal(pointer) {
+        return pointer
+      }
+      
+      // Query the cache.
+      if let result = cache[pointer] {
+        return result
+      }
+
+      // Apply the morphism.
+      let result: MFDD.Pointer
+      if pointer.pointee.key < assignment.key {
+        result = factory.node(
+          key: pointer.pointee.key,
+          take: pointer.pointee.take.mapValues(apply(on:)),
+          skip: factory.zero.pointer)
+      } else if pointer.pointee.key == assignment.key {
+        var take: [Value: MFDD.Pointer] = [:]
+        
+        for (key, pointer) in pointer.pointee.take {
+          if key.contains(assignment.value) {
+            take[key] = pointer
+          }
+        }
+        result = factory.node(
+          key: pointer.pointee.key,
+          take: take,
+          skip: factory.zero.pointer)
+      } else {
+        fatalError("The key to filter is lower in the MFDD. Thus, the value could never be filtered.")
+      }
+      
+      cache[pointer] = result
+      return result
+    }
+
+    public func hash(into hasher: inout Hasher) {
+      hasher.combine(assignment.key)
+      hasher.combine(assignment.value)
+    }
+
+    public static func == (lhs: filterMarking, rhs: filterMarking) -> Bool {
       lhs === rhs
     }
   }
@@ -347,5 +416,10 @@ where Key: Place, Value == Multiset<Val> {
   public func insertValueInMarking(assignment: (key: Key, value: Value.Key)) -> MFDD<Key, Value>.InsertValueInMarking
   {
     return MFDD.InsertValueInMarking(assignment: assignment, factory: nodeFactory)
+  }
+  
+  /// Creates a morphism to filter marking which not include the assignement, i.e. where multiset does not include a specific value.
+  public func filterMarking(include assignment: (key: Key, value: Value.Key)) -> MFDD<Key, Value>.filterMarking {
+    return MFDD.filterMarking(assignment: assignment, factory: nodeFactory)
   }
 }
