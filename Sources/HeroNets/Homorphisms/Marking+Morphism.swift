@@ -315,7 +315,7 @@ where Key: Place, Value == Multiset<Val> {
   }
   
   /// Keep marking where a place contains a specific value in the multiset
-  public final class filterMarking: Morphism, MFDDSaturable {
+  public final class FilterMarking: Morphism, MFDDSaturable {
 
     public typealias DD = MFDD
 
@@ -378,11 +378,10 @@ where Key: Place, Value == Multiset<Val> {
       hasher.combine(assignment.value)
     }
 
-    public static func == (lhs: filterMarking, rhs: filterMarking) -> Bool {
+    public static func == (lhs: FilterMarking, rhs: FilterMarking) -> Bool {
       lhs === rhs
     }
   }
-
 }
 
 
@@ -419,7 +418,8 @@ where Key: Place, Value == Multiset<Val> {
   }
   
   /// Creates a morphism to filter marking which not include the assignement, i.e. where multiset does not include a specific value.
-  public func filterMarking(include assignment: (key: Key, value: Value.Key)) -> MFDD<Key, Value>.filterMarking {
-    return MFDD.filterMarking(assignment: assignment, factory: nodeFactory)
+  public func filterMarking(include assignment: (key: Key, value: Value.Key)) -> MFDD<Key, Value>.FilterMarking
+  {
+    return MFDD.FilterMarking(assignment: assignment, factory: nodeFactory)
   }
 }
