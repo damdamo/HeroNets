@@ -40,26 +40,6 @@ extension HeroNet {
     }
     return factory.zero
   }
-  
-  // The fireable binding function for SSC.
-  func fireableBindingsForSSC(
-    for transition: TransitionType,
-    with marking: Marking<PlaceType>,
-    keySet: Set<KeyMFDDVar>,
-    dependentKeys: Set<KeyMFDDVar>,
-    keysToGuards: [Set<KeyMFDDVar>: Set<Guard>],
-    factory: BindingMFDDFactory)
-  -> BindingMFDD {
-    let net: HeroNet = self
-    // Static optimization, only depends on the structure of the net
-//    net = computeStaticOptimizedNet()
-    // Dynamic optimization, depends on the structure of the net and the marking
-    let tupleDynamicOptimizedNetAndnewMarking = net.computeDynamicOptimizedNet(transition: transition, marking: marking) ?? nil
-    if let (dynamicOptimizedNet, newMarking) = tupleDynamicOptimizedNetAndnewMarking {
-      return dynamicOptimizedNet.computeEnabledBindings(for: transition, marking: newMarking, keySet: keySet, dependentKeys: dependentKeys, keysToGuards: keysToGuards, factory: factory)
-    }
-    return factory.zero
-  }
 
 
   // --------------------------------------------------------------------------------- //
