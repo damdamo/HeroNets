@@ -180,9 +180,6 @@ where Key: Place, Value == Multiset<Val> {
     /// The assignments filtered by this morphism.
     public let assignment: (key: Key, value: Value.Key)
 
-    /// The next morphism to apply once the first assignment has been processed.
-//    private var next: SaturatedMorphism<RemoveValueInMarking>?
-
     /// The factory that creates the nodes handled by this morphism.
     public unowned let factory: MFDDFactory<Key, Value>
 
@@ -255,9 +252,6 @@ where Key: Place, Value == Multiset<Val> {
     /// The assignments inserted by this morphism.
     public let assignment: (key: Key, value: Value.Key)
 
-    /// The next morphism to apply once the first assignment has been processed.
-//    private var next: SaturatedMorphism<InsertValuesInMarking>?
-
     /// The factory that creates the nodes handled by this morphism.
     public unowned let factory: MFDDFactory<Key, Value>
 
@@ -267,15 +261,7 @@ where Key: Place, Value == Multiset<Val> {
     public var lowestRelevantKey: Key { assignment.key }
 
     init(assignment: (key: Key, value: Value.Key), factory: MFDDFactory<Key, Value>) {
-//      assert(!assignments.isEmpty, "Sequence of assignments to insert is empty.")
-
       self.assignment = assignment
-      
-//      self.next = assignments.count > 1
-//        ? factory.morphisms.saturate(
-//          factory.morphisms.insertValuesInMarking(insert: self.assignments.dropFirst()))
-//        : nil
-
       self.factory = factory
     }
 
@@ -326,39 +312,38 @@ where Key: Place, Value == Multiset<Val> {
     public static func == (lhs: InsertValueInMarking, rhs: InsertValueInMarking) -> Bool {
       lhs === rhs
     }
-
   }
 
-  
-  
 }
 
 
 extension MFDDMorphismFactory
 where Key: Place, Value == Multiset<Val> {
-  /// Creates an _exclusive filter marking_ morphism.
+  /// Creates a morphism to remove multiple elements at a time
   ///
   /// - Parameter assignments: A sequence with the assignments that the member must not contain.
   public func removeValuesInMarking<S>(excluding assignments: S) -> MFDD<Key, Value>.RemoveValuesInMarking
-    where S: Sequence, S.Element == (key: Key, value: Value)
+  where S: Sequence, S.Element == (key: Key, value: Value)
   {
     return MFDD.RemoveValuesInMarking(assignments: Array(assignments), factory: nodeFactory)
   }
   
-  /// Creates an _insert  in marking_ morphism.
+  /// Creates a morphism to insert multiple elements at a time
   ///
   /// - Parameter assignments: A sequence with the assignments to insert.
   public func insertValuesInMarking<S>(insert assignments: S) -> MFDD<Key, Value>.InsertValuesInMarking
-    where S: Sequence, S.Element == (key: Key, value: Value)
+  where S: Sequence, S.Element == (key: Key, value: Value)
   {
     return MFDD.InsertValuesInMarking(assignments: Array(assignments), factory: nodeFactory)
   }
   
+  /// Creates a morphism to remove an element in a place
   public func removeValueInMarking(assignment: (key: Key, value: Value.Key)) -> MFDD<Key,Value>.RemoveValueInMarking
   {
     return MFDD.RemoveValueInMarking(assignment: assignment, factory: nodeFactory)
   }
   
+  /// Creates a morphism to insert an element in a place
   public func insertValueInMarking(assignment: (key: Key, value: Value.Key)) -> MFDD<Key, Value>.InsertValueInMarking
   {
     return MFDD.InsertValueInMarking(assignment: assignment, factory: nodeFactory)
