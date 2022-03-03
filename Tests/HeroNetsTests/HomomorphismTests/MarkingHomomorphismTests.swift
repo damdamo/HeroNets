@@ -173,5 +173,27 @@ final class MarkingHomomorphismTests: XCTestCase {
     
     XCTAssertEqual(removeFilter.apply(on: markingMFDD), expectedRes)
   }
+  
+  
+  func testInsertValueInMarking() {
+    let markingMFDDFactory = MarkingMFDDFactory()
+    var morphisms: MFDDMorphismFactory<KeyMarking, ValueMarking> { markingMFDDFactory.morphisms }
+
+    var marking1 = Marking<P>([.p1: ["2"], .p2: ["3", "4"], .p3: []])
+    var marking2 = Marking<P>([.p1: ["5"], .p2: ["6", "7"], .p3: []])
+    
+    var markingMFDD = marking1.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory)
+    markingMFDD = markingMFDD.union(marking2.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory))
+
+    let valueToInsert: Val = .cst("1")
+    let insertFilter = morphisms.insertValueInMarking(assignment: (key: .p1, value: valueToInsert))
+    
+    marking1 = Marking<P>([.p1: ["1","2"], .p2: ["3", "4"], .p3: []])
+    marking2 = Marking<P>([.p1: ["1","5"], .p2: ["6", "7"], .p3: []])
+    
+    let expectedRes = marking1.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory).union(marking2.markingToMFDDMarking(markingMFDDFactory: markingMFDDFactory))
+    
+    XCTAssertEqual(insertFilter.apply(on: markingMFDD), expectedRes)
+  }
 
 }

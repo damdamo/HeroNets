@@ -222,7 +222,6 @@ where Key: Place, Value == Multiset<Val> {
           newKey = key
           newKey.remove(assignment.value)
           take[newKey] = pointer
-          take[key] = factory.zero.pointer
         }
         
         result = factory.node(
@@ -247,6 +246,91 @@ where Key: Place, Value == Multiset<Val> {
     }
 
   }
+  
+  
+  public final class InsertValueInMarking: Morphism, MFDDSaturable {
+
+    public typealias DD = MFDD
+
+    /// The assignments inserted by this morphism.
+    public let assignment: (key: Key, value: Value.Key)
+
+    /// The next morphism to apply once the first assignment has been processed.
+//    private var next: SaturatedMorphism<InsertValuesInMarking>?
+
+    /// The factory that creates the nodes handled by this morphism.
+    public unowned let factory: MFDDFactory<Key, Value>
+
+    /// The morphism's cache.
+    private var cache: [MFDD.Pointer: MFDD.Pointer] = [:]
+
+    public var lowestRelevantKey: Key { assignment.key }
+
+    init(assignment: (key: Key, value: Value.Key), factory: MFDDFactory<Key, Value>) {
+//      assert(!assignments.isEmpty, "Sequence of assignments to insert is empty.")
+
+      self.assignment = assignment
+      
+//      self.next = assignments.count > 1
+//        ? factory.morphisms.saturate(
+//          factory.morphisms.insertValuesInMarking(insert: self.assignments.dropFirst()))
+//        : nil
+
+      self.factory = factory
+    }
+
+    public func apply(on pointer: MFDD.Pointer) -> MFDD.Pointer {
+      // Check for trivial cases.
+      if factory.isTerminal(pointer) {
+        return pointer
+      }
+      
+      // Query the cache.
+      if let result = cache[pointer] {
+        return result
+      }
+
+      // Apply the morphism.
+      let result: MFDD.Pointer
+      if pointer.pointee.key < assignment.key {
+        result = factory.node(
+          key: pointer.pointee.key,
+          take: pointer.pointee.take.mapValues(apply(on:)),
+          skip: factory.zero.pointer)
+      } else if pointer.pointee.key == assignment.key {
+        var take: [Value: MFDD.Pointer] = [:]
+        var newKey: Multiset<Val>
+        
+        for (key, pointer) in pointer.pointee.take {
+          newKey = key
+          newKey.insert(assignment.value)
+          take[newKey] = pointer
+        }
+        result = factory.node(
+          key: pointer.pointee.key,
+          take: take,
+          skip: factory.zero.pointer)
+      } else {
+        fatalError("The key to filter is lower in the MFDD. Thus, the value could never be added.")
+      }
+      
+      cache[pointer] = result
+      return result
+    }
+
+    public func hash(into hasher: inout Hasher) {
+      hasher.combine(assignment.key)
+      hasher.combine(assignment.value)
+    }
+
+    public static func == (lhs: InsertValueInMarking, rhs: InsertValueInMarking) -> Bool {
+      lhs === rhs
+    }
+
+  }
+
+  
+  
 }
 
 
@@ -273,5 +357,10 @@ where Key: Place, Value == Multiset<Val> {
   public func removeValueInMarking(assignment: (key: Key, value: Value.Key)) -> MFDD<Key,Value>.RemoveValueInMarking
   {
     return MFDD.RemoveValueInMarking(assignment: assignment, factory: nodeFactory)
+  }
+  
+  public func insertValueInMarking(assignment: (key: Key, value: Value.Key)) -> MFDD<Key, Value>.InsertValueInMarking
+  {
+    return MFDD.InsertValueInMarking(assignment: assignment, factory: nodeFactory)
   }
 }
