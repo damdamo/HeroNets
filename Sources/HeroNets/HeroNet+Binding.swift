@@ -902,3 +902,211 @@ extension HeroNet {
 }
 
 
+extension HeroNet where PlaceType: Comparable {
+  
+  /// Version with a marking mfdd as input
+  public func computeEnabledBindings(
+    for transition: TransitionType,
+    marking: MFDD<PlaceType, PlaceType.Content>,
+    bindingMFDDFactory: BindingMFDDFactory,
+    markingMFDDFactory: MarkingMFDDFactory)
+  -> BindingMFDD {
+    
+//    let keySet = createKeys(transition: transition)
+//    let dependentKeys = computeDependentKeys(transition: transition, keySet: keySet)
+//
+//    let (dependentPlaceToKeyToValues, independentKeyToValues) = computeDependentAndIndependentKeyValues(keySet: keySet, dependentKeys: dependentKeys, marking: marking, transition: transition)
+
+    var morphisms: MFDDMorphismFactory<PlaceType, PlaceType.Content> { markingMFDDFactory.morphisms }
+    var markingWithoutConstant: MarkingMFDD = marking
+    
+    var labs: [Var] = []
+    var labsTemp: [Var] = []
+    var placeToVarWithUniqueVar: [(place: PlaceType, vars: [Var])] = []
+    
+    if let pre = input[transition] {
+      for (place, labels) in pre.sorted(by: {$0.key < $1.key}) {
+        for label in labels {
+          switch label {
+          case .var(let varName):
+            if !labs.contains(varName) {
+              labs.append(varName)
+              labsTemp.append(varName)
+            }
+          case .val(let val):
+            // Apply a pre homomorphism on the constant on the arcs
+            let filterMorphism = morphisms.filterMarking(include: (place, val))
+            let removeMorphism = morphisms.removeValueInMarking(assignment: (place,val))
+            let preMorphism = morphisms.composition(of: removeMorphism, with: filterMorphism)
+            markingWithoutConstant = preMorphism.apply(on: markingWithoutConstant)
+          case .exp(_):
+            fatalError("Expressions are not allowed on the pre arcs.")
+          }
+        }
+        placeToVarWithUniqueVar.append((place: place, vars: labsTemp))
+        labsTemp = []
+      }
+    }
+        
+    let totalOrder = createTotalOrder(variables: labs)
+//    var keys: Set<KeyMFDDVar> = []
+//    for lab in labs {
+//      keys.insert(KeyMFDDVar(label: lab, couple: totalOrder))
+//    }
+    
+    var placeToKeyWithUniqueKey: [(place: PlaceType, keys: [KeyMFDDVar])] = []
+    var keysTemp: [KeyMFDDVar] = []
+    for (place, vars) in placeToVarWithUniqueVar {
+      for var_ in vars {
+        keysTemp.append(KeyMFDDVar(label: var_, couple: totalOrder))
+      }
+      placeToKeyWithUniqueKey.append((place: place, keys: keysTemp))
+      keysTemp = []
+    }
+
+    
+    var mfddPointer = constructBindings(
+      placeToKeyWithUniqueKey: placeToKeyWithUniqueKey,
+      marking: markingWithoutConstant,
+      transition: transition,
+      bindingMFDDFactory: bindingMFDDFactory,
+      markingMFDDFactory: markingMFDDFactory)
+
+    // If there are conditions, we have to apply them on the MFDD
+//    if let conditions = guards[transition] {
+//      let keysToGuards = createKeysToGuards(transition: transition, keySet: keys)
+//      // Apply guards
+//      mfddPointer = applyCondition(
+//        mfddPointer: mfddPointer,
+//        guards: conditions,
+//        keysToGuards: keysToGuards,
+//        // CARRRRRREEEE, that was dependentKeys before
+//        dependentKeys: keys,
+//        factory: bindingMFDDFactory
+//      )
+//    }
+
+    // Add independent labels at the end of the process, to reduce the combinatory explosion. These labels does not impact the result !
+//    mfddPointer = addIndependentLabel(mfddPointer: mfddPointer, independentKeyToValues: independentKeyToValues, factory: factory)
+//    return MFDD(pointer: mfddPointer, factory: bindingMFDDFactory)
+    return mfddPointer
+  }
+  
+  func constructBindings(
+    placeToKeyWithUniqueKey: [(place: PlaceType, keys: [KeyMFDDVar])],
+    marking: MarkingMFDD,
+    transition: TransitionType,
+    bindingMFDDFactory: BindingMFDDFactory,
+    markingMFDDFactory: MarkingMFDDFactory
+  ) -> BindingMFDD {
+    
+    print(placeToKeyWithUniqueKey)
+    
+    return BindingMFDD(
+      pointer: constructBindings(
+        placeToKeys: placeToKeyWithUniqueKey,
+        markingPointer: marking.pointer,
+        transition: transition,
+        bindingMFDDFactory: bindingMFDDFactory,
+        markingMFDDFactory: markingMFDDFactory
+      ),
+      factory: bindingMFDDFactory
+    )
+    
+  }
+  
+  
+  func constructBindings(
+    placeToKeys: [(place: PlaceType, keys: [KeyMFDDVar])],
+    markingPointer: MarkingMFDD.Pointer,
+    transition: TransitionType,
+    bindingMFDDFactory: BindingMFDDFactory,
+    markingMFDDFactory: MarkingMFDDFactory
+  )
+  -> BindingMFDD.Pointer {
+    
+    if placeToKeys.isEmpty {
+      return bindingMFDDFactory.one.pointer
+    }
+    
+    if markingPointer == markingMFDDFactory.one.pointer || markingPointer == markingMFDDFactory.zero.pointer {
+      return bindingMFDDFactory.zero.pointer
+    }
+    
+    if let pToK = placeToKeys.first {
+      var resTemp: BindingMFDD.Pointer = bindingMFDDFactory.zero.pointer
+      var resPointer: BindingMFDD.Pointer = bindingMFDDFactory.zero.pointer
+      
+      if markingPointer.pointee.key < pToK.place {
+        print(markingPointer.pointee.key)
+        for (_, markingPointer) in markingPointer.pointee.take {
+          
+          resTemp = constructBindings(
+            placeToKeys: placeToKeys,
+            markingPointer: markingPointer,
+            transition: transition,
+            bindingMFDDFactory: bindingMFDDFactory,
+            markingMFDDFactory: markingMFDDFactory
+          )
+          
+          // TODO: CHANGE THIS HORROR
+          resPointer = BindingMFDD(pointer: resPointer, factory: bindingMFDDFactory).union(BindingMFDD(pointer: resTemp, factory: bindingMFDDFactory)).pointer
+        }
+      } else if markingPointer.pointee.key == pToK.place {
+        var bindTemp: BindingMFDD.Pointer = bindingMFDDFactory.zero.pointer
+        var initPointer: BindingMFDD.Pointer = bindingMFDDFactory.zero.pointer
+        for (multiset, subMarkingPointer) in markingPointer.pointee.take {
+          initPointer = constructBindings(
+            placeToKeys: Array(placeToKeys.dropFirst()),
+            markingPointer: subMarkingPointer,
+            transition: transition,
+            bindingMFDDFactory: bindingMFDDFactory,
+            markingMFDDFactory: markingMFDDFactory
+          )
+          bindTemp = constructBindingForAPlace(multiset: multiset, keyList: pToK.keys, initPointer: initPointer, bindingMFDDFactory: bindingMFDDFactory)
+          resPointer = BindingMFDD(pointer: resPointer, factory: bindingMFDDFactory).union(BindingMFDD(pointer: bindTemp, factory: bindingMFDDFactory)).pointer
+        }
+        
+        return resPointer
+
+      }
+
+    }
+    
+    return bindingMFDDFactory.zero.pointer
+  }
+  
+  func constructBindingForAPlace(
+    multiset: PlaceType.Content,
+    keyList: [KeyMFDDVar],
+    initPointer: BindingMFDD.Pointer,
+    bindingMFDDFactory: BindingMFDDFactory
+  ) -> BindingMFDD.Pointer {
+    
+    if keyList.isEmpty {
+      return initPointer
+    }
+    
+    if let firstKey = keyList.first {
+      var take: [PlaceType.Content.Key: BindingMFDD.Pointer] = [:]
+      var multisetTemp = multiset
+      var pointerTemp: BindingMFDD.Pointer = bindingMFDDFactory.zero.pointer
+      for val in multiset {
+        multisetTemp.remove(val)
+        pointerTemp = constructBindingForAPlace(
+          multiset: multisetTemp,
+          keyList: Array(keyList.dropFirst()),
+          initPointer: initPointer,
+          bindingMFDDFactory: bindingMFDDFactory
+        )
+        take[val] = pointerTemp
+        multisetTemp = multiset
+      }
+      
+      return bindingMFDDFactory.node(key: firstKey, take: take, skip: bindingMFDDFactory.zero.pointer)
+    }
+    
+    return bindingMFDDFactory.zero.pointer
+  }
+  
+}

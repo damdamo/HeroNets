@@ -2,6 +2,7 @@ import DDKit
   
 // TODO: Add constraint on the MFDD types for the application
 extension MFDDFactory {
+// where Key == String, Value == Val {
   
   /// `concatAndFilterInclude` (abreviate by `cfi`) is a homorphism that takes two MFDD and returns a new one.
   /// This operations is specially designed to construct a MFDD that represents all bindings for a transition

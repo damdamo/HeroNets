@@ -382,6 +382,106 @@ where Key: Place, Value == Multiset<Val> {
       lhs === rhs
     }
   }
+  
+  public final class Bindings: Morphism, MFDDSaturable {
+
+    public typealias DD = MFDD
+    public typealias Var = String
+
+    /// The assignments filtered by this morphism.
+    public let assignments: [(key: Key, value: Var)]
+
+    /// The next morphism to apply once the first assignment has been processed.
+    private var next: SaturatedMorphism<Bindings>?
+
+    /// The factory that creates the nodes handled by this morphism.
+    public unowned let factory: MFDDFactory<Key, Value>
+    public unowned let markingMFDDFactory: MFDDFactory<Key, String>
+
+    /// The morphism's cache.
+    private var cache: [MFDD.Pointer: MFDD.Pointer] = [:]
+
+    public var lowestRelevantKey: Key { assignments.min(by: { a, b in a.key < b.key })!.key }
+
+    init(
+      assignments: [(key: Key, value: Var)],
+      factory: MFDDFactory<Key, Value>,
+      markingMFDDFactory: MFDDFactory<Key, String>)
+    {
+      assert(!assignments.isEmpty, "Sequence of assignments is empty.")
+
+      self.assignments = assignments.sorted(by: { a, b in a.key < b.key })
+      self.next = assignments.count > 1
+        ? factory.morphisms.saturate(
+          factory.morphisms.bindingMarking(assignments: self.assignments.dropFirst(), markingMFDDFactory: markingMFDDFactory))
+        : nil
+
+      self.factory = factory
+      self.markingMFDDFactory = markingMFDDFactory
+    }
+
+//    // Create a MFDD binding from a mfdd marking
+//    private func buildBindings() -> MFDD<Key, String> {
+//
+//    }
+    
+    public func apply(on pointer: MFDD.Pointer) -> MFDD.Pointer {
+      // Check for trivial cases.
+      if factory.isTerminal(pointer) {
+        return pointer
+      }
+
+      // Query the cache.
+      if let result = cache[pointer] {
+        return result
+      }
+      
+//      let bindings = buildBindings()
+
+//      // Apply the morphism.
+//      let result: MFDD.Pointer
+//      if pointer.pointee.key < assignments[0].key {
+//        result = factory.node(
+//          key: pointer.pointee.key,
+//          take: pointer.pointee.take.mapValues(apply(on:)),
+//          skip: factory.zero.pointer)
+//      } else if pointer.pointee.key == assignments[0].key {
+//        var take: [Value: MFDD.Pointer] = [:]
+//        var newKey: Multiset<Val>
+//
+//        for (key, pointer) in pointer.pointee.take {
+//          newKey = key - assignments[0].value
+//          take[newKey] = pointer
+//        }
+//
+//        result = factory.node(
+//          key: pointer.pointee.key,
+//          take: next != nil ? take.mapValues(next!.apply(on:)) : take,
+//          skip: factory.zero.pointer)
+//      } else {
+//        fatalError("One of the key/values to remove is too lower in the MFDD. Thus, one of the values could never be removed.")
+//      }
+
+      let result = factory.zero.pointer
+      
+      cache[pointer] = result
+      return result
+    }
+
+    public func hash(into hasher: inout Hasher) {
+      for (key, value) in assignments {
+        hasher.combine(key)
+        hasher.combine(value)
+      }
+    }
+
+    public static func == (lhs: Bindings, rhs: Bindings) -> Bool {
+      lhs === rhs
+    }
+
+  }
+
+  
 }
 
 
@@ -421,5 +521,10 @@ where Key: Place, Value == Multiset<Val> {
   public func filterMarking(include assignment: (key: Key, value: Value.Key)) -> MFDD<Key, Value>.FilterMarking
   {
     return MFDD.FilterMarking(assignment: assignment, factory: nodeFactory)
+  }
+  
+  public func bindingMarking<S>(assignments: S, markingMFDDFactory: MFDDFactory<Key, String>) -> MFDD<Key, Value>.Bindings
+  where S: Sequence, S.Element == (key: Key, value: String) {
+    return MFDD.Bindings(assignments: Array(assignments), factory: nodeFactory, markingMFDDFactory: markingMFDDFactory)
   }
 }
